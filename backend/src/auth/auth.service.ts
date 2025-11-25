@@ -68,10 +68,6 @@ export class AuthService {
   }
 
   async validateOAuthLogin(provider: AuthProvider, profile: OAuthProfile) {
-    console.log(
-      `OAuth Login - Provider: ${provider}, Email: ${profile.email}, ProviderId: ${profile.providerId}`,
-    );
-
     // Check if external auth already exists
     let externalAuth = await this.externalAuthRepository.findOne({
       where: { provider, providerId: profile.providerId },

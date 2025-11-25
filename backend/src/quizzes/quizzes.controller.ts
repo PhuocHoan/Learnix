@@ -16,12 +16,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../users/enums/user-role.enum';
 import { GenerateQuizDto } from './dto/generate-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
-
-interface JwtUser {
-  userId: string;
-  email: string;
-  role: string;
-}
+import { User } from '../users/entities/user.entity';
 
 @Controller('quizzes')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -32,15 +27,15 @@ export class QuizzesController {
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
   async generateQuiz(
     @Body() generateDto: GenerateQuizDto,
-    @CurrentUser() user: JwtUser,
+    @CurrentUser() user: User,
   ) {
-    return this.quizzesService.generateQuizWithAI(generateDto, user.userId);
+    return this.quizzesService.generateQuizWithAI(generateDto, user.id);
   }
 
   @Get('my-quizzes')
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
-  async getMyQuizzes(@CurrentUser() user: JwtUser) {
-    return this.quizzesService.findByInstructor(user.userId);
+  async getMyQuizzes(@CurrentUser() user: User) {
+    return this.quizzesService.findByInstructor(user.id);
   }
 
   @Get(':id')
