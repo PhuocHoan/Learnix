@@ -15,7 +15,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await authApi.getProfile();
       setUser(userData);
       return userData;
-    } catch (error) {
+    } catch {
       setUser(null);
       return null;
     }

@@ -16,12 +16,10 @@ import { CreateUserDto } from '../users/dto/create-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GithubAuthGuard } from './guards/github-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
-import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { ConfigService } from '@nestjs/config';
 import { AuthProvider } from './entities/external-auth.entity';
 import { User } from '../users/entities/user.entity';
-import { UserRole } from '../users/enums/user-role.enum';
 import { SelectRoleDto } from './dto/select-role.dto';
 
 // Cookie configuration for secure token storage
@@ -71,7 +69,7 @@ export class AuthController {
 
   @Get('google')
   @UseGuards(GoogleAuthGuard)
-  async googleAuth(@Req() req: Request) {
+  async googleAuth() {
     // Force account selection by passing prompt parameter
     // This prevents Google from using cached sessions
   }
@@ -80,14 +78,14 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
     const profile = req.user as OAuthProfile;
-    
+
     // Debug logging to see what profile we're receiving
     console.log('Google OAuth Profile:', {
       email: profile.email,
       providerId: profile.providerId,
       fullName: profile.fullName,
     });
-    
+
     const result = await this.authService.validateOAuthLogin(
       AuthProvider.GOOGLE,
       profile,
@@ -101,7 +99,7 @@ export class AuthController {
       sameSite: 'none',
       path: '/',
     });
-    
+
     // Set new JWT token in HTTP-only cookie
     res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
 
@@ -131,7 +129,7 @@ export class AuthController {
       sameSite: 'none',
       path: '/',
     });
-    
+
     // Set new JWT token in HTTP-only cookie
     res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
 
@@ -154,16 +152,17 @@ export class AuthController {
     @CurrentUser() user: User,
     @Body() selectRoleDto: SelectRoleDto,
   ) {
-    try {
-      const updatedUser = await this.authService.updateUserRole(
-        user.id,
-        selectRoleDto.role,
-      );
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...userWithoutPassword } = updatedUser as User & { password?: string | null };
-      return { user: userWithoutPassword, message: 'Role selected successfully' };
-    } catch (error) {
-      throw error;
-    }
+    const updatedUser = await this.authService.updateUserRole(
+      user.id,
+      selectRoleDto.role,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = updatedUser as User & {
+      password?: string | null;
+    };
+    return {
+      user: userWithoutPassword,
+      message: 'Role selected successfully',
+    };
   }
 }

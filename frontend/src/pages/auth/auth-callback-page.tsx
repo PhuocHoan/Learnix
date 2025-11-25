@@ -23,7 +23,7 @@ export function AuthCallbackPage() {
           // Force full page reload to ensure clean state
           window.location.href = '/dashboard';
         }
-      } catch (error) {
+      } catch {
         setError('Authentication failed. Please try again.');
         // Redirect to login after a short delay
         setTimeout(() => navigate('/login'), 2000);

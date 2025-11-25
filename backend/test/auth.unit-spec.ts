@@ -3,11 +3,19 @@ import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ExternalAuth } from '../src/auth/entities/external-auth.entity';
 import * as bcrypt from 'bcrypt';
+import type { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 
 import { AuthService } from '../src/auth/auth.service';
 import { AuthController } from '../src/auth/auth.controller';
 import { UsersService } from '../src/users/users.service';
 import { AdminController } from '../src/admin/admin.controller';
+import { AdminService } from '../src/admin/admin.service';
+import { LoginDto } from '../src/auth/dto/login.dto';
+import { User } from '../src/users/entities/user.entity';
+import { UserRole } from '../src/users/enums/user-role.enum';
+import { UpdateUserRoleDto } from '../src/admin/dto/update-user-role.dto';
+import { UpdateUserStatusDto } from '../src/admin/dto/update-user-status.dto';
 
 describe('Auth unit tests (mocked DB)', () => {
   let module: TestingModule;
@@ -15,17 +23,17 @@ describe('Auth unit tests (mocked DB)', () => {
 
   const userId = '1111-2222-3333';
 
-  const mockUsersService = {
+  const mockUsersService: Partial<UsersService> = {
     create: jest.fn(),
     findByEmail: jest.fn(),
     findAll: jest.fn(),
     updateRole: jest.fn(),
     updateStatus: jest.fn(),
-  } as unknown as UsersService;
+  };
 
-  const mockJwtService = {
+  const mockJwtService: Partial<JwtService> = {
     sign: jest.fn().mockReturnValue('signed-jwt-token'),
-  } as unknown as JwtService;
+  };
 
   beforeAll(async () => {
     module = await Test.createTestingModule({
@@ -47,67 +55,108 @@ describe('Auth unit tests (mocked DB)', () => {
   it('validateUser returns user when password matches (mocked)', async () => {
     const plain = 'Password123!';
     const hashed = await bcrypt.hash(plain, 1);
-    const storedUser = {
+    const storedUser: Partial<User> = {
       id: userId,
       email: 'u@example.com',
       password: hashed,
-      role: 'student',
-    } as any;
+      role: UserRole.STUDENT,
+    };
 
     (mockUsersService.findByEmail as jest.Mock).mockResolvedValue(storedUser);
 
     const result = await authService.validateUser('u@example.com', plain);
     expect(result).toBeDefined();
-    expect((result as any).email).toBe('u@example.com');
+    expect(result?.email).toBe('u@example.com');
     // password removed in service
-    expect((result as any).password).toBeUndefined();
+    expect((result as Partial<User>).password).toBeUndefined();
   });
 
   it('login returns signed token and user', async () => {
-    const user = { id: userId, email: 'u@example.com', role: 'student' } as any;
+    const user: Partial<User> = {
+      id: userId,
+      email: 'u@example.com',
+      role: UserRole.STUDENT,
+    };
     // mock validateUser to return user
-    jest.spyOn(authService, 'validateUser' as any).mockResolvedValue(user);
+    jest
+      .spyOn(authService, 'validateUser')
+      .mockResolvedValue(user as Omit<User, 'password'>);
 
-    const res = await authService.login({ email: 'u@example.com', password: 'x' } as any);
+    const loginDto: LoginDto = {
+      email: 'u@example.com',
+      password: 'x',
+    };
+    const res = await authService.login(loginDto);
     expect(res).toBeDefined();
     expect(res.access_token).toBe('signed-jwt-token');
     expect(res.user).toEqual(user);
   });
 
   it('AuthController.signIn sets cookie and returns user (mocked)', async () => {
-    const fakeUser = { id: userId, email: 'c@example.com' };
-    const mockAuthService = {
-      login: jest.fn().mockResolvedValue({ access_token: 'signed-jwt-token', user: fakeUser }),
-    } as any;
+    const fakeUser: Partial<User> = { id: userId, email: 'c@example.com' };
+    const mockAuthServiceForController: Partial<AuthService> = {
+      login: jest.fn().mockResolvedValue({
+        access_token: 'signed-jwt-token',
+        user: fakeUser,
+      }),
+    };
 
-    const controller = new AuthController(mockAuthService, ({ get: () => 'http://localhost:5173' } as any));
+    const mockConfigService: Partial<ConfigService> = {
+      get: jest.fn().mockReturnValue('http://localhost:5173'),
+    };
 
-    const fakeRes = {
+    const controller = new AuthController(
+      mockAuthServiceForController as AuthService,
+      mockConfigService as ConfigService,
+    );
+
+    const fakeRes: Partial<Response> = {
       cookie: jest.fn(),
-    } as any;
+    };
 
-    const returnVal = await controller.signIn({ email: 'c@example.com', password: 'x' } as any, fakeRes);
-    expect(fakeRes.cookie).toHaveBeenCalledWith('access_token', 'signed-jwt-token', expect.any(Object));
+    const loginDto: LoginDto = { email: 'c@example.com', password: 'x' };
+    const returnVal = await controller.signIn(loginDto, fakeRes as Response);
+
+    expect(fakeRes.cookie).toHaveBeenCalledWith(
+      'access_token',
+      'signed-jwt-token',
+      expect.any(Object),
+    );
     expect(returnVal).toEqual({ user: fakeUser, message: 'Login successful' });
   });
 
   it('AdminController methods call UsersService (mocked)', async () => {
-    const mockAdminService = { getSystemStats: jest.fn().mockResolvedValue({ users: 1 }) } as any;
-    const mockUsers = {
+    const mockAdminServiceForController: Partial<AdminService> = {
+      getSystemStats: jest.fn().mockResolvedValue({ users: 1 }),
+    };
+    const mockUsersServiceForAdmin: Partial<UsersService> = {
       findAll: jest.fn().mockResolvedValue([{ id: '1', email: 'a@a' }]),
-      updateRole: jest.fn().mockResolvedValue({ id: '1', role: 'admin' }),
+      updateRole: jest
+        .fn()
+        .mockResolvedValue({ id: '1', role: UserRole.ADMIN }),
       updateStatus: jest.fn().mockResolvedValue({ id: '1', isActive: false }),
-    } as any;
+    };
 
-    const adminController = new AdminController(mockAdminService, mockUsers);
+    const adminController = new AdminController(
+      mockAdminServiceForController as AdminService,
+      mockUsersServiceForAdmin as UsersService,
+    );
 
     const users = await adminController.getAllUsers();
     expect(users).toEqual([{ id: '1', email: 'a@a' }]);
 
-    const updatedRole = await adminController.updateUserRole('1', { role: 'admin' } as any);
-    expect(updatedRole).toEqual({ id: '1', role: 'admin' });
+    const updateRoleDto: UpdateUserRoleDto = { role: UserRole.ADMIN };
+    const updatedRole = await adminController.updateUserRole(
+      '1',
+      updateRoleDto,
+    );
+    expect(updatedRole).toEqual({ id: '1', role: UserRole.ADMIN });
 
-    const updatedStatus = await adminController.updateUserStatus('1', { isActive: false } as any);
+    const updateStatusDto: UpdateUserStatusDto = { isActive: false };
+    const updatedStatus = await adminController.updateUserStatus(
+      '1',
+      updateStatusDto,
+    );
     expect(updatedStatus).toEqual({ id: '1', isActive: false });
 
     const stats = await adminController.getSystemStats();

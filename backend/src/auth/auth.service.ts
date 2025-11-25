@@ -59,7 +59,8 @@ export class AuthService {
 
   async register(createUserDto: CreateUserDto) {
     // Don't set role during registration - user will select it on /select-role page
-    const { role: _, ...userDataWithoutRole } = createUserDto;
+    const { role: _unusedRole, ...userDataWithoutRole } = createUserDto;
+    void _unusedRole; // Role is intentionally excluded - users select role after registration
     const user = await this.usersService.create(userDataWithoutRole);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: __, ...result } = user;
@@ -67,15 +68,20 @@ export class AuthService {
   }
 
   async validateOAuthLogin(provider: AuthProvider, profile: OAuthProfile) {
-    console.log(`OAuth Login - Provider: ${provider}, Email: ${profile.email}, ProviderId: ${profile.providerId}`);
-    
+    console.log(
+      `OAuth Login - Provider: ${provider}, Email: ${profile.email}, ProviderId: ${profile.providerId}`,
+    );
+
     // Check if external auth already exists
     let externalAuth = await this.externalAuthRepository.findOne({
       where: { provider, providerId: profile.providerId },
       relations: ['user'],
     });
 
-    console.log('External Auth Found:', externalAuth ? `Yes, User: ${externalAuth.user.email}` : 'No');
+    console.log(
+      'External Auth Found:',
+      externalAuth ? `Yes, User: ${externalAuth.user.email}` : 'No',
+    );
 
     let user: User | null = null;
 
@@ -96,7 +102,10 @@ export class AuthService {
       // Check if user exists with this email
       user = await this.usersService.findByEmail(profile.email);
 
-      console.log('Existing User Found by Email:', user ? `Yes, Email: ${user.email}, ID: ${user.id}` : 'No');
+      console.log(
+        'Existing User Found by Email:',
+        user ? `Yes, Email: ${user.email}, ID: ${user.id}` : 'No',
+      );
 
       if (!user) {
         // Create new user (no password needed for OAuth users)
@@ -108,7 +117,9 @@ export class AuthService {
         });
         console.log(`Created user with ID: ${user.id}`);
       } else {
-        console.log(`Linking existing user (${user.email}) to ${provider} account`);
+        console.log(
+          `Linking existing user (${user.email}) to ${provider} account`,
+        );
       }
 
       // Create external auth record linking this provider to this user
@@ -126,7 +137,9 @@ export class AuthService {
       throw new UnauthorizedException('Failed to authenticate user');
     }
 
-    console.log(`Returning user: ${user.email} (ID: ${user.id}, Role: ${user.role})`);
+    console.log(
+      `Returning user: ${user.email} (ID: ${user.id}, Role: ${user.role})`,
+    );
 
     const payload = { email: user.email, sub: user.id, role: user.role };
     return {
