@@ -8,13 +8,13 @@ help:
 	@echo "make clean - Stop and remove volumes"
 
 up:
-	docker compose up
+	docker compose up -d
 
 down:
 	docker compose down
 
 db:
-	docker compose up postgres
+	docker compose up -d postgres
 
 logs:
 	docker compose logs -f

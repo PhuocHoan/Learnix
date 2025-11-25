@@ -20,20 +20,42 @@ import { DashboardModule } from './dashboard/dashboard.module';
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
-        username: configService.get<string>('DB_USERNAME'),
-        password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_NAME'),
-        entities: [User, ExternalAuth, Quiz, Question],
-        synchronize: configService.get<string>('NODE_ENV') !== 'production', // Auto-create tables in dev
-        ssl:
-          configService.get<string>('DB_SSL') === 'true'
-            ? { rejectUnauthorized: false }
-            : false,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const databaseUrl = configService.get<string>('DATABASE_URL');
+
+        // Use DATABASE_URL if provided (production/Aiven), otherwise use individual vars (local dev)
+        if (databaseUrl) {
+          // Aiven SSL configuration with CA certificate
+          // Replace literal \n with actual newlines (env files store as escaped string)
+          const caCert = configService.get<string>('DATABASE_CA_CERT');
+
+          return {
+            type: 'postgres',
+            url: databaseUrl,
+            entities: [User, ExternalAuth, Quiz, Question],
+            synchronize: configService.get<string>('NODE_ENV') !== 'production',
+            ssl: caCert
+              ? { rejectUnauthorized: true, ca: caCert }
+              : { rejectUnauthorized: false },
+          };
+        }
+
+        // Fallback to individual environment variables (local development)
+        return {
+          type: 'postgres',
+          host: configService.get<string>('DB_HOST'),
+          port: configService.get<number>('DB_PORT'),
+          username: configService.get<string>('DB_USERNAME'),
+          password: configService.get<string>('DB_PASSWORD'),
+          database: configService.get<string>('DB_NAME'),
+          entities: [User, ExternalAuth, Quiz, Question],
+          synchronize: configService.get<string>('NODE_ENV') !== 'production',
+          ssl:
+            configService.get<string>('DB_SSL') === 'true'
+              ? { rejectUnauthorized: false }
+              : false,
+        };
+      },
       inject: [ConfigService],
     }),
     UsersModule,

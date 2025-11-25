@@ -3,17 +3,33 @@ import { Strategy, Profile } from 'passport-github2';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+/**
+ * GitHub App Authentication Strategy
+ *
+ * Uses GitHub App OAuth flow (not legacy OAuth App).
+ * GitHub Apps provide:
+ * - Granular permissions
+ * - Higher rate limits
+ * - Better security with short-lived tokens
+ *
+ * Setup: Create a GitHub App at https://github.com/settings/apps
+ * Required permissions: read:user, user:email
+ */
 @Injectable()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   constructor(private configService: ConfigService) {
     super({
-      clientID: configService.get<string>('GITHUB_CLIENT_ID') || 'placeholder',
+      // GitHub App Client ID (not OAuth App)
+      clientID:
+        configService.get<string>('GITHUB_APP_CLIENT_ID') || 'placeholder',
+      // GitHub App Client Secret
       clientSecret:
-        configService.get<string>('GITHUB_CLIENT_SECRET') || 'placeholder',
+        configService.get<string>('GITHUB_APP_CLIENT_SECRET') || 'placeholder',
       callbackURL:
         configService.get<string>('GITHUB_CALLBACK_URL') ||
         'http://localhost:3000/auth/github/callback',
-      scope: ['user:email'],
+      // Scopes for GitHub App OAuth
+      scope: ['read:user', 'user:email'],
     });
   }
 

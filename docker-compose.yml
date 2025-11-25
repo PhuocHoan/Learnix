@@ -31,8 +31,6 @@ services:
         condition: service_healthy
     env_file:
       - ./backend/.env
-    environment:
-      DB_HOST: postgres
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
