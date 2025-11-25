@@ -83,6 +83,13 @@ pnpm install
 pnpm dev
 ```
 
+### Run Unit Test (Backend)
+
+```bash
+cd backend
+pnpm test 
+```
+
 ## Production Deployment
 
 ### Database
