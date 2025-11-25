@@ -1,0 +1,68 @@
+# ==============================================================================
+# CI Pipeline - Learnix
+# Runs on: Pull requests and pushes to main
+# Uses reusable workflows for DRY pattern
+# ==============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/reusable-ci.yml'
+      - '.github/actions/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/reusable-ci.yml'
+      - '.github/actions/**'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==========================
+  # Backend CI
+  # ==========================
+  backend:
+    name: Backend
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      project: backend
+      test-command: pnpm test
+
+  # ==========================
+  # Frontend CI
+  # ==========================
+  frontend:
+    name: Frontend
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      project: frontend
+      test-command: pnpm test
+
+  # ==========================
+  # CI Status Check
+  # ==========================
+  ci-status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    if: always()
+    steps:
+      - name: Check CI status
+        run: |
+          if [[ "${{ needs.backend.result }}" == "failure" ]] || \
+             [[ "${{ needs.frontend.result }}" == "failure" ]]; then
+            echo "❌ CI failed"
+            exit 1
+          fi
+          echo "✅ All CI checks passed"

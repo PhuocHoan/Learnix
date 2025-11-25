@@ -1,0 +1,62 @@
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/use-auth';
+import type { ReactNode } from 'react';
+import { GraduationCap, Loader2, ShieldX } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+interface ProtectedRouteProps {
+  children: ReactNode;
+  allowedRoles?: string[];
+}
+
+export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center gradient-hero">
+        <div className="text-center animate-fade-in">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="p-3 gradient-primary rounded-xl">
+              <GraduationCap className="w-8 h-8 text-white" />
+            </div>
+            <span className="text-3xl font-bold text-foreground">Learnix</span>
+          </div>
+          <div className="flex items-center justify-center gap-3 text-muted-foreground">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <span className="font-medium">Loading...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center gradient-hero p-4">
+        <div className="text-center max-w-md animate-fade-in">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-destructive/10 flex items-center justify-center">
+            <ShieldX className="w-10 h-10 text-destructive" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
+          <p className="text-muted-foreground mb-6">
+            You don't have permission to access this page. This area is restricted to {allowedRoles.join(' or ')} users only.
+          </p>
+          <Link 
+            to="/dashboard"
+            className="inline-flex items-center justify-center px-6 py-3 gradient-primary text-white rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all"
+          >
+            Go to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}

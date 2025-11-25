@@ -1,0 +1,16 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# pnpm
+.pnpm-store/
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

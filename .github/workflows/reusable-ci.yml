@@ -1,0 +1,99 @@
+# ==============================================================================
+# Reusable Workflow: CI for a Node.js Project
+# Called by ci.yml for both frontend and backend
+# ==============================================================================
+
+name: Reusable CI
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        description: Project name (backend or frontend)
+        required: true
+        type: string
+      node-version:
+        description: Node.js version
+        required: false
+        type: string
+        default: '24'
+      run-tests:
+        description: Whether to run tests
+        required: false
+        type: boolean
+        default: true
+      test-command:
+        description: Test command to run
+        required: false
+        type: string
+        default: 'pnpm test'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.project }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.project }}
+          node-version: ${{ inputs.node-version }}
+
+      - name: Run ESLint
+        run: pnpm lint
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    if: ${{ inputs.run-tests }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.project }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.project }}
+          node-version: ${{ inputs.node-version }}
+
+      - name: Run tests
+        run: ${{ inputs.test-command }}
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ inputs.project }}-coverage
+          path: ${{ inputs.project }}/coverage
+          retention-days: 7
+          if-no-files-found: ignore
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: always() && needs.lint.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    defaults:
+      run:
+        working-directory: ${{ inputs.project }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.project }}
+          node-version: ${{ inputs.node-version }}
+
+      - name: Build
+        run: pnpm build
