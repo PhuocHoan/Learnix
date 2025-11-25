@@ -20,8 +20,13 @@ export function LoginForm() {
       // Login sets HTTP-only cookie automatically
       await authApi.login(data);
       // Refresh user state from server (cookie is sent automatically)
-      await refreshUser();
-      navigate('/dashboard');
+      const user = await refreshUser();
+      // If user doesn't have a role, redirect to select-role
+      if (!user?.role) {
+        navigate('/select-role');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: unknown) {
       console.error('Login error:', err);
       const errorMessage = err instanceof Error && 'response' in err 

@@ -14,8 +14,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userData = await authApi.getProfile();
       setUser(userData);
-    } catch {
+      return userData;
+    } catch (error) {
       setUser(null);
+      return null;
     }
   }, []);
 

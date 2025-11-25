@@ -7,6 +7,7 @@ import { DashboardPage } from '@/pages/dashboard/dashboard-page';
 import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
 import { AuthCallbackPage } from '@/pages/auth/auth-callback-page';
+import { SelectRolePage } from '@/pages/auth/select-role-page';
 import { AdminDashboardPage } from '@/pages/admin/admin-dashboard-page';
 import { UserManagementPage } from '@/pages/admin/user-management-page';
 import { SystemStatsPage } from '@/pages/admin/system-stats-page';
@@ -23,6 +24,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
+            <Route path="/select-role" element={<SelectRolePage />} />
             
             <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

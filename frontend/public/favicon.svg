@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background with rounded corners -->
+  <rect width="100" height="100" rx="22" fill="url(#grad)"/>
+  
+  <!-- Lucide GraduationCap icon (scaled and centered) -->
+  <g transform="translate(50, 50) scale(3)" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Cap top -->
+    <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" transform="translate(-12, -12)"/>
+    <!-- Tassel -->
+    <path d="M22 10v6" transform="translate(-12, -12)"/>
+    <!-- Cap bottom -->
+    <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" transform="translate(-12, -12)"/>
+  </g>
+</svg>

@@ -13,9 +13,17 @@ export function AuthCallbackPage() {
     // We just need to refresh the user state from the server
     const handleCallback = async () => {
       try {
-        await refreshUser();
-        navigate('/dashboard');
-      } catch {
+        const user = await refreshUser();
+        
+        // If user doesn't have a role, redirect to select-role
+        if (!user?.role) {
+          // Force full page reload to ensure clean state
+          window.location.href = '/select-role';
+        } else {
+          // Force full page reload to ensure clean state
+          window.location.href = '/dashboard';
+        }
+      } catch (error) {
         setError('Authentication failed. Please try again.');
         // Redirect to login after a short delay
         setTimeout(() => navigate('/login'), 2000);

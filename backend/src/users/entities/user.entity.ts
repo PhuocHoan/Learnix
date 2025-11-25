@@ -27,9 +27,9 @@ export class User {
   @Column({
     type: 'enum',
     enum: UserRole,
-    default: UserRole.STUDENT,
+    nullable: true, // Allow null so users can select role after signup
   })
-  role: UserRole;
+  role: UserRole | null;
 
   @Column({ default: true })
   isActive: boolean;

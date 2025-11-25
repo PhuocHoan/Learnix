@@ -8,6 +8,7 @@ import { LoginDto } from './dto/login.dto';
 import { ExternalAuth, AuthProvider } from './entities/external-auth.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateUserDto } from '../users/dto/create-user.dto';
+import { UserRole } from '../users/enums/user-role.enum';
 
 export interface OAuthProfile {
   email: string;
@@ -57,18 +58,24 @@ export class AuthService {
   }
 
   async register(createUserDto: CreateUserDto) {
-    const user = await this.usersService.create(createUserDto);
+    // Don't set role during registration - user will select it on /select-role page
+    const { role: _, ...userDataWithoutRole } = createUserDto;
+    const user = await this.usersService.create(userDataWithoutRole);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...result } = user;
+    const { password: __, ...result } = user;
     return result;
   }
 
   async validateOAuthLogin(provider: AuthProvider, profile: OAuthProfile) {
+    console.log(`OAuth Login - Provider: ${provider}, Email: ${profile.email}, ProviderId: ${profile.providerId}`);
+    
     // Check if external auth already exists
     let externalAuth = await this.externalAuthRepository.findOne({
       where: { provider, providerId: profile.providerId },
       relations: ['user'],
     });
+
+    console.log('External Auth Found:', externalAuth ? `Yes, User: ${externalAuth.user.email}` : 'No');
 
     let user: User | null = null;
 
@@ -85,19 +92,26 @@ export class AuthService {
         await this.externalAuthRepository.save(externalAuth);
       }
     } else {
+      // No existing external auth for this provider+providerId
       // Check if user exists with this email
       user = await this.usersService.findByEmail(profile.email);
 
+      console.log('Existing User Found by Email:', user ? `Yes, Email: ${user.email}, ID: ${user.id}` : 'No');
+
       if (!user) {
         // Create new user (no password needed for OAuth users)
+        console.log(`Creating NEW user with email: ${profile.email}`);
         user = await this.usersService.create({
           email: profile.email,
           fullName: profile.fullName,
           avatarUrl: profile.avatarUrl,
         });
+        console.log(`Created user with ID: ${user.id}`);
+      } else {
+        console.log(`Linking existing user (${user.email}) to ${provider} account`);
       }
 
-      // Create external auth record
+      // Create external auth record linking this provider to this user
       externalAuth = this.externalAuthRepository.create({
         provider,
         providerId: profile.providerId,
@@ -112,6 +126,8 @@ export class AuthService {
       throw new UnauthorizedException('Failed to authenticate user');
     }
 
+    console.log(`Returning user: ${user.email} (ID: ${user.id}, Role: ${user.role})`);
+
     const payload = { email: user.email, sub: user.id, role: user.role };
     return {
       access_token: this.jwtService.sign(payload),
@@ -123,5 +139,17 @@ export class AuthService {
         avatarUrl: user.avatarUrl,
       },
     };
+  }
+
+  async updateUserRole(userId: string, role: UserRole): Promise<User> {
+    return await this.usersService.updateRole(userId, role);
+  }
+
+  async getUserById(userId: string): Promise<User> {
+    const user = await this.usersService.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return user;
   }
 }

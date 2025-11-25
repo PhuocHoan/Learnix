@@ -15,11 +15,14 @@ import { LoginDto } from './dto/login.dto';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GithubAuthGuard } from './guards/github-auth.guard';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { ConfigService } from '@nestjs/config';
 import { AuthProvider } from './entities/external-auth.entity';
 import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
+import { SelectRoleDto } from './dto/select-role.dto';
 
 // Cookie configuration for secure token storage
 // For cross-origin (different subdomains), we need sameSite: 'none' and secure: true
@@ -67,21 +70,39 @@ export class AuthController {
   }
 
   @Get('google')
-  @UseGuards(AuthGuard('google'))
-  async googleAuth() {
-    // Initiates the Google OAuth flow
+  @UseGuards(GoogleAuthGuard)
+  async googleAuth(@Req() req: Request) {
+    // Force account selection by passing prompt parameter
+    // This prevents Google from using cached sessions
   }
 
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleAuthGuard)
   async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
+    const profile = req.user as OAuthProfile;
+    
+    // Debug logging to see what profile we're receiving
+    console.log('Google OAuth Profile:', {
+      email: profile.email,
+      providerId: profile.providerId,
+      fullName: profile.fullName,
+    });
+    
     const result = await this.authService.validateOAuthLogin(
       AuthProvider.GOOGLE,
-      req.user as OAuthProfile,
+      profile,
     );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // Set JWT token in HTTP-only cookie
+    // Clear cookie with exact same options to ensure it's actually cleared
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+    });
+    
+    // Set new JWT token in HTTP-only cookie
     res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
 
     // Redirect to frontend without token in URL (more secure)
@@ -103,7 +124,15 @@ export class AuthController {
     );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // Set JWT token in HTTP-only cookie
+    // Clear cookie with exact same options to ensure it's actually cleared
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+    });
+    
+    // Set new JWT token in HTTP-only cookie
     res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
 
     // Redirect to frontend without token in URL (more secure)
@@ -112,7 +141,29 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  getProfile(@CurrentUser() user: User): User {
-    return user;
+  async getProfile(@CurrentUser() user: User) {
+    // Fetch fresh user data from database to get updated role
+    const freshUser = await this.authService.getUserById(user.id);
+    return freshUser;
+  }
+
+  @Post('select-role')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async selectRole(
+    @CurrentUser() user: User,
+    @Body() selectRoleDto: SelectRoleDto,
+  ) {
+    try {
+      const updatedUser = await this.authService.updateUserRole(
+        user.id,
+        selectRoleDto.role,
+      );
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...userWithoutPassword } = updatedUser as User & { password?: string | null };
+      return { user: userWithoutPassword, message: 'Role selected successfully' };
+    } catch (error) {
+      throw error;
+    }
   }
 }

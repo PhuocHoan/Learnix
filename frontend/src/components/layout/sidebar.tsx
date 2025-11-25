@@ -23,7 +23,6 @@ interface SidebarProps {
 const sidebarItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard', roles: ['student', 'instructor', 'admin'] },
   { icon: BookOpen, label: 'Browse Courses', href: '/courses', roles: ['student', 'instructor', 'admin'] },
-  { icon: GraduationCap, label: 'My Learning', href: '/my-learning', roles: ['student'] },
   { icon: Settings, label: 'Settings', href: '/settings', roles: ['student', 'instructor', 'admin'] },
 ];
 
@@ -51,12 +50,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     // Close sidebar on mobile after navigation
     onClose();
   };
-
-  const allItems = [
-    ...sidebarItems.filter(item => !item.roles || user && item.roles.includes(user.role)),
-    ...(user?.role === 'instructor' || user?.role === 'admin' ? instructorItems : []),
-    ...(user?.role === 'admin' ? adminItems : []),
-  ];
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -101,12 +94,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{user.name || 'User'}</p>
-              <span className={cn(
-                "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize",
-                getRoleBadgeColor(user.role)
-              )}>
-                {user.role}
-              </span>
+              {user.role && (
+                <span className={cn(
+                  "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize",
+                  getRoleBadgeColor(user.role)
+                )}>
+                  {user.role}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -117,7 +112,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Navigation
         </p>
-        {allItems.slice(0, 4).map((item) => {
+        {sidebarItems.filter(item => !item.roles || (user?.role && item.roles.includes(user.role))).map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.href;
           

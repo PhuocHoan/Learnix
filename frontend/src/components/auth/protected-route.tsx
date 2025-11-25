@@ -36,7 +36,12 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+  // Redirect to select-role if user hasn't selected a role yet
+  if (user && !user.role && location.pathname !== '/select-role') {
+    return <Navigate to="/select-role" replace />;
+  }
+
+  if (allowedRoles && user && user.role && !allowedRoles.includes(user.role)) {
     return (
       <div className="min-h-screen flex items-center justify-center gradient-hero p-4">
         <div className="text-center max-w-md animate-fade-in">

@@ -1,9 +1,12 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { LoginForm } from '@/features/auth/components/login-form';
-import { GraduationCap, Sparkles } from 'lucide-react';
+import { GraduationCap, Sparkles, CheckCircle2 } from 'lucide-react';
 import { oauthUrls } from '@/lib/config';
 
 export function LoginPage() {
+  const [searchParams] = useSearchParams();
+  const registered = searchParams.get('registered') === 'true';
+
   const handleGoogleLogin = () => {
     window.location.href = oauthUrls.google;
   };
@@ -55,6 +58,13 @@ export function LoginPage() {
           </div>
 
           <div className="glass rounded-2xl p-8 shadow-xl">
+            {registered && (
+              <div className="flex items-center justify-center gap-2 p-4 mb-6 text-green-600 bg-green-50 dark:bg-green-950/30 rounded-xl border border-green-200 dark:border-green-800">
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
+                <span className="text-sm font-medium">Account created! Please login to continue.</span>
+              </div>
+            )}
+            
             <div className="text-center space-y-2 mb-8">
               <h1 className="text-3xl font-bold bg-linear-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 Welcome Back

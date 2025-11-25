@@ -10,7 +10,6 @@ export const registerSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   fullName: z.string().min(2, 'Name must be at least 2 characters').optional(),
-  role: z.enum(['student', 'instructor']),
 });
 
 export type LoginData = z.infer<typeof loginSchema>;
@@ -31,6 +30,10 @@ export const authApi = {
   },
   getProfile: async () => {
     const response = await api.get('/auth/me');
+    return response.data;
+  },
+  selectRole: async (data: { role: 'student' | 'instructor' }) => {
+    const response = await api.post('/auth/select-role', data);
     return response.data;
   },
 };

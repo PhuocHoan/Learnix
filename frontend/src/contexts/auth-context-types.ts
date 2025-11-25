@@ -3,7 +3,7 @@ import { createContext } from 'react';
 export interface User {
   userId: string;
   email: string;
-  role: string;
+  role: string | null;
   name?: string;
 }
 
@@ -12,7 +12,7 @@ export interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

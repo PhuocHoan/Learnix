@@ -3,27 +3,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { registerSchema, authApi, type RegisterData } from '../api/auth-api';
-import { Mail, Lock, User, AlertCircle, Loader2, GraduationCap, BookOpen } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
 
 export function RegisterForm() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<RegisterData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: {
-      role: 'student',
-    },
   });
-
-  const selectedRole = watch('role');
 
   const onSubmit = async (data: RegisterData) => {
     try {
       setError(null);
       await authApi.register(data);
-      // Auto login or redirect to login
-      navigate('/login');
+      // Redirect to login after successful registration
+      navigate('/login?registered=true');
     } catch (err: unknown) {
       const errorMessage = err instanceof Error && 'response' in err 
         ? (err as { response?: { data?: { message?: string } } }).response?.data?.message 
@@ -40,59 +34,6 @@ export function RegisterForm() {
           {error}
         </div>
       )}
-
-      {/* Role Selection */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">I want to</label>
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setValue('role', 'student')}
-            className={cn(
-              "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
-              selectedRole === 'student'
-                ? "border-primary bg-primary/10 shadow-md"
-                : "border-border hover:border-primary/50 hover:bg-muted/50"
-            )}
-          >
-            <div className={cn(
-              "p-2 rounded-lg transition-colors",
-              selectedRole === 'student' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-            )}>
-              <GraduationCap className="w-5 h-5" />
-            </div>
-            <span className={cn(
-              "text-sm font-medium",
-              selectedRole === 'student' ? "text-primary" : "text-foreground"
-            )}>Learn</span>
-            <span className="text-xs text-muted-foreground">As a Student</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setValue('role', 'instructor')}
-            className={cn(
-              "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
-              selectedRole === 'instructor'
-                ? "border-primary bg-primary/10 shadow-md"
-                : "border-border hover:border-primary/50 hover:bg-muted/50"
-            )}
-          >
-            <div className={cn(
-              "p-2 rounded-lg transition-colors",
-              selectedRole === 'instructor' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-            )}>
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <span className={cn(
-              "text-sm font-medium",
-              selectedRole === 'instructor' ? "text-primary" : "text-foreground"
-            )}>Teach</span>
-            <span className="text-xs text-muted-foreground">As an Instructor</span>
-          </button>
-        </div>
-        <input type="hidden" {...register('role')} />
-      </div>
       
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Full Name</label>
@@ -165,7 +106,7 @@ export function RegisterForm() {
             Creating account...
           </>
         ) : (
-          `Create ${selectedRole === 'instructor' ? 'Instructor' : 'Student'} Account`
+          'Create Account'
         )}
       </button>
     </form>
