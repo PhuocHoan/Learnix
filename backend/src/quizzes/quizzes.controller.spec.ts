@@ -31,7 +31,7 @@ describe('QuizzesController', () => {
   };
 
   const mockUser = {
-    userId: 'user-1',
+    id: 'user-1',
     email: 'instructor@example.com',
     role: 'instructor',
   };
@@ -77,7 +77,7 @@ describe('QuizzesController', () => {
 
       expect(quizzesService.generateQuizWithAI).toHaveBeenCalledWith(
         generateDto,
-        mockUser.userId,
+        mockUser.id,
       );
       expect(result).toEqual(mockQuiz);
     });
@@ -91,7 +91,7 @@ describe('QuizzesController', () => {
       const result = await controller.getMyQuizzes(mockUser);
 
       expect(quizzesService.findByInstructor).toHaveBeenCalledWith(
-        mockUser.userId,
+        mockUser.id,
       );
       expect(result).toEqual(quizzes);
     });
