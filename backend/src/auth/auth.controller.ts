@@ -22,10 +22,11 @@ import { AuthProvider } from './entities/external-auth.entity';
 import { User } from '../users/entities/user.entity';
 
 // Cookie configuration for secure token storage
+// For cross-origin (different subdomains), we need sameSite: 'none' and secure: true
 const COOKIE_OPTIONS = {
   httpOnly: true, // Prevents XSS attacks - JavaScript cannot access this cookie
-  secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-  sameSite: 'lax' as const, // CSRF protection
+  secure: true, // Always use secure in production (required for sameSite: 'none')
+  sameSite: 'none' as const, // Required for cross-origin cookies
   maxAge: 24 * 60 * 60 * 1000, // 24 hours
   path: '/',
 };
