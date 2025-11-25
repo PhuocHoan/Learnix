@@ -34,13 +34,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-node-pnpm
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
-          working-directory: frontend
+          node-version: '24'
 
       - name: Install Vercel CLI
-        run: pnpm add -g vercel
+        run: npm install -g vercel
 
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
@@ -76,13 +76,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-node-pnpm
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
-          working-directory: backend
+          node-version: '24'
 
       - name: Install Vercel CLI
-        run: pnpm add -g vercel
+        run: npm install -g vercel
 
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
