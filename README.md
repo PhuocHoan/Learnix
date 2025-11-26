@@ -90,6 +90,16 @@ cd backend
 pnpm test 
 ```
 
+## Test Accounts
+
+The following test accounts are available for development and testing:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Student | user@user.com | 123456 |
+| Instructor | instructor@instructor.com | 123456 |
+| Admin | admin@admin.com | 123456 |
+
 ## Production Deployment
 
 ### Database
