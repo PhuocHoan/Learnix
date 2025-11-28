@@ -2,7 +2,6 @@
   "name": "learnix-monorepo",
   "private": true,
   "version": "0.0.0",
-  "packageManager": "pnpm@10.24.0",
   "workspaces": [
     "frontend",
     "backend"

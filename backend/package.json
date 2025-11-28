@@ -2,7 +2,6 @@
   "name": "backend",
   "version": "0.0.1",
   "description": "",
-  "packageManager": "pnpm@10.24.0",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
