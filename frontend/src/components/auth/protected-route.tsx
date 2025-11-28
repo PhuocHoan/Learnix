@@ -1,15 +1,18 @@
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/use-auth';
-import type { ReactNode } from 'react';
-import { GraduationCap, Loader2, ShieldX } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/use-auth";
+import type { ReactNode } from "react";
+import { GraduationCap, Loader2, ShieldX } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   allowedRoles?: string[];
 }
 
-export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+export function ProtectedRoute({
+  children,
+  allowedRoles,
+}: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
@@ -37,7 +40,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   // Redirect to select-role if user hasn't selected a role yet
-  if (user && !user.role && location.pathname !== '/select-role') {
+  if (user && !user.role && location.pathname !== "/select-role") {
     return <Navigate to="/select-role" replace />;
   }
 
@@ -48,11 +51,14 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-destructive/10 flex items-center justify-center">
             <ShieldX className="w-10 h-10 text-destructive" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">
+            Access Denied
+          </h1>
           <p className="text-muted-foreground mb-6">
-            You don't have permission to access this page. This area is restricted to {allowedRoles.join(' or ')} users only.
+            You don't have permission to access this page. This area is
+            restricted to {allowedRoles.join(" or ")} users only.
           </p>
-          <Link 
+          <Link
             to="/dashboard"
             className="inline-flex items-center justify-center px-6 py-3 gradient-primary text-white rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all"
           >

@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { ReactNode } from 'react';
-import { authApi } from '@/features/auth/api/auth-api';
-import { AuthContext } from './auth-context-types';
-import type { User } from './auth-context-types';
+import { useState, useEffect, useCallback } from "react";
+import type { ReactNode } from "react";
+import { authApi } from "@/features/auth/api/auth-api";
+import { AuthContext } from "./auth-context-types";
+import type { User } from "./auth-context-types";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -23,7 +23,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // On mount, check if user is authenticated via cookie
-    authApi.getProfile()
+    authApi
+      .getProfile()
       .then((data) => setUser(data))
       .catch(() => setUser(null))
       .finally(() => setIsLoading(false));
@@ -39,7 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, logout, refreshUser }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, isAuthenticated: !!user, logout, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

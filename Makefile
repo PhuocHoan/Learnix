@@ -6,6 +6,7 @@ help:
 	@echo "make db    - Start PostgreSQL only"
 	@echo "make logs  - View logs"
 	@echo "make clean - Stop and remove volumes"
+	@echo "make pre   - Run pre-commit checks"
 
 up:
 	docker compose up -d
@@ -21,3 +22,6 @@ logs:
 
 clean:
 	docker compose down -v
+
+pre:
+	pnpm precommit

@@ -1,11 +1,11 @@
-import { api } from '@/lib/api';
+import { api } from "@/lib/api";
 
 export interface User {
   id: string;
   email: string;
   fullName: string | null;
   avatarUrl: string | null;
-  role: 'guest' | 'student' | 'instructor' | 'admin';
+  role: "guest" | "student" | "instructor" | "admin";
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -19,7 +19,7 @@ export interface SystemStats {
 
 export const adminApi = {
   getAllUsers: async (): Promise<User[]> => {
-    const response = await api.get('/admin/users');
+    const response = await api.get("/admin/users");
     return response.data;
   },
 
@@ -28,13 +28,18 @@ export const adminApi = {
     return response.data;
   },
 
-  updateUserStatus: async (userId: string, isActive: boolean): Promise<User> => {
-    const response = await api.patch(`/admin/users/${userId}/status`, { isActive });
+  updateUserStatus: async (
+    userId: string,
+    isActive: boolean,
+  ): Promise<User> => {
+    const response = await api.patch(`/admin/users/${userId}/status`, {
+      isActive,
+    });
     return response.data;
   },
 
   getSystemStats: async (): Promise<SystemStats> => {
-    const response = await api.get('/admin/stats');
+    const response = await api.get("/admin/stats");
     return response.data;
   },
 };

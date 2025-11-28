@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/use-auth';
-import { GraduationCap, Loader2, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/use-auth";
+import { GraduationCap, Loader2, AlertCircle } from "lucide-react";
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -14,22 +14,22 @@ export function AuthCallbackPage() {
     const handleCallback = async () => {
       try {
         const user = await refreshUser();
-        
+
         // If user doesn't have a role, redirect to select-role
         if (!user?.role) {
           // Force full page reload to ensure clean state
-          window.location.href = '/select-role';
+          window.location.href = "/select-role";
         } else {
           // Force full page reload to ensure clean state
-          window.location.href = '/dashboard';
+          window.location.href = "/dashboard";
         }
       } catch {
-        setError('Authentication failed. Please try again.');
+        setError("Authentication failed. Please try again.");
         // Redirect to login after a short delay
-        setTimeout(() => navigate('/login'), 2000);
+        setTimeout(() => navigate("/login"), 2000);
       }
     };
-    
+
     handleCallback();
   }, [refreshUser, navigate]);
 
@@ -43,7 +43,9 @@ export function AuthCallbackPage() {
             </div>
           </div>
           <p className="text-destructive font-medium">{error}</p>
-          <p className="text-sm text-muted-foreground mt-2">Redirecting to login...</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Redirecting to login...
+          </p>
         </div>
       </div>
     );
@@ -62,7 +64,9 @@ export function AuthCallbackPage() {
           <Loader2 className="w-5 h-5 animate-spin text-primary" />
           <span className="font-medium">Signing you in...</span>
         </div>
-        <p className="text-sm text-muted-foreground mt-2">Please wait while we complete authentication</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Please wait while we complete authentication
+        </p>
       </div>
     </div>
   );

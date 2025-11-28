@@ -34,17 +34,17 @@ The Guest subsystem allows unregistered visitors to view course overviews and pe
 ### **Main Functions**
 
 - **Homepage**
-    - Display featured courses and popular categories.
-    - Show basic info: title, thumbnail, instructor, and short description.
+  - Display featured courses and popular categories.
+  - Show basic info: title, thumbnail, instructor, and short description.
 - **Course List**
-    - Browse courses by category or tag.
+  - Browse courses by category or tag.
 - **Course Details**
-    - View course description, instructor name, difficulty level, and number of enrolled students.
-    - Lessons and quizzes remain locked.
+  - View course description, instructor name, difficulty level, and number of enrolled students.
+  - Lessons and quizzes remain locked.
 - **Search**
-    - Search by course title, tags, or summary.
+  - Search by course title, tags, or summary.
 - **Register / Login**
-    - Redirect to authentication when selecting “Enroll.”
+  - Redirect to authentication when selecting “Enroll.”
 
 ## **3.2. Student Subsystem**
 
@@ -55,18 +55,18 @@ The **Student subsystem** is the core learning module. Registered students can e
 ### **Main Functions**
 
 - **Course Enrollment**
-    - Enroll or unenroll from courses.
-    - Access lessons after enrolling.
+  - Enroll or unenroll from courses.
+  - Access lessons after enrolling.
 - **Learning Lessons**
-    - View lesson content in text or video format.
+  - View lesson content in text or video format.
 - **Quizzes**
-    - Take quizzes created by instructors.
-    - Receive immediate results and score.
+  - Take quizzes created by instructors.
+  - Receive immediate results and score.
 - **Learning Dashboard**
-    - View enrolled courses.
-    - Track progress, quiz scores, and completion percentage.
+  - View enrolled courses.
+  - Track progress, quiz scores, and completion percentage.
 - **Feedback**
-    - Rate and comment on courses after completion.
+  - Rate and comment on courses after completion.
 
 ## **3.3. Instructor Subsystem**
 
@@ -77,19 +77,19 @@ The **Instructor subsystem** allows teachers to create, edit, and manage their c
 ### **Main Functions**
 
 - **Course Management**
-    - Create, edit, publish/unpublish, or delete courses.
-    - Define title, description, categories, tags, and access type (free/premium).
+  - Create, edit, publish/unpublish, or delete courses.
+  - Define title, description, categories, tags, and access type (free/premium).
 - **Lesson Management**
-    - Add or edit lessons with text or video content.
+  - Add or edit lessons with text or video content.
 - **Quiz Management**
-    - Create quizzes manually.
-    - **AI Quiz Generator** Use AI to automatically generate multiple-choice or coding questions from course materials.
-    - Add/edit multiple-choice questions.
+  - Create quizzes manually.
+  - **AI Quiz Generator** Use AI to automatically generate multiple-choice or coding questions from course materials.
+  - Add/edit multiple-choice questions.
 - **Student Insights**
-    - View enrolled students.
-    - See average quiz scores and completion rates.
+  - View enrolled students.
+  - See average quiz scores and completion rates.
 - **Feedback Management**
-    - Review and respond to student comments.
+  - Review and respond to student comments.
 
 ## **3.4. Administrator Subsystem**
 
@@ -100,27 +100,27 @@ The **Administrator subsystem** provides full control over user accounts, conten
 ### **Main Functions**
 
 - **User & Role Management**
-    - View all users.
-    - Lock/unlock users.
-    - Assign roles (Student/Instructor/Admin).
+  - View all users.
+  - Lock/unlock users.
+  - Assign roles (Student/Instructor/Admin).
 - **Course Moderation**
-    - View all courses.
-    - Hide or delete inappropriate content.
-    - Review reported courses or lessons.
+  - View all courses.
+  - Hide or delete inappropriate content.
+  - Review reported courses or lessons.
 - **System Configuration**
-    - Manage environment-level settings.
+  - Manage environment-level settings.
 - **Statistics**
-    - View summary of users, courses, and completion metrics.
+  - View summary of users, courses, and completion metrics.
 
 ## 3.5. Common Features
 
 - **Authentication**
-    - Register, login, logout.
-    - Forgot password flow.
+  - Register, login, logout.
+  - Forgot password flow.
 - **Profile Management**
-    - Update name, bio, date of birth, and profile picture.
+  - Update name, bio, date of birth, and profile picture.
 - **Browse & Search**
-    - Filter courses by title, instructor, tags, or categories.
+  - Filter courses by title, instructor, tags, or categories.
 
 ---
 
@@ -174,28 +174,29 @@ During the development of **Learnix**, several technical challenges were identif
 
 # 6. Evaluation
 
-| **Criteria** | **Description** | **Points** |
-| --- | --- | --- |
-| **1. Common Features** | - Registration, login with JWT or Session-Based authentication (0.5pts)
+| **Criteria**           | **Description**                                                         | **Points** |
+| ---------------------- | ----------------------------------------------------------------------- | ---------- |
+| **1. Common Features** | - Registration, login with JWT or Session-Based authentication (0.5pts) |
+
 - Profile management (Update name, bio) (0.25pts)
 - View course list and details (0.25pts)
 - Search courses by title, category, tag (0.25pts) | 1.75 |
-| **2. Basic Student Features** | - Enroll/unenroll courses (0.25pts)
+  | **2. Basic Student Features** | - Enroll/unenroll courses (0.25pts)
 - View lesson content (text, video) (0.5pts)
 - Take quizzes, view results and earn reward coins (0.5pts)
 - Rate and comment on courses (0.25pts) | 1.5 |
-| **3. Advanced Student Features** | - Embedded IDE integration for code execution (≥2 languages)  (1pts)
+  | **3. Advanced Student Features** | - Embedded IDE integration for code execution (≥2 languages) (1pts)
 - Learning progress tracking dashboard (0.5pts) | 1.5 |
-| **4. Instructor Features** | - Create and manage courses and lessons (1pts)
+  | **4. Instructor Features** | - Create and manage courses and lessons (1pts)
 - Upload materials (video, code samples) (0.5pts)
 - Create/edit quizzes manually (0.25pts)
 - View student analytics and progress (0.5pts) | 2.25 |
-| **5. AI Quiz Generator Integration** | - AI auto-generates questions from course materials (1pts) | 1.0 |
-| **6. Administrator Features** | - Manage users, roles, and permissions (0.5pts)
+  | **5. AI Quiz Generator Integration** | - AI auto-generates questions from course materials (1pts) | 1.0 |
+  | **6. Administrator Features** | - Manage users, roles, and permissions (0.5pts)
 - Content moderation and course management (0.5pts) | 1.0 |
-| **7. Deployment and Public Hosting** | - Deploy system to production environment
+  | **7. Deployment and Public Hosting** | - Deploy system to production environment
 - Configure domain and ensure stable system operation | 0.5 |
-| **8. UI/UX and System Design** | - User-friendly, responsive interface
+  | **8. UI/UX and System Design** | - User-friendly, responsive interface
 - Smooth user experience | 0.5 |
 
 ### **Notes:**

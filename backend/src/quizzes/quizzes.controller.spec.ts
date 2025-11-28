@@ -4,6 +4,8 @@ import { QuizzesController } from './quizzes.controller';
 import { QuizzesService } from './quizzes.service';
 import { Quiz, QuizStatus } from './entities/quiz.entity';
 import { Question } from './entities/question.entity';
+import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
 
 describe('QuizzesController', () => {
   let controller: QuizzesController;
@@ -26,14 +28,20 @@ describe('QuizzesController', () => {
     quizId: 'quiz-1',
     questionText: 'What is 2 + 2?',
     options: ['1', '2', '3', '4'],
-    correctAnswer: 3,
+    correctAnswer: 'D',
     explanation: 'Basic math',
   };
 
-  const mockUser = {
+  const mockUser: User = {
     id: 'user-1',
     email: 'instructor@example.com',
-    role: 'instructor',
+    role: UserRole.INSTRUCTOR,
+    password: null,
+    fullName: 'Test Instructor',
+    avatarUrl: '',
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   beforeEach(async () => {
@@ -90,9 +98,7 @@ describe('QuizzesController', () => {
 
       const result = await controller.getMyQuizzes(mockUser);
 
-      expect(quizzesService.findByInstructor).toHaveBeenCalledWith(
-        mockUser.id,
-      );
+      expect(quizzesService.findByInstructor).toHaveBeenCalledWith(mockUser.id);
       expect(result).toEqual(quizzes);
     });
   });

@@ -10,25 +10,44 @@ on:
   push:
     branches: [main]
     paths:
-      - 'frontend/**'
-      - 'backend/**'
-      - '.github/workflows/ci.yml'
-      - '.github/workflows/reusable-ci.yml'
-      - '.github/actions/**'
+      - "frontend/**"
+      - "backend/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/reusable-ci.yml"
+      - ".github/actions/**"
   pull_request:
     branches: [main]
     paths:
-      - 'frontend/**'
-      - 'backend/**'
-      - '.github/workflows/ci.yml'
-      - '.github/workflows/reusable-ci.yml'
-      - '.github/actions/**'
+      - "frontend/**"
+      - "backend/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/reusable-ci.yml"
+      - ".github/actions/**"
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # ==========================
+  # Format Check (runs once for whole repo)
+  # ==========================
+  format:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: .
+          node-version: "24"
+
+      - name: Check formatting
+        run: pnpm exec prettier --check .
+
   # ==========================
   # Backend CI
   # ==========================
@@ -55,12 +74,13 @@ jobs:
   ci-status:
     name: CI Status
     runs-on: ubuntu-latest
-    needs: [backend, frontend]
+    needs: [format, backend, frontend]
     if: always()
     steps:
       - name: Check CI status
         run: |
-          if [[ "${{ needs.backend.result }}" == "failure" ]] || \
+          if [[ "${{ needs.format.result }}" == "failure" ]] || \
+             [[ "${{ needs.backend.result }}" == "failure" ]] || \
              [[ "${{ needs.frontend.result }}" == "failure" ]]; then
             echo "❌ CI failed"
             exit 1

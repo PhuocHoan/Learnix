@@ -1,4 +1,4 @@
-import { createContext } from 'react';
+import { createContext } from "react";
 
 export interface User {
   userId: string;
@@ -15,4 +15,6 @@ export interface AuthContextType {
   refreshUser: () => Promise<User | null>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined,
+);

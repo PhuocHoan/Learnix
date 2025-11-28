@@ -1,15 +1,15 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from "path"
-import tailwindcss from "@tailwindcss/vite"
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
+import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react({
       babel: {
-        plugins: [['babel-plugin-react-compiler']],
+        plugins: [["babel-plugin-react-compiler"]],
       },
     }),
     tailwindcss(),
@@ -21,9 +21,9 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
+    environment: "jsdom",
+    setupFiles: "./src/test/setup.ts",
     css: true,
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
   },
-})
+});

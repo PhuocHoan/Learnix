@@ -30,10 +30,9 @@ describe('QuizzesService', () => {
     quizId: 'quiz-1',
     questionText: 'What is 2 + 2?',
     options: ['1', '2', '3', '4'],
-    correctAnswer: 3,
+    correctAnswer: 'D',
     explanation: 'Basic math',
     createdAt: new Date(),
-    updatedAt: new Date(),
   };
 
   beforeEach(async () => {

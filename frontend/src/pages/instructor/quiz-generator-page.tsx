@@ -1,13 +1,17 @@
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { quizzesApi, type Quiz, type Question } from '@/features/quizzes/api/quizzes-api';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  quizzesApi,
+  type Quiz,
+  type Question,
+} from "@/features/quizzes/api/quizzes-api";
+import { useNavigate } from "react-router-dom";
 
 export function QuizGeneratorPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [lessonText, setLessonText] = useState('');
-  const [title, setTitle] = useState('');
+  const [lessonText, setLessonText] = useState("");
+  const [title, setTitle] = useState("");
   const [numberOfQuestions, setNumberOfQuestions] = useState(5);
   const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
@@ -16,16 +20,23 @@ export function QuizGeneratorPage() {
     mutationFn: quizzesApi.generateQuiz,
     onSuccess: (data) => {
       setGeneratedQuiz(data);
-      queryClient.invalidateQueries({ queryKey: ['quizzes', 'my-quizzes'] });
+      queryClient.invalidateQueries({ queryKey: ["quizzes", "my-quizzes"] });
     },
   });
 
   const updateQuestionMutation = useMutation({
-    mutationFn: ({ questionId, data }: { questionId: string; data: Partial<Question> }) =>
-      quizzesApi.updateQuestion(questionId, data),
+    mutationFn: ({
+      questionId,
+      data,
+    }: {
+      questionId: string;
+      data: Partial<Question>;
+    }) => quizzesApi.updateQuestion(questionId, data),
     onSuccess: () => {
       if (generatedQuiz) {
-        queryClient.invalidateQueries({ queryKey: ['quizzes', generatedQuiz.id] });
+        queryClient.invalidateQueries({
+          queryKey: ["quizzes", generatedQuiz.id],
+        });
       }
       setEditingQuestion(null);
     },
@@ -35,7 +46,9 @@ export function QuizGeneratorPage() {
     mutationFn: quizzesApi.deleteQuestion,
     onSuccess: () => {
       if (generatedQuiz) {
-        queryClient.invalidateQueries({ queryKey: ['quizzes', generatedQuiz.id] });
+        queryClient.invalidateQueries({
+          queryKey: ["quizzes", generatedQuiz.id],
+        });
       }
     },
   });
@@ -43,14 +56,14 @@ export function QuizGeneratorPage() {
   const approveMutation = useMutation({
     mutationFn: quizzesApi.approveQuiz,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quizzes', 'my-quizzes'] });
-      navigate('/instructor/quizzes');
+      queryClient.invalidateQueries({ queryKey: ["quizzes", "my-quizzes"] });
+      navigate("/instructor/quizzes");
     },
   });
 
   const handleGenerate = () => {
     if (!title || !lessonText) {
-      alert('Please provide both title and lesson text');
+      alert("Please provide both title and lesson text");
       return;
     }
     generateMutation.mutate({ title, lessonText, numberOfQuestions });
@@ -63,11 +76,15 @@ export function QuizGeneratorPage() {
       {!generatedQuiz ? (
         <div className="space-y-6">
           <div className="bg-card rounded-lg border border-border p-6">
-            <h2 className="text-xl font-semibold mb-4">Generate Quiz from Lesson Text</h2>
-            
+            <h2 className="text-xl font-semibold mb-4">
+              Generate Quiz from Lesson Text
+            </h2>
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Quiz Title</label>
+                <label className="block text-sm font-medium mb-2">
+                  Quiz Title
+                </label>
                 <input
                   type="text"
                   value={title}
@@ -78,7 +95,9 @@ export function QuizGeneratorPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Lesson Text</label>
+                <label className="block text-sm font-medium mb-2">
+                  Lesson Text
+                </label>
                 <textarea
                   value={lessonText}
                   onChange={(e) => setLessonText(e.target.value)}
@@ -88,13 +107,17 @@ export function QuizGeneratorPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Number of Questions</label>
+                <label className="block text-sm font-medium mb-2">
+                  Number of Questions
+                </label>
                 <input
                   type="number"
                   min={3}
                   max={20}
                   value={numberOfQuestions}
-                  onChange={(e) => setNumberOfQuestions(parseInt(e.target.value))}
+                  onChange={(e) =>
+                    setNumberOfQuestions(parseInt(e.target.value))
+                  }
                   className="w-full px-3 py-2 rounded-md border border-input bg-background"
                 />
               </div>
@@ -104,7 +127,9 @@ export function QuizGeneratorPage() {
                 disabled={generateMutation.isPending}
                 className="w-full py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
               >
-                {generateMutation.isPending ? 'Generating...' : 'Generate Quiz with AI'}
+                {generateMutation.isPending
+                  ? "Generating..."
+                  : "Generate Quiz with AI"}
               </button>
 
               {generateMutation.isError && (
@@ -120,7 +145,9 @@ export function QuizGeneratorPage() {
           <div className="bg-card rounded-lg border border-border p-6">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h2 className="text-2xl font-semibold">{generatedQuiz.title}</h2>
+                <h2 className="text-2xl font-semibold">
+                  {generatedQuiz.title}
+                </h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   {generatedQuiz.questions.length} questions generated
                 </p>
@@ -143,7 +170,10 @@ export function QuizGeneratorPage() {
 
             <div className="space-y-4">
               {generatedQuiz.questions.map((question, index) => (
-                <div key={question.id} className="border border-border rounded-lg p-4">
+                <div
+                  key={question.id}
+                  className="border border-border rounded-lg p-4"
+                >
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold">Question {index + 1}</h3>
                     <div className="space-x-2">
@@ -155,7 +185,7 @@ export function QuizGeneratorPage() {
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm('Delete this question?')) {
+                          if (confirm("Delete this question?")) {
                             deleteQuestionMutation.mutate(question.id);
                           }
                         }}
@@ -171,9 +201,9 @@ export function QuizGeneratorPage() {
                       <div
                         key={i}
                         className={`p-2 rounded ${
-                          option.startsWith(question.correctAnswer + ':')
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-muted'
+                          option.startsWith(question.correctAnswer + ":")
+                            ? "bg-green-100 text-green-800"
+                            : "bg-muted"
                         }`}
                       >
                         {option}
@@ -198,7 +228,9 @@ export function QuizGeneratorPage() {
             <h2 className="text-xl font-bold mb-4">Edit Question</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Question Text</label>
+                <label className="block text-sm font-medium mb-2">
+                  Question Text
+                </label>
                 <textarea
                   defaultValue={editingQuestion.questionText}
                   id="edit-question-text"
@@ -207,16 +239,20 @@ export function QuizGeneratorPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Options (one per line, format: "A: text")</label>
+                <label className="block text-sm font-medium mb-2">
+                  Options (one per line, format: "A: text")
+                </label>
                 <textarea
-                  defaultValue={editingQuestion.options.join('\n')}
+                  defaultValue={editingQuestion.options.join("\n")}
                   id="edit-options"
                   className="w-full px-3 py-2 rounded-md border border-input"
                   rows={4}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Correct Answer (A, B, C, or D)</label>
+                <label className="block text-sm font-medium mb-2">
+                  Correct Answer (A, B, C, or D)
+                </label>
                 <input
                   type="text"
                   defaultValue={editingQuestion.correctAnswer}
@@ -228,10 +264,24 @@ export function QuizGeneratorPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    const questionText = (document.getElementById('edit-question-text') as HTMLTextAreaElement).value;
-                    const options = (document.getElementById('edit-options') as HTMLTextAreaElement).value.split('\n').filter(o => o.trim());
-                    const correctAnswer = (document.getElementById('edit-correct-answer') as HTMLInputElement).value;
-                    
+                    const questionText = (
+                      document.getElementById(
+                        "edit-question-text",
+                      ) as HTMLTextAreaElement
+                    ).value;
+                    const options = (
+                      document.getElementById(
+                        "edit-options",
+                      ) as HTMLTextAreaElement
+                    ).value
+                      .split("\n")
+                      .filter((o) => o.trim());
+                    const correctAnswer = (
+                      document.getElementById(
+                        "edit-correct-answer",
+                      ) as HTMLInputElement
+                    ).value;
+
                     updateQuestionMutation.mutate({
                       questionId: editingQuestion.id,
                       data: { questionText, options, correctAnswer },

@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { config } from '@/lib/config';
+import axios from "axios";
+import { config } from "@/lib/config";
 
 const API_URL = config.apiUrl;
 
@@ -34,7 +34,7 @@ export interface Activity {
 
 export const dashboardApi = {
   getStats: async (): Promise<DashboardStats> => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     const response = await axios.get(`${API_URL}/dashboard/stats`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -42,7 +42,7 @@ export const dashboardApi = {
   },
 
   getProgress: async (): Promise<{ currentCourses: CourseProgress[] }> => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     const response = await axios.get(`${API_URL}/dashboard/progress`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -50,7 +50,7 @@ export const dashboardApi = {
   },
 
   getActivity: async (): Promise<{ activities: Activity[] }> => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     const response = await axios.get(`${API_URL}/dashboard/activity`, {
       headers: { Authorization: `Bearer ${token}` },
     });

@@ -1,5 +1,6 @@
 description: "Plan a new feature implementation"
 model: "Claude Opus 4.5 (Preview)"
+
 ---
 
 You are the System Architect. I need to implement the following feature:
@@ -8,21 +9,28 @@ You are the System Architect. I need to implement the following feature:
 Please analyze the requirements and create a detailed implementation plan.
 
 ## Environment Context
--   **Local Development**: Docker Compose (PostgreSQL, NestJS, Vite)
--   **Production**: Vercel (Frontend + Backend) + Aiven PostgreSQL
+
+- **Local Development**: Docker Compose (PostgreSQL, NestJS, Vite)
+- **Production**: Vercel (Frontend + Backend) + Aiven PostgreSQL
 
 ## Planning Sections
 
 1.  **Database Schema**: What tables/columns need to be added or modified? (PostgreSQL)
-    -   Consider Aiven PostgreSQL constraints (SSL, connection pooling).
+    - Consider Aiven PostgreSQL constraints (SSL, connection pooling).
 2.  **API Design**: Define the endpoints (Method, URL, Body, Response).
-    -   Consider Vercel serverless function limits (10s timeout, memory).
+    - Consider Vercel serverless function limits (10s timeout, memory).
 3.  **Frontend Components**: What components need to be created or updated? (React 19)
-    -   Configure environment variables for Vercel.
+    - Configure environment variables for Vercel.
 4.  **Task Breakdown**: List the step-by-step tasks for the Full Stack Developer.
-5.  **Deployment Steps**: How to deploy this feature?
-    -   Local testing with Docker Compose.
-    -   Database migration on Aiven.
-    -   Vercel deployment configuration.
+5.  **Documentation**: What changes are needed in `README.md`?
+    - New commands, environment variables, or setup steps.
+    - New features or configuration options.
+    - Obsolete sections to remove.
+6.  **Deployment Steps**: How to deploy this feature?
+    - Local testing with Docker Compose.
+    - Database migration on Aiven.
+    - Vercel deployment configuration.
+
+**Important**: Always include a documentation review step. The `README.md` must stay up-to-date.
 
 Output the plan in Markdown format.

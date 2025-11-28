@@ -10,11 +10,11 @@ inputs:
   node-version:
     description: Node.js version
     required: false
-    default: '24'
+    default: "24"
   pnpm-version:
     description: pnpm version
     required: false
-    default: '10'
+    default: "10"
   working-directory:
     description: Working directory for the project
     required: true

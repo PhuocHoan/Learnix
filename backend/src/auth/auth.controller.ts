@@ -23,12 +23,11 @@ import { User } from '../users/entities/user.entity';
 import { SelectRoleDto } from './dto/select-role.dto';
 
 // Cookie configuration for secure token storage
-// For cross-origin (different subdomains), we need sameSite: 'none' and secure: true
 const COOKIE_OPTIONS = {
-  httpOnly: true, // Prevents XSS attacks - JavaScript cannot access this cookie
-  secure: true, // Always use secure in production (required for sameSite: 'none')
-  sameSite: 'none' as const, // Required for cross-origin cookies
-  maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  maxAge: 24 * 60 * 60 * 1000,
   path: '/',
 };
 
@@ -92,13 +91,8 @@ export class AuthController {
     );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // Clear cookie with exact same options to ensure it's actually cleared
-    res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-    });
+    // Clear any existing cookie before setting new one
+    res.clearCookie('access_token', { path: '/' });
 
     // Set new JWT token in HTTP-only cookie
     res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
@@ -122,13 +116,8 @@ export class AuthController {
     );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // Clear cookie with exact same options to ensure it's actually cleared
-    res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-    });
+    // Clear any existing cookie before setting new one
+    res.clearCookie('access_token', { path: '/' });
 
     // Set new JWT token in HTTP-only cookie
     res.cookie('access_token', result.access_token, COOKIE_OPTIONS);

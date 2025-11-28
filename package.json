@@ -1,0 +1,39 @@
+{
+  "name": "learnix-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.24.0",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "prepare": "husky",
+    "typecheck:frontend": "pnpm --filter frontend exec tsc -p tsconfig.app.json --noEmit",
+    "typecheck:backend": "pnpm --filter backend exec tsc -p tsconfig.json --noEmit",
+    "typecheck": "pnpm typecheck:frontend && pnpm typecheck:backend",
+    "lint": "pnpm --filter frontend lint && pnpm --filter backend lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm --filter frontend test run && pnpm --filter backend test",
+    "test:related": "pnpm --filter frontend test run --changed && pnpm --filter backend test --onlyChanged",
+    "build": "pnpm --filter frontend build && pnpm --filter backend build",
+    "precommit": "pnpm format && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.7.1"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx,json,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "frontend/src/**/*.{ts,tsx}": [
+      "pnpm --filter frontend eslint --max-warnings=0"
+    ],
+    "backend/src/**/*.ts": [
+      "pnpm --filter backend eslint --max-warnings=0 --fix"
+    ]
+  }
+}

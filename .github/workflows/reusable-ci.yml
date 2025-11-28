@@ -16,7 +16,7 @@ on:
         description: Node.js version
         required: false
         type: string
-        default: '24'
+        default: "24"
       run-tests:
         description: Whether to run tests
         required: false
@@ -26,9 +26,33 @@ on:
         description: Test command to run
         required: false
         type: string
-        default: 'pnpm test'
+        default: "pnpm test"
 
 jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.project }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.project }}
+          node-version: ${{ inputs.node-version }}
+
+      - name: Run TypeScript typecheck
+        run: |
+          if [ "${{ inputs.project }}" = "frontend" ]; then
+            pnpm exec tsc -p tsconfig.app.json --noEmit
+          else
+            pnpm exec tsc -p tsconfig.json --noEmit
+          fi
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -80,8 +104,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, test]
-    if: always() && needs.lint.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    needs: [typecheck, lint, test]
+    if: always() && needs.typecheck.result == 'success' && needs.lint.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped')
     defaults:
       run:
         working-directory: ${{ inputs.project }}

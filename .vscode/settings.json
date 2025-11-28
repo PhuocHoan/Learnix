@@ -1,3 +1,4 @@
 {
-    "files.autoSave": "afterDelay"
+  "files.autoSave": "afterDelay",
+  "editor.fontFamily": "'JetBrainsMono Nerd Font', 'monospace', monospace"
 }
