@@ -90,15 +90,15 @@ After completing any implementation that affects project setup, commands, featur
 
 ### What to Update in README.md
 
-| Change Type | README Section to Update |
-| --- | --- |
-| New dependency/tool | Tech Stack, Prerequisites |
-| New environment variable | Setup, Environment Variables |
-| New CLI command | Available Commands |
-| API changes | Authentication, Authorization |
-| New feature | Relevant feature section |
-| Deprecated feature | Remove or mark as deprecated |
-| Version upgrades | Tech Stack versions |
+| Change Type              | README Section to Update      |
+| ------------------------ | ----------------------------- |
+| New dependency/tool      | Tech Stack, Prerequisites     |
+| New environment variable | Setup, Environment Variables  |
+| New CLI command          | Available Commands            |
+| API changes              | Authentication, Authorization |
+| New feature              | Relevant feature section      |
+| Deprecated feature       | Remove or mark as deprecated  |
+| Version upgrades         | Tech Stack versions           |
 
 ## Post-Implementation Verification (MANDATORY)
 

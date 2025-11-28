@@ -124,8 +124,8 @@ pnpm test:cov     # Run with coverage
 
 The following test accounts are available for development and testing:
 
-| Role       | Email                     | Password |
-| ---------- | ------------------------- | -------- |
+| Role       | Email                       | Password |
+| ---------- | --------------------------- | -------- |
 | Student    | <user@user.com>             | 123456   |
 | Instructor | <instructor@instructor.com> | 123456   |
 | Admin      | <admin@admin.com>           | 123456   |
@@ -152,10 +152,10 @@ This project uses GitHub Actions for continuous integration.
 
 ### Workflows
 
-| Workflow     | Trigger                   | Description                                   |
-| ------------ | ------------------------- | --------------------------------------------- |
-| **CI**       | Push/PR to `main`         | Format, lint, typecheck, test, build          |
-| **Security** | PR + Weekly schedule      | Dependency review, CodeQL analysis, npm audit |
+| Workflow     | Trigger              | Description                                   |
+| ------------ | -------------------- | --------------------------------------------- |
+| **CI**       | Push/PR to `main`    | Format, lint, typecheck, test, build          |
+| **Security** | PR + Weekly schedule | Dependency review, CodeQL analysis, npm audit |
 
 ### Required GitHub Secrets
 
@@ -240,7 +240,7 @@ The frontend restricts navigation and hides UI elements based on the user's role
 <Route
   path="/admin"
   element={
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute allowedRoles={["admin"]}>
       <AdminDashboardPage />
     </ProtectedRoute>
   }
@@ -251,9 +251,11 @@ The frontend restricts navigation and hides UI elements based on the user's role
 
 ```tsx
 // src/components/layout/sidebar.tsx
-{user?.role === 'instructor' && (
-  <Link to="/instructor/quiz-generator">Quiz Generator</Link>
-)}
+{
+  user?.role === "instructor" && (
+    <Link to="/instructor/quiz-generator">Quiz Generator</Link>
+  );
+}
 ```
 
 ### Server-Side Authorization (Enforcement)
