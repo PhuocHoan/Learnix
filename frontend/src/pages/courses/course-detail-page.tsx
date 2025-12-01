@@ -20,7 +20,7 @@ export function CourseDetailPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  
+
   // Modal State
   const [showAuthModal, setShowAuthModal] = useState(false);
 
@@ -52,13 +52,13 @@ export function CourseDetailPage() {
     }
     enrollMutation.mutate();
   };
-  
+
   // Handle locked lesson click
   const handleLockedLessonClick = () => {
     if (!isAuthenticated) {
-        setShowAuthModal(true);
+      setShowAuthModal(true);
     }
-    // If authenticated but not enrolled, logic could be handled here 
+    // If authenticated but not enrolled, logic could be handled here
     // (e.g., scroll to enroll button or show "Enroll to view" toast)
   };
 
@@ -77,9 +77,9 @@ export function CourseDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8 animate-fade-in">
-      <AuthRequiredModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
       />
 
       {/* Header */}
@@ -133,7 +133,10 @@ export function CourseDetailPage() {
                 size="lg"
                 className="w-full font-semibold"
                 onClick={handleEnroll}
-                disabled={enrollMutation.isPending || (isAuthenticated && isLoadingEnrollment)}
+                disabled={
+                  enrollMutation.isPending ||
+                  (isAuthenticated && isLoadingEnrollment)
+                }
               >
                 {enrollMutation.isPending ? (
                   <>
@@ -178,12 +181,14 @@ export function CourseDetailPage() {
                       <div
                         key={lesson.id}
                         className={cn(
-                           "p-4 flex items-center gap-4 transition-colors",
-                           isLocked 
-                             ? "opacity-75 hover:bg-muted/10 cursor-pointer" 
-                             : "hover:bg-muted/20"
+                          "p-4 flex items-center gap-4 transition-colors",
+                          isLocked
+                            ? "opacity-75 hover:bg-muted/10 cursor-pointer"
+                            : "hover:bg-muted/20",
                         )}
-                        onClick={() => isLocked ? handleLockedLessonClick() : null}
+                        onClick={() =>
+                          isLocked ? handleLockedLessonClick() : null
+                        }
                       >
                         <div
                           className={cn(
@@ -204,7 +209,7 @@ export function CourseDetailPage() {
                         <div className="flex-1 text-sm font-medium">
                           {lesson.title}
                         </div>
-                        
+
                         {/* Logic for Buttons/Icons */}
                         {isEnrolled || lesson.isFreePreview ? (
                           <Button
@@ -220,18 +225,18 @@ export function CourseDetailPage() {
                           </Button>
                         ) : (
                           <div className="flex items-center gap-2">
-                             {/* Replaced Icon with Button-like feel or just icon */}
-                             <Button 
-                               variant="ghost" 
-                               size="sm" 
-                               className="h-8 w-8 p-0 hover:bg-transparent"
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 handleLockedLessonClick();
-                               }}
-                             >
-                                <Lock className="w-4 h-4 text-muted-foreground" />
-                             </Button>
+                            {/* Replaced Icon with Button-like feel or just icon */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-transparent"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleLockedLessonClick();
+                              }}
+                            >
+                              <Lock className="w-4 h-4 text-muted-foreground" />
+                            </Button>
                           </div>
                         )}
                       </div>

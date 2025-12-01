@@ -1,6 +1,12 @@
 import { Link } from "react-router-dom";
 import { RegisterForm } from "@/features/auth/components/register-form";
-import { GraduationCap, BookOpen, Award, Users, ChevronLeft } from "lucide-react";
+import {
+  GraduationCap,
+  BookOpen,
+  Award,
+  Users,
+  ChevronLeft,
+} from "lucide-react";
 import { oauthUrls } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 
