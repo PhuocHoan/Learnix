@@ -33,6 +33,26 @@ export interface Course {
   createdAt: string;
 }
 
+export interface CoursesParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  level?: string;
+  tags?: string;
+  sort?: "price" | "date";
+  order?: "ASC" | "DESC";
+}
+
+export interface CoursesResponse {
+  data: Course[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export interface EnrollmentResponse {
   isEnrolled: boolean;
   progress: {
@@ -43,9 +63,15 @@ export interface EnrollmentResponse {
 }
 
 export const coursesApi = {
-  getAllCourses: async (limit?: number): Promise<Course[]> => {
-    const params = limit ? { limit } : undefined;
+  getAllCourses: async (params?: CoursesParams): Promise<CoursesResponse> => {
     const response = await api.get("/courses", { params });
+    // Check if backend returns array (legacy) or object (new pagination)
+    if (Array.isArray(response.data)) {
+      return {
+        data: response.data,
+        meta: { total: response.data.length, page: 1, limit: 100, totalPages: 1 }
+      };
+    }
     return response.data;
   },
 

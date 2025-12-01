@@ -11,10 +11,18 @@ export function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
-  const { data: latestCourses, isLoading: isLoadingCourses } = useQuery({
+  const { data: response, isLoading: isLoadingCourses } = useQuery({
     queryKey: ["courses", "latest"],
-    queryFn: () => coursesApi.getAllCourses(6), // Lấy 6 khóa học mới nhất
+    // UPDATED: Pass object with limit and sort options
+    queryFn: () => coursesApi.getAllCourses({ 
+      limit: 6, 
+      sort: 'date', 
+      order: 'DESC' 
+    }), 
   });
+
+  // UPDATED: Handle both legacy array response and new paginated response
+  const latestCourses = Array.isArray(response) ? response : response?.data;
 
   const { data: tags, isLoading: isLoadingTags } = useQuery({
     queryKey: ["courses", "tags"],
@@ -23,8 +31,9 @@ export function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Hero Section */}
+      {/* Hero Section ... (No changes here) ... */}
       <section className="relative pt-20 pb-32 overflow-hidden gradient-primary text-white">
+        {/* ... hero content ... */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
           <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute top-1/2 -left-24 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
@@ -80,7 +89,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Categories Section (Unique Tags) */}
+      {/* Categories Section ... (No changes here) ... */}
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
@@ -104,7 +113,7 @@ export function HomePage() {
               {tags?.map((tag) => (
                 <button
                   key={tag}
-                  onClick={() => navigate(`/courses?search=${tag}`)} // Sẽ cần xử lý logic search ở Task 2
+                  onClick={() => navigate(`/courses?tags=${tag}`)}
                   className="px-6 py-3 rounded-full border border-border bg-card hover:bg-primary/5 hover:border-primary/50 hover:text-primary transition-all duration-300 font-medium capitalize shadow-sm hover:shadow-md hover:-translate-y-0.5"
                 >
                   {tag}

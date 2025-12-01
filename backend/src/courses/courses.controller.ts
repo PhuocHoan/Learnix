@@ -4,13 +4,13 @@ import {
   Post,
   Param,
   UseGuards,
-  Request,
   Query,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
+import { CourseLevel } from './entities/course.entity';
 
 @Controller('courses')
 export class CoursesController {
@@ -22,8 +22,27 @@ export class CoursesController {
   }
 
   @Get()
-  findAll(@Query('limit') limit?: number) {
-    return this.coursesService.findAllPublished(limit);
+  findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Query('level') level?: CourseLevel,
+    @Query('tags') tags?: string, // Received as comma-separated string "react,js"
+    @Query('sort') sort?: 'price' | 'date',
+    @Query('order') order?: 'ASC' | 'DESC',
+  ) {
+    // Parse tags string into array if it exists
+    const tagsArray = tags ? tags.split(',').map((t) => t.trim()) : undefined;
+
+    return this.coursesService.findAllPublished({
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 10,
+      search,
+      level,
+      tags: tagsArray,
+      sort,
+      order,
+    });
   }
 
   @Get(':id')

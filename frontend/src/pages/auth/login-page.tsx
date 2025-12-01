@@ -1,7 +1,8 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { LoginForm } from "@/features/auth/components/login-form";
-import { GraduationCap, Sparkles, CheckCircle2 } from "lucide-react";
+import { GraduationCap, Sparkles, CheckCircle2, ChevronLeft } from "lucide-react"; 
 import { oauthUrls } from "@/lib/config";
+import { Button } from "@/components/ui/button"; 
 
 export function LoginPage() {
   const [searchParams] = useSearchParams();
@@ -16,10 +17,20 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Branding */}
+    <div className="min-h-screen flex relative">
+      {/* ADDED: Back to Home Button (Floating top-left for mobile, fixed for desktop) */}
+      <div className="absolute top-4 left-4 z-50">
+        <Link to="/">
+          <Button variant="ghost" size="sm" className="gap-1 pl-2">
+            <ChevronLeft className="w-4 h-4" />
+            Back to Home
+          </Button>
+        </Link>
+      </div>
+
+      {/* Left Panel - Branding (No changes below) */}
       <div className="hidden lg:flex lg:w-1/2 gradient-primary relative overflow-hidden">
-        {/* Decorative circles */}
+        {/* ... existing left panel content ... */}
         <div className="absolute -top-20 -left-20 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -right-20 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute top-1/4 right-1/4 w-40 h-40 bg-white/5 rounded-full blur-2xl" />
@@ -47,18 +58,21 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Right Panel - Form */}
+      {/* Right Panel - Form (No changes) */}
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-background gradient-hero">
         <div className="w-full max-w-md animate-fade-in">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
+          <div className="lg:hidden flex items-center justify-center gap-2 mb-8 mt-8">
+             {/* Added mt-8 to give space from the back button on mobile */}
             <div className="p-2 gradient-primary rounded-lg">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold text-foreground">Learnix</span>
           </div>
 
+          {/* ... existing form content ... */}
           <div className="glass rounded-2xl p-8 shadow-xl">
+             {/* ... rest of the component ... */}
             {registered && (
               <div className="flex items-center justify-center gap-2 p-4 mb-6 text-green-600 bg-green-50 dark:bg-green-950/30 rounded-xl border border-green-200 dark:border-green-800">
                 <CheckCircle2 className="w-5 h-5 shrink-0" />
