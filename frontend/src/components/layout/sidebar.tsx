@@ -21,7 +21,16 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const sidebarItems = [
+// Define interface to support optional properties
+interface SidebarItem {
+  icon: typeof Home;
+  label: string;
+  href: string;
+  roles?: string[];
+  excludeRoles?: string[]; // Added property for exclusion
+}
+
+const sidebarItems: SidebarItem[] = [
   // Add Home for everyone
   {
     icon: Home,
@@ -39,7 +48,8 @@ const sidebarItems = [
     icon: BookOpen,
     label: "Browse Courses",
     href: "/courses",
-    roles: [], // REMOVED ROLES to make it public
+    roles: [], // Public for guests/students
+    excludeRoles: ["admin", "instructor"], // UPDATED: Hidden for admin/instructor
   },
   {
     icon: Settings,
@@ -159,13 +169,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           Navigation
         </p>
         {sidebarItems
-          .filter(
-            (item) =>
-              // Show if no roles defined (public) OR if user has the role
+          .filter((item) => {
+            // UPDATED FILTER LOGIC
+            // 1. If user has a role that is in excludeRoles, hide it
+            if (user?.role && item.excludeRoles?.includes(user.role)) {
+              return false;
+            }
+            // 2. Standard inclusion logic
+            return (
               !item.roles ||
               item.roles.length === 0 ||
-              (user?.role && item.roles.includes(user.role)),
-          )
+              (user?.role && item.roles.includes(user.role))
+            );
+          })
           .map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;

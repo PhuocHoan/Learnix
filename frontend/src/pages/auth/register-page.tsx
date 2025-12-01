@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { RegisterForm } from "@/features/auth/components/register-form";
-import { GraduationCap, BookOpen, Award, Users } from "lucide-react";
+import { GraduationCap, BookOpen, Award, Users, ChevronLeft } from "lucide-react";
 import { oauthUrls } from "@/lib/config";
+import { Button } from "@/components/ui/button";
 
 export function RegisterPage() {
   const handleGoogleLogin = () => {
@@ -23,7 +24,15 @@ export function RegisterPage() {
   ];
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex relative">
+      <div className="absolute top-4 left-4 z-50">
+        <Link to="/">
+          <Button variant="ghost" size="sm" className="gap-1 pl-2">
+            <ChevronLeft className="w-4 h-4" />
+            Back to Home
+          </Button>
+        </Link>
+      </div>
       {/* Left Panel - Form */}
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-background gradient-hero">
         <div className="w-full max-w-md animate-fade-in">

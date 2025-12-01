@@ -1,3 +1,4 @@
+import { useState } from "react"; // Added useState
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { coursesApi } from "@/features/courses/api/courses-api";
@@ -12,12 +13,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
 import { cn } from "@/lib/utils";
+import { AuthRequiredModal } from "@/features/auth/components/auth-required-modal";
 
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Modal State
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const { data: course, isLoading: isLoadingCourse } = useQuery({
     queryKey: ["course", id],
@@ -25,7 +30,6 @@ export function CourseDetailPage() {
     enabled: !!id,
   });
 
-  // Check enrollment status if logged in
   const { data: enrollment, isLoading: isLoadingEnrollment } = useQuery({
     queryKey: ["enrollment", id],
     queryFn: () => coursesApi.getEnrollment(id!),
@@ -36,17 +40,26 @@ export function CourseDetailPage() {
     mutationFn: () => coursesApi.enroll(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["enrollment", id] });
-      // Optional: Redirect directly to lesson viewer
       navigate(`/courses/${id}/learn`);
     },
   });
 
   const handleEnroll = () => {
+    // Show modal instead of redirect
     if (!isAuthenticated) {
-      navigate("/login", { state: { from: `/courses/${id}` } });
+      setShowAuthModal(true);
       return;
     }
     enrollMutation.mutate();
+  };
+  
+  // Handle locked lesson click
+  const handleLockedLessonClick = () => {
+    if (!isAuthenticated) {
+        setShowAuthModal(true);
+    }
+    // If authenticated but not enrolled, logic could be handled here 
+    // (e.g., scroll to enroll button or show "Enroll to view" toast)
   };
 
   if (isLoadingCourse) return <div className="p-8 text-center">Loading...</div>;
@@ -58,11 +71,17 @@ export function CourseDetailPage() {
       0,
     ) || 0;
 
-  const isEnrolled = enrollment?.isEnrolled;
+  // Force isEnrolled to false if not authenticated, ignoring cached enrollment data
+  const isEnrolled = isAuthenticated && enrollment?.isEnrolled;
   const completedIds = enrollment?.progress?.completedLessonIds || [];
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8 animate-fade-in">
+      <AuthRequiredModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
+
       {/* Header */}
       <div className="bg-card rounded-2xl p-8 border border-border shadow-sm flex flex-col md:flex-row gap-8">
         <div className="flex-1 space-y-4">
@@ -114,7 +133,7 @@ export function CourseDetailPage() {
                 size="lg"
                 className="w-full font-semibold"
                 onClick={handleEnroll}
-                disabled={enrollMutation.isPending || isLoadingEnrollment}
+                disabled={enrollMutation.isPending || (isAuthenticated && isLoadingEnrollment)}
               >
                 {enrollMutation.isPending ? (
                   <>
@@ -153,10 +172,18 @@ export function CourseDetailPage() {
                 <div className="divide-y divide-border">
                   {section.lessons.map((lesson) => {
                     const isCompleted = completedIds.includes(lesson.id);
+                    const isLocked = !isEnrolled && !lesson.isFreePreview;
+
                     return (
                       <div
                         key={lesson.id}
-                        className="p-4 flex items-center gap-4 hover:bg-muted/20 transition-colors"
+                        className={cn(
+                           "p-4 flex items-center gap-4 transition-colors",
+                           isLocked 
+                             ? "opacity-75 hover:bg-muted/10 cursor-pointer" 
+                             : "hover:bg-muted/20"
+                        )}
+                        onClick={() => isLocked ? handleLockedLessonClick() : null}
                       >
                         <div
                           className={cn(
@@ -177,21 +204,35 @@ export function CourseDetailPage() {
                         <div className="flex-1 text-sm font-medium">
                           {lesson.title}
                         </div>
+                        
+                        {/* Logic for Buttons/Icons */}
                         {isEnrolled || lesson.isFreePreview ? (
                           <Button
                             variant="ghost"
                             size="sm"
                             className="text-xs h-8"
-                            onClick={() =>
-                              isEnrolled
-                                ? navigate(`/courses/${id}/learn`)
-                                : null
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent parent click
+                              navigate(`/courses/${id}/learn`);
+                            }}
                           >
                             {isEnrolled ? "View" : "Preview"}
                           </Button>
                         ) : (
-                          <Lock className="w-4 h-4 text-muted-foreground/50" />
+                          <div className="flex items-center gap-2">
+                             {/* Replaced Icon with Button-like feel or just icon */}
+                             <Button 
+                               variant="ghost" 
+                               size="sm" 
+                               className="h-8 w-8 p-0 hover:bg-transparent"
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 handleLockedLessonClick();
+                               }}
+                             >
+                                <Lock className="w-4 h-4 text-muted-foreground" />
+                             </Button>
+                          </div>
                         )}
                       </div>
                     );

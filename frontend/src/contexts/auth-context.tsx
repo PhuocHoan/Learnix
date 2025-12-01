@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/features/auth/api/auth-api";
 import { AuthContext } from "./auth-context-types";
 import type { User } from "./auth-context-types";
@@ -7,6 +8,7 @@ import type { User } from "./auth-context-types";
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   // Check if user is authenticated by calling the profile endpoint
   // The HTTP-only cookie is sent automatically with the request
@@ -37,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Even if the API call fails, clear local state
     }
     setUser(null);
+    queryClient.clear();
   };
 
   return (

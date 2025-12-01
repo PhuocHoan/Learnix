@@ -36,11 +36,19 @@ export class CoursesService {
       .leftJoinAndSelect('course.instructor', 'instructor')
       .where('course.isPublished = :isPublished', { isPublished: true });
 
-    // 1. Filter by Search (Title)
+    // 1. UPDATED: Multi-field Search (Title, Description, Tags)
     if (search) {
-      queryBuilder.andWhere('LOWER(course.title) LIKE :search', {
-        search: `%${search.toLowerCase()}%`,
-      });
+      const searchLower = `%${search.toLowerCase()}%`;
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          qb.where('LOWER(course.title) LIKE :search', { search: searchLower })
+            .orWhere('LOWER(course.description) LIKE :search', {
+              search: searchLower,
+            })
+            // Search within the comma-separated string of tags
+            .orWhere('course.tags LIKE :search', { search: searchLower });
+        }),
+      );
     }
 
     // 2. Filter by Difficulty Level
@@ -48,12 +56,9 @@ export class CoursesService {
       queryBuilder.andWhere('course.level = :level', { level });
     }
 
-    // 3. Filter by Tags
-    // Note: 'simple-array' stores as "tag1,tag2". We check if the string contains the tag.
+    // 3. Filter by Specific Tags (Strict Filter)
+    // This remains useful if the user clicks a specific tag pill in the UI
     if (tags && tags.length > 0) {
-      // Create a bracketed AND condition: (tag LIKE %t1% OR tag LIKE %t2%)
-      // If you want strictly ALL tags, use AND. For "any of these tags", use OR.
-      // Let's assume "Any of these tags" for a broader search.
       queryBuilder.andWhere(
         new Brackets((qb) => {
           tags.forEach((tag, index) => {
@@ -86,7 +91,6 @@ export class CoursesService {
     };
   }
 
-  // THÊM MỚI: Lấy danh sách tags duy nhất
   async getUniqueTags() {
     const courses = await this.coursesRepository.find({
       where: { isPublished: true },
