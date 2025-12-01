@@ -1,10 +1,13 @@
 import { createContext } from "react";
 
 export interface User {
+  id?: string;
   userId: string;
   email: string;
   role: string | null;
   name?: string;
+  fullName?: string;
+  avatarUrl?: string;
 }
 
 export interface AuthContextType {

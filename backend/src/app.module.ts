@@ -10,6 +10,11 @@ import { QuizzesModule } from './quizzes/quizzes.module';
 import { Quiz } from './quizzes/entities/quiz.entity';
 import { Question } from './quizzes/entities/question.entity';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { CoursesModule } from './courses/courses.module';
+import { Enrollment } from './courses/entities/enrollment.entity';
+import { Course } from './courses/entities/course.entity';
+import { CourseSection } from './courses/entities/course-section.entity';
+import { Lesson } from './courses/entities/lesson.entity';
 
 @Module({
   imports: [
@@ -30,7 +35,16 @@ import { DashboardModule } from './dashboard/dashboard.module';
           return {
             type: 'postgres',
             url: databaseUrl,
-            entities: [User, ExternalAuth, Quiz, Question],
+            entities: [
+              User,
+              ExternalAuth,
+              Quiz,
+              Question,
+              Enrollment,
+              Course,
+              CourseSection,
+              Lesson,
+            ],
             synchronize: configService.get<string>('NODE_ENV') !== 'production',
             ssl: caCert
               ? { rejectUnauthorized: true, ca: caCert }
@@ -46,7 +60,16 @@ import { DashboardModule } from './dashboard/dashboard.module';
           username: configService.get<string>('DB_USERNAME'),
           password: configService.get<string>('DB_PASSWORD'),
           database: configService.get<string>('DB_NAME'),
-          entities: [User, ExternalAuth, Quiz, Question],
+          entities: [
+            User,
+            ExternalAuth,
+            Quiz,
+            Question,
+            Enrollment,
+            Course,
+            CourseSection,
+            Lesson,
+          ],
           synchronize: configService.get<string>('NODE_ENV') !== 'production',
           ssl:
             configService.get<string>('DB_SSL') === 'true'
@@ -61,6 +84,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     AdminModule,
     QuizzesModule,
     DashboardModule,
+    CoursesModule,
   ],
 })
 export class AppModule {}

@@ -1,7 +1,4 @@
-import axios from "axios";
-import { config } from "@/lib/config";
-
-const API_URL = config.apiUrl;
+import { api } from "@/lib/api";
 
 export interface DashboardStats {
   coursesEnrolled?: number;
@@ -17,7 +14,7 @@ export interface DashboardStats {
 }
 
 export interface CourseProgress {
-  id: number;
+  id: string;
   title: string;
   progress: number;
   totalLessons: number;
@@ -25,7 +22,7 @@ export interface CourseProgress {
 }
 
 export interface Activity {
-  id: number;
+  id: string;
   type: string;
   title: string;
   course?: string;
@@ -34,26 +31,18 @@ export interface Activity {
 
 export const dashboardApi = {
   getStats: async (): Promise<DashboardStats> => {
-    const token = localStorage.getItem("token");
-    const response = await axios.get(`${API_URL}/dashboard/stats`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    // api instance automatically sends the HTTP-only cookie
+    const response = await api.get("/dashboard/stats");
     return response.data;
   },
 
   getProgress: async (): Promise<{ currentCourses: CourseProgress[] }> => {
-    const token = localStorage.getItem("token");
-    const response = await axios.get(`${API_URL}/dashboard/progress`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await api.get("/dashboard/progress");
     return response.data;
   },
 
   getActivity: async (): Promise<{ activities: Activity[] }> => {
-    const token = localStorage.getItem("token");
-    const response = await axios.get(`${API_URL}/dashboard/activity`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await api.get("/dashboard/activity");
     return response.data;
   },
 };

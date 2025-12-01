@@ -13,6 +13,7 @@ import {
   Users,
   BarChart3,
   X,
+  Home,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -21,6 +22,13 @@ interface SidebarProps {
 }
 
 const sidebarItems = [
+  // Add Home for everyone
+  {
+    icon: Home,
+    label: "Home",
+    href: "/",
+    roles: [], // Empty array or undefined means public
+  },
   {
     icon: LayoutDashboard,
     label: "Dashboard",
@@ -31,7 +39,7 @@ const sidebarItems = [
     icon: BookOpen,
     label: "Browse Courses",
     href: "/courses",
-    roles: ["student", "instructor", "admin"],
+    roles: [], // REMOVED ROLES to make it public
   },
   {
     icon: Settings,
@@ -77,7 +85,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   };
 
   const handleNavClick = () => {
-    // Close sidebar on mobile after navigation
     onClose();
   };
 
@@ -101,7 +108,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     >
       {/* Logo Section */}
       <div className="p-6 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-3">
           <div className="p-2 gradient-primary rounded-xl">
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
@@ -109,8 +116,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <h1 className="text-xl font-bold text-foreground">Learnix</h1>
             <p className="text-xs text-muted-foreground">Learning Platform</p>
           </div>
-        </div>
-        {/* Close button for mobile */}
+        </Link>
         <button
           onClick={onClose}
           className="lg:hidden p-2 rounded-lg hover:bg-muted text-muted-foreground"
@@ -120,7 +126,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </button>
       </div>
 
-      {/* User Info */}
+      {/* User Info - ONLY RENDER IF LOGGED IN */}
       {user && (
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
@@ -155,7 +161,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {sidebarItems
           .filter(
             (item) =>
-              !item.roles || (user?.role && item.roles.includes(user.role)),
+              // Show if no roles defined (public) OR if user has the role
+              !item.roles ||
+              item.roles.length === 0 ||
+              (user?.role && item.roles.includes(user.role)),
           )
           .map((item) => {
             const Icon = item.icon;
@@ -259,16 +268,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         )}
       </nav>
 
-      {/* Logout Button */}
-      <div className="p-4 border-t border-border">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 group"
-        >
-          <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          <span className="font-medium">Sign Out</span>
-        </button>
-      </div>
+      {/* Logout Button - ONLY IF LOGGED IN */}
+      {user && (
+        <div className="p-4 border-t border-border">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 group"
+          >
+            <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <span className="font-medium">Sign Out</span>
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

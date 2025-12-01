@@ -2,12 +2,14 @@ import { Bell, Search, Moon, Sun, Menu, X } from "lucide-react";
 import { useAuth } from "@/contexts/use-auth";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   onMenuClick: () => void;
 }
 
-// Get initial theme from DOM (set by main.tsx before React mounts)
+// Get initial theme from DOM
 const getInitialTheme = () => {
   if (typeof document !== "undefined") {
     return document.documentElement.classList.contains("dark");
@@ -17,12 +19,12 @@ const getInitialTheme = () => {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isDark, setIsDark] = useState(getInitialTheme);
   const [hasNotifications] = useState(true);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input when mobile search opens
   useEffect(() => {
     if (isMobileSearchOpen && mobileSearchInputRef.current) {
       mobileSearchInputRef.current.focus();
@@ -44,10 +46,11 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-10">
+    // UPDATED: Changed bg-card/80 to bg-background/60 and added supports-backdrop-blur fallback
+    <header className="h-16 border-b border-border bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-50">
       {/* Mobile Search Overlay */}
       {isMobileSearchOpen && (
-        <div className="absolute inset-0 sm:hidden bg-card/95 backdrop-blur-md z-20 flex items-center px-4 gap-2">
+        <div className="absolute inset-0 sm:hidden bg-background/95 backdrop-blur-md z-20 flex items-center px-4 gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
@@ -80,7 +83,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <input
             type="text"
-            placeholder="Search courses, quizzes, or lessons..."
+            placeholder="Search courses..."
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-muted/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary focus:bg-background transition-all"
           />
           <kbd className="hidden md:inline-flex absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs text-muted-foreground bg-background border border-border rounded-md">
@@ -108,38 +111,56 @@ export function Header({ onMenuClick }: HeaderProps) {
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
 
-        {/* Notifications */}
-        <button
-          className="relative p-2 sm:p-2.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-          aria-label="Notifications"
-        >
-          <Bell className="w-5 h-5" />
-          {hasNotifications && (
-            <span className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse-soft" />
-          )}
-        </button>
+        {user ? (
+          /* Logged In State */
+          <>
+            <button
+              className="relative p-2 sm:p-2.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
+              aria-label="Notifications"
+            >
+              <Bell className="w-5 h-5" />
+              {hasNotifications && (
+                <span className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse-soft" />
+              )}
+            </button>
 
-        {/* User Info */}
-        <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 ml-1 sm:ml-2 border-l border-border">
-          <div className="text-right hidden md:block">
-            <p className="text-sm font-medium text-foreground">
-              {getGreeting()}, {user?.name || user?.email.split("@")[0]}
-            </p>
-            <p className="text-xs text-muted-foreground capitalize">
-              {user?.role || "Student"}
-            </p>
+            <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 ml-1 sm:ml-2 border-l border-border">
+              <div className="text-right hidden md:block">
+                <p className="text-sm font-medium text-foreground">
+                  {getGreeting()}, {user?.name || user?.email.split("@")[0]}
+                </p>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {user?.role || "Student"}
+                </p>
+              </div>
+              <button
+                className={cn(
+                  "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white font-semibold",
+                  "gradient-primary shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 transition-all",
+                )}
+              >
+                {user?.name?.charAt(0).toUpperCase() ||
+                  user?.email?.charAt(0).toUpperCase() ||
+                  "U"}
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Guest State */
+          <div className="flex items-center gap-2 pl-2 sm:pl-3 ml-1 sm:ml-2 border-l border-border">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/login")}
+              className="hidden sm:flex"
+            >
+              Log in
+            </Button>
+            <Button size="sm" onClick={() => navigate("/register")}>
+              Sign up
+            </Button>
           </div>
-          <button
-            className={cn(
-              "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white font-semibold",
-              "gradient-primary shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 transition-all",
-            )}
-          >
-            {user?.name?.charAt(0).toUpperCase() ||
-              user?.email?.charAt(0).toUpperCase() ||
-              "U"}
-          </button>
-        </div>
+        )}
       </div>
     </header>
   );
