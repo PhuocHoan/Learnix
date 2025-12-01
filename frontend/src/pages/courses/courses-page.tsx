@@ -3,7 +3,10 @@ import { useState, useEffect } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useInView } from "react-intersection-observer";
-import { coursesApi, type CoursesParams } from "@/features/courses/api/courses-api";
+import {
+  coursesApi,
+  type CoursesParams,
+} from "@/features/courses/api/courses-api";
 import { Search, BookOpen, User, Filter, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -44,24 +47,19 @@ export function CoursesPage() {
   };
 
   // --- Infinite Query ---
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useInfiniteQuery({
-    queryKey: ["courses", "infinite", queryParams], // Key changes when filters change
-    queryFn: ({ pageParam = 1 }) => 
-      coursesApi.getAllCourses({ ...queryParams, page: pageParam }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
-      if (lastPage.meta.page < lastPage.meta.totalPages) {
-        return lastPage.meta.page + 1;
-      }
-      return undefined;
-    },
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["courses", "infinite", queryParams], // Key changes when filters change
+      queryFn: ({ pageParam = 1 }) =>
+        coursesApi.getAllCourses({ ...queryParams, page: pageParam }),
+      initialPageParam: 1,
+      getNextPageParam: (lastPage) => {
+        if (lastPage.meta.page < lastPage.meta.totalPages) {
+          return lastPage.meta.page + 1;
+        }
+        return undefined;
+      },
+    });
 
   // --- Load more when scrolling to bottom ---
   useEffect(() => {
@@ -103,7 +101,7 @@ export function CoursesPage() {
           <Filter className="w-4 h-4" />
           <span>Filters & Sorting</span>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. Search */}
           <Input
@@ -132,7 +130,7 @@ export function CoursesPage() {
             onChange={(e) => {
               const [sort, order] = e.target.value.split("-") as [
                 "price" | "date",
-                "ASC" | "DESC"
+                "ASC" | "DESC",
               ];
               setSortConfig({ sort, order });
             }}
@@ -145,12 +143,12 @@ export function CoursesPage() {
 
           {/* 4. Tags Input */}
           <div className="relative">
-             <Input
-                placeholder="Type tag & press Enter..."
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleAddTag}
-              />
+            <Input
+              placeholder="Type tag & press Enter..."
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleAddTag}
+            />
           </div>
         </div>
 
@@ -168,7 +166,7 @@ export function CoursesPage() {
                 </button>
               </Badge>
             ))}
-            <button 
+            <button
               onClick={() => setSelectedTags([])}
               className="text-xs text-muted-foreground hover:text-primary underline px-2"
             >
@@ -182,7 +180,10 @@ export function CoursesPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-96 bg-muted/30 rounded-xl animate-pulse" />
+            <div
+              key={i}
+              className="h-96 bg-muted/30 rounded-xl animate-pulse"
+            />
           ))}
         </div>
       ) : (
@@ -225,42 +226,58 @@ export function CoursesPage() {
 
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
                         <User className="w-3.5 h-3.5" />
-                        <span>{course.instructor?.fullName || "Instructor"}</span>
+                        <span>
+                          {course.instructor?.fullName || "Instructor"}
+                        </span>
                       </div>
 
                       <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
-                         <div className="flex flex-wrap gap-1">
-                            {course.tags?.slice(0, 2).map(tag => (
-                               <span key={tag} className="text-[10px] bg-secondary px-1.5 py-0.5 rounded text-secondary-foreground">{tag}</span>
-                            ))}
-                            {(course.tags?.length || 0) > 2 && (
-                                <span className="text-[10px] text-muted-foreground">+{course.tags!.length - 2}</span>
-                            )}
-                         </div>
-                         <div className="font-bold text-primary">
-                            {course.price === 0 ? "Free" : `$${course.price}`}
-                         </div>
+                        <div className="flex flex-wrap gap-1">
+                          {course.tags?.slice(0, 2).map((tag) => (
+                            <span
+                              key={tag}
+                              className="text-[10px] bg-secondary px-1.5 py-0.5 rounded text-secondary-foreground"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {(course.tags?.length || 0) > 2 && (
+                            <span className="text-[10px] text-muted-foreground">
+                              +{course.tags!.length - 2}
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-bold text-primary">
+                          {course.price === 0 ? "Free" : `$${course.price}`}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
                 </Link>
-              ))
+              )),
             )}
           </div>
-          
+
           {/* Infinite Scroll Trigger */}
-          <div ref={ref} className="h-10 flex items-center justify-center w-full">
+          <div
+            ref={ref}
+            className="h-10 flex items-center justify-center w-full"
+          >
             {isFetchingNextPage && (
-               <div className="flex items-center gap-2 text-muted-foreground">
-                 <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                 <span>Loading more courses...</span>
-               </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span>Loading more courses...</span>
+              </div>
             )}
             {!hasNextPage && data && data.pages[0].data.length > 0 && (
-               <span className="text-muted-foreground text-sm">You've reached the end</span>
+              <span className="text-muted-foreground text-sm">
+                You've reached the end
+              </span>
             )}
-             {!hasNextPage && data && data.pages[0].data.length === 0 && (
-               <span className="text-muted-foreground text-sm">No courses found matching your criteria</span>
+            {!hasNextPage && data && data.pages[0].data.length === 0 && (
+              <span className="text-muted-foreground text-sm">
+                No courses found matching your criteria
+              </span>
             )}
           </div>
         </div>

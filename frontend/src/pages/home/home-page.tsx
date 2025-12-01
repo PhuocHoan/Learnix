@@ -14,11 +14,12 @@ export function HomePage() {
   const { data: response, isLoading: isLoadingCourses } = useQuery({
     queryKey: ["courses", "latest"],
     // UPDATED: Pass object with limit and sort options
-    queryFn: () => coursesApi.getAllCourses({ 
-      limit: 6, 
-      sort: 'date', 
-      order: 'DESC' 
-    }), 
+    queryFn: () =>
+      coursesApi.getAllCourses({
+        limit: 6,
+        sort: "date",
+        order: "DESC",
+      }),
   });
 
   // UPDATED: Handle both legacy array response and new paginated response

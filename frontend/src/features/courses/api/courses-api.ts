@@ -69,7 +69,12 @@ export const coursesApi = {
     if (Array.isArray(response.data)) {
       return {
         data: response.data,
-        meta: { total: response.data.length, page: 1, limit: 100, totalPages: 1 }
+        meta: {
+          total: response.data.length,
+          page: 1,
+          limit: 100,
+          totalPages: 1,
+        },
       };
     }
     return response.data;

@@ -1,8 +1,13 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { LoginForm } from "@/features/auth/components/login-form";
-import { GraduationCap, Sparkles, CheckCircle2, ChevronLeft } from "lucide-react"; 
+import {
+  GraduationCap,
+  Sparkles,
+  CheckCircle2,
+  ChevronLeft,
+} from "lucide-react";
 import { oauthUrls } from "@/lib/config";
-import { Button } from "@/components/ui/button"; 
+import { Button } from "@/components/ui/button";
 
 export function LoginPage() {
   const [searchParams] = useSearchParams();
@@ -63,7 +68,7 @@ export function LoginPage() {
         <div className="w-full max-w-md animate-fade-in">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-8 mt-8">
-             {/* Added mt-8 to give space from the back button on mobile */}
+            {/* Added mt-8 to give space from the back button on mobile */}
             <div className="p-2 gradient-primary rounded-lg">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
@@ -72,7 +77,7 @@ export function LoginPage() {
 
           {/* ... existing form content ... */}
           <div className="glass rounded-2xl p-8 shadow-xl">
-             {/* ... rest of the component ... */}
+            {/* ... rest of the component ... */}
             {registered && (
               <div className="flex items-center justify-center gap-2 p-4 mb-6 text-green-600 bg-green-50 dark:bg-green-950/30 rounded-xl border border-green-200 dark:border-green-800">
                 <CheckCircle2 className="w-5 h-5 shrink-0" />
