@@ -6,7 +6,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 
-import { diskStorage } from 'multer';
+import { diskStorage, memoryStorage } from 'multer';
 
 import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
@@ -16,10 +16,24 @@ import { UploadService } from './upload.service';
     MulterModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
+        const isServerless = configService.get<string>('VERCEL') === '1';
+
+        // In serverless environment (Vercel), use memory storage
+        // Files should be uploaded to cloud storage (S3, Cloudinary, etc.)
+        if (isServerless) {
+          return {
+            storage: memoryStorage(),
+            limits: {
+              fileSize: 10 * 1024 * 1024, // 10MB default limit
+            },
+          };
+        }
+
+        // For local development, use disk storage
         const uploadPath =
           configService.get<string>('UPLOAD_PATH') ?? './uploads';
 
-        // Ensure upload directory exists
+        // Ensure upload directory exists (only for local development)
         // Path is from validated config, not user input
         // eslint-disable-next-line security/detect-non-literal-fs-filename
         if (!existsSync(uploadPath)) {
