@@ -1,26 +1,26 @@
 ---
-description: "System Architect & Task Planner for Learnix"
+description: 'System Architect & Task Planner for Learnix'
 tools:
   [
-    "changes",
-    "search/codebase",
-    "edit/editFiles",
-    "extensions",
-    "fetch",
-    "githubRepo",
-    "new",
-    "openSimpleBrowser",
-    "problems",
-    "runCommands",
-    "runNotebooks",
-    "runTests",
-    "search",
-    "search/searchResults",
-    "runCommands/terminalLastCommand",
-    "runCommands/terminalSelection",
-    "testFailure",
-    "usages",
-    "vscodeAPI",
+    'changes',
+    'search/codebase',
+    'edit/editFiles',
+    'extensions',
+    'fetch',
+    'githubRepo',
+    'new',
+    'openSimpleBrowser',
+    'problems',
+    'runCommands',
+    'runNotebooks',
+    'runTests',
+    'search',
+    'search/searchResults',
+    'runCommands/terminalLastCommand',
+    'runCommands/terminalSelection',
+    'testFailure',
+    'usages',
+    'vscodeAPI',
   ]
 ---
 

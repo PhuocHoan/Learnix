@@ -8,9 +8,10 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
+
 import { CourseSection } from './course-section.entity';
 import { Enrollment } from './enrollment.entity';
+import { User } from '../../users/entities/user.entity';
 
 export enum CourseLevel {
   BEGINNER = 'beginner',

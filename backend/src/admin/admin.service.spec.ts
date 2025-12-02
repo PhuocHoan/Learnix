@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { AdminService } from './admin.service';
 import { UsersService } from '../users/users.service';
 

@@ -1,6 +1,7 @@
-import { useNavigate } from "react-router-dom";
-import { X, GraduationCap, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { X, GraduationCap, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+import { Button } from '@/components/ui/button';
 
 interface AuthRequiredModalProps {
   isOpen: boolean;
@@ -12,12 +13,14 @@ interface AuthRequiredModalProps {
 export function AuthRequiredModal({
   isOpen,
   onClose,
-  title = "Join Learnix to Continue",
-  description = "Create a free account to enroll in courses, track your progress, and access exclusive content.",
+  title = 'Join Learnix to Continue',
+  description = 'Create a free account to enroll in courses, track your progress, and access exclusive content.',
 }: AuthRequiredModalProps) {
   const navigate = useNavigate();
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
@@ -25,6 +28,14 @@ export function AuthRequiredModal({
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            onClose();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label="Close modal"
       />
 
       {/* Modal Content */}
@@ -52,7 +63,7 @@ export function AuthRequiredModal({
             <Button
               size="lg"
               className="w-full group"
-              onClick={() => navigate("/register")}
+              onClick={() => navigate('/register')}
             >
               Get Started for Free
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -62,7 +73,7 @@ export function AuthRequiredModal({
               variant="outline"
               size="lg"
               className="w-full"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate('/login')}
             >
               Sign In
             </Button>

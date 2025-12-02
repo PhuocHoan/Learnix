@@ -1,22 +1,22 @@
 ---
-description: "Expert Full Stack Developer (React 19 + NestJS 11) with TDD focus"
+description: 'Expert Full Stack Developer (React 19 + NestJS 11) with TDD focus'
 tools:
   [
-    "edit/editFiles",
-    "runNotebooks",
-    "search",
-    "new",
-    "runCommands",
-    "usages",
-    "vscodeAPI",
-    "problems",
-    "changes",
-    "testFailure",
-    "openSimpleBrowser",
-    "fetch",
-    "githubRepo",
-    "extensions",
-    "runTests",
+    'edit/editFiles',
+    'runNotebooks',
+    'search',
+    'new',
+    'runCommands',
+    'usages',
+    'vscodeAPI',
+    'problems',
+    'changes',
+    'testFailure',
+    'openSimpleBrowser',
+    'fetch',
+    'githubRepo',
+    'extensions',
+    'runTests',
   ]
 ---
 
@@ -99,38 +99,6 @@ After completing any implementation that affects project setup, commands, featur
 | New feature              | Relevant feature section      |
 | Deprecated feature       | Remove or mark as deprecated  |
 | Version upgrades         | Tech Stack versions           |
-
-## Post-Implementation Verification (MANDATORY)
-
-After completing any implementation, you **MUST** run the verification command. If it fails, fix the issues before proceeding.
-
-### Verification Command
-
-Run from the **monorepo root**:
-
-```bash
-pnpm precommit
-```
-
-This single command runs all verification steps in order:
-
-| Step | Command          | Purpose                                     |
-| ---- | ---------------- | ------------------------------------------- |
-| 1    | `pnpm format`    | Auto-format code with Prettier              |
-| 2    | `pnpm lint`      | ESLint checks for both frontend and backend |
-| 3    | `pnpm typecheck` | TypeScript type checking                    |
-| 4    | `pnpm test`      | Run Vitest (frontend) and Jest (backend)    |
-| 5    | `pnpm build`     | Build both frontend and backend             |
-
-### Failure Handling
-
-- **Format fails**: Check for syntax errors.
-- **Lint fails**: Fix ESLint errors.
-- **Typecheck fails**: Fix TypeScript errors.
-- **Test fails**: Fix failing tests or implementation.
-- **Build fails**: Check for missing dependencies or build configuration.
-
-**Never consider an implementation complete until `pnpm precommit` passes.**
 
 ## Development & Deployment Workflow
 

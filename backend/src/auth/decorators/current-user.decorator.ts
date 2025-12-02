@@ -1,5 +1,6 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { User } from '../../users/entities/user.entity';
+import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
+
+import { type User } from '../../users/entities/user.entity';
 
 interface RequestWithUser {
   user: User;

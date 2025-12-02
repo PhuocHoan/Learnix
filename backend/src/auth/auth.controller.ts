@@ -8,19 +8,35 @@ import {
   UseGuards,
   Req,
   Res,
+  Query,
+  Patch,
+  Delete,
 } from '@nestjs/common';
-import type { Response, Request } from 'express';
-import { AuthService, OAuthProfile } from './auth.service';
+import { ConfigService } from '@nestjs/config';
+
+import { AuthService } from './auth.service';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
-import { CreateUserDto } from '../users/dto/create-user.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SelectRoleDto } from './dto/select-role.dto';
+import { AuthProvider } from './entities/external-auth.entity';
 import { GithubAuthGuard } from './guards/github-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
-import { CurrentUser } from './decorators/current-user.decorator';
-import { ConfigService } from '@nestjs/config';
-import { AuthProvider } from './entities/external-auth.entity';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CreateUserDto } from '../users/dto/create-user.dto';
+import { UpdateProfileDto } from '../users/dto/update-profile.dto';
 import { User } from '../users/entities/user.entity';
-import { SelectRoleDto } from './dto/select-role.dto';
+
+import type {
+  OAuthProfile,
+  ActivationResult,
+  MessageResult,
+  SafeUser,
+} from './auth.service';
+import type { Response, Request } from 'express';
 
 // Cookie configuration for secure token storage
 const COOKIE_OPTIONS = {
@@ -43,7 +59,7 @@ export class AuthController {
   async signIn(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<{ user: SafeUser; message: string }> {
     const result = await this.authService.login(loginDto);
 
     // Set JWT token in HTTP-only cookie
@@ -54,13 +70,31 @@ export class AuthController {
   }
 
   @Post('register')
-  signUp(@Body() createUserDto: CreateUserDto) {
+  signUp(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<SafeUser & { message: string }> {
     return this.authService.register(createUserDto);
+  }
+
+  @Get('activate')
+  @HttpCode(HttpStatus.OK)
+  async activateAccount(
+    @Query('token') token: string,
+  ): Promise<ActivationResult> {
+    return this.authService.activateAccount(token);
+  }
+
+  @Post('resend-activation')
+  @HttpCode(HttpStatus.OK)
+  async resendActivationEmail(
+    @Body('email') email: string,
+  ): Promise<MessageResult> {
+    return this.authService.resendActivationEmail(email);
   }
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  logout(@Res({ passthrough: true }) res: Response) {
+  logout(@Res({ passthrough: true }) res: Response): MessageResult {
     // Clear the cookie
     res.clearCookie('access_token', { path: '/' });
     return { message: 'Logout successful' };
@@ -68,23 +102,18 @@ export class AuthController {
 
   @Get('google')
   @UseGuards(GoogleAuthGuard)
-  async googleAuth() {
+  googleAuth(): void {
     // Force account selection by passing prompt parameter
     // This prevents Google from using cached sessions
   }
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
+  async googleAuthRedirect(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
     const profile = req.user as OAuthProfile;
-
-    // Debug logging to see what profile we're receiving
-    console.log('Google OAuth Profile:', {
-      email: profile.email,
-      providerId: profile.providerId,
-      fullName: profile.fullName,
-    });
-
     const result = await this.authService.validateOAuthLogin(
       AuthProvider.GOOGLE,
       profile,
@@ -103,13 +132,16 @@ export class AuthController {
 
   @Get('github')
   @UseGuards(GithubAuthGuard)
-  async githubAuth() {
+  githubAuth(): void {
     // Initiates the GitHub OAuth flow
   }
 
   @Get('github/callback')
   @UseGuards(GithubAuthGuard)
-  async githubAuthRedirect(@Req() req: Request, @Res() res: Response) {
+  async githubAuthRedirect(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
     const result = await this.authService.validateOAuthLogin(
       AuthProvider.GITHUB,
       req.user as OAuthProfile,
@@ -128,7 +160,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getProfile(@CurrentUser() user: User) {
+  async getProfile(@CurrentUser() user: User): Promise<User> {
     // Fetch fresh user data from database to get updated role
     const freshUser = await this.authService.getUserById(user.id);
     return freshUser;
@@ -140,18 +172,102 @@ export class AuthController {
   async selectRole(
     @CurrentUser() user: User,
     @Body() selectRoleDto: SelectRoleDto,
-  ) {
+  ): Promise<{ user: SafeUser; message: string }> {
     const updatedUser = await this.authService.updateUserRole(
       user.id,
       selectRoleDto.role,
     );
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userWithoutPassword } = updatedUser as User & {
+    const {
+      password: _p,
+      activationToken: _at,
+      passwordResetToken: _prt,
+      ...userWithoutSensitiveData
+    } = updatedUser as User & {
       password?: string | null;
+      activationToken?: string | null;
+      passwordResetToken?: string | null;
     };
     return {
-      user: userWithoutPassword,
+      user: userWithoutSensitiveData,
       message: 'Role selected successfully',
     };
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<MessageResult> {
+    return this.authService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+  ): Promise<MessageResult> {
+    return this.authService.resetPassword(
+      resetPasswordDto.token,
+      resetPasswordDto.newPassword,
+    );
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @CurrentUser() user: User,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ): Promise<MessageResult> {
+    return this.authService.changePassword(
+      user.id,
+      changePasswordDto.currentPassword,
+      changePasswordDto.newPassword,
+    );
+  }
+
+  @Patch('profile')
+  @UseGuards(JwtAuthGuard)
+  async updateProfile(
+    @CurrentUser() user: User,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ): Promise<{ user: User; message: string }> {
+    const updatedUser = await this.authService.updateProfile(
+      user.id,
+      updateProfileDto,
+    );
+    return {
+      user: updatedUser,
+      message: 'Profile updated successfully',
+    };
+  }
+
+  @Delete('account')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async deleteAccount(
+    @CurrentUser() user: User,
+    @Body() deleteAccountDto: DeleteAccountDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<MessageResult> {
+    const result = await this.authService.deleteAccount(
+      user.id,
+      deleteAccountDto.password,
+      deleteAccountDto.confirmation,
+    );
+
+    // Clear the auth cookie
+    res.clearCookie('access_token', { path: '/' });
+
+    return result;
+  }
+
+  @Get('has-password')
+  @UseGuards(JwtAuthGuard)
+  async hasPassword(
+    @CurrentUser() user: User,
+  ): Promise<{ hasPassword: boolean }> {
+    const hasPassword = await this.authService.hasPassword(user.id);
+    return { hasPassword };
   }
 }

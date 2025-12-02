@@ -6,6 +6,7 @@ import {
   JoinColumn,
   CreateDateColumn,
 } from 'typeorm';
+
 import { Quiz } from './quiz.entity';
 
 @Entity('questions')

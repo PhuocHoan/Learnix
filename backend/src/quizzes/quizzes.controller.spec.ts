@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
+
+import { type Question } from './entities/question.entity';
+import { type Quiz, QuizStatus } from './entities/quiz.entity';
 import { QuizzesController } from './quizzes.controller';
 import { QuizzesService } from './quizzes.service';
-import { Quiz, QuizStatus } from './entities/quiz.entity';
-import { Question } from './entities/question.entity';
-import { User } from '../users/entities/user.entity';
+import { type User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
 
 describe('QuizzesController', () => {
@@ -39,7 +39,13 @@ describe('QuizzesController', () => {
     password: null,
     fullName: 'Test Instructor',
     avatarUrl: '',
+    oauthAvatarUrl: null,
     isActive: true,
+    isEmailVerified: true,
+    activationToken: null,
+    activationTokenExpiry: null,
+    passwordResetToken: null,
+    passwordResetTokenExpiry: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

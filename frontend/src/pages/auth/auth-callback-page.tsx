@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/use-auth";
-import { GraduationCap, Loader2, AlertCircle } from "lucide-react";
+import { useEffect, useState } from 'react';
+
+import { GraduationCap, Loader2, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+import { useAuth } from '@/contexts/use-auth';
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -18,19 +20,21 @@ export function AuthCallbackPage() {
         // If user doesn't have a role, redirect to select-role
         if (!user?.role) {
           // Force full page reload to ensure clean state
-          window.location.href = "/select-role";
+          window.location.href = '/select-role';
         } else {
           // Force full page reload to ensure clean state
-          window.location.href = "/dashboard";
+          window.location.href = '/dashboard';
         }
       } catch {
-        setError("Authentication failed. Please try again.");
+        setError('Authentication failed. Please try again.');
         // Redirect to login after a short delay
-        setTimeout(() => navigate("/login"), 2000);
+        setTimeout(() => {
+          void navigate('/login');
+        }, 2000);
       }
     };
 
-    handleCallback();
+    void handleCallback();
   }, [refreshUser, navigate]);
 
   if (error) {
@@ -71,3 +75,5 @@ export function AuthCallbackPage() {
     </div>
   );
 }
+
+export default AuthCallbackPage;

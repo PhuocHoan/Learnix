@@ -1,12 +1,14 @@
 import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
-import { AdminService } from './admin.service';
-import { UsersService } from '../users/users.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../users/enums/user-role.enum';
+
+import { AdminService, SystemStats } from './admin.service';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
+import { UsersService } from '../users/users.service';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -18,7 +20,7 @@ export class AdminController {
   ) {}
 
   @Get('users')
-  async getAllUsers() {
+  async getAllUsers(): Promise<User[]> {
     return this.usersService.findAll();
   }
 
@@ -26,7 +28,7 @@ export class AdminController {
   async updateUserRole(
     @Param('id') id: string,
     @Body() updateRoleDto: UpdateUserRoleDto,
-  ) {
+  ): Promise<User> {
     return this.usersService.updateRole(id, updateRoleDto.role);
   }
 
@@ -34,12 +36,12 @@ export class AdminController {
   async updateUserStatus(
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateUserStatusDto,
-  ) {
+  ): Promise<User> {
     return this.usersService.updateStatus(id, updateStatusDto.isActive);
   }
 
   @Get('stats')
-  async getSystemStats() {
+  async getSystemStats(): Promise<SystemStats> {
     return this.adminService.getSystemStats();
   }
 }

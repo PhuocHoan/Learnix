@@ -1,4 +1,4 @@
-import { CourseLevel } from '../entities/course.entity';
+import { type CourseLevel } from '../entities/course.entity';
 
 export interface CourseFilterOptions {
   page?: number;

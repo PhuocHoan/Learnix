@@ -7,8 +7,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
+
 import { Course } from './course.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('enrollments')
 export class Enrollment {
@@ -36,6 +37,12 @@ export class Enrollment {
 
   @Column({ nullable: true })
   completedAt: Date; // When they finished the course
+
+  @Column({ name: 'is_archived', default: false })
+  isArchived: boolean; // Whether the course is archived by the user
+
+  @Column({ name: 'archived_at', nullable: true })
+  archivedAt: Date; // When the user archived the course
 
   @CreateDateColumn({ name: 'enrolled_at' })
   enrolledAt: Date;

@@ -1,0 +1,180 @@
+import { config } from '@/lib/config';
+
+export interface UploadResult {
+  filename: string;
+  originalName: string;
+  mimetype: string;
+  size: number;
+  url: string;
+}
+
+interface ErrorResponse {
+  message?: string;
+}
+
+/**
+ * Upload API functions for file handling
+ */
+export const uploadApi = {
+  /**
+   * Upload an avatar image (max 5MB)
+   */
+  uploadAvatar: async (file: File): Promise<UploadResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${config.apiUrl}/upload/avatar`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include', // Include cookies for authentication
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .then((data: unknown) => data as ErrorResponse)
+        .catch((): ErrorResponse => ({}));
+      throw new Error(error.message ?? 'Failed to upload avatar');
+    }
+
+    return response.json() as Promise<UploadResult>;
+  },
+
+  /**
+   * Upload a single image (max 10MB)
+   */
+  uploadImage: async (file: File): Promise<UploadResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${config.apiUrl}/upload/image`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .then((data: unknown) => data as ErrorResponse)
+        .catch((): ErrorResponse => ({}));
+      throw new Error(error.message ?? 'Failed to upload image');
+    }
+
+    return response.json() as Promise<UploadResult>;
+  },
+
+  /**
+   * Upload multiple images (max 10 files, 10MB each)
+   */
+  uploadImages: async (files: File[]): Promise<UploadResult[]> => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    const response = await fetch(`${config.apiUrl}/upload/images`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .then((data: unknown) => data as ErrorResponse)
+        .catch((): ErrorResponse => ({}));
+      throw new Error(error.message ?? 'Failed to upload images');
+    }
+
+    return response.json() as Promise<UploadResult[]>;
+  },
+
+  /**
+   * Upload a general file (max 25MB)
+   */
+  uploadFile: async (file: File): Promise<UploadResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${config.apiUrl}/upload/file`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .then((data: unknown) => data as ErrorResponse)
+        .catch((): ErrorResponse => ({}));
+      throw new Error(error.message ?? 'Failed to upload file');
+    }
+
+    return response.json() as Promise<UploadResult>;
+  },
+
+  /**
+   * Delete a file by filename
+   */
+  deleteFile: async (filename: string): Promise<void> => {
+    const response = await fetch(`${config.apiUrl}/upload/${filename}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .then((data: unknown) => data as ErrorResponse)
+        .catch((): ErrorResponse => ({}));
+      throw new Error(error.message ?? 'Failed to delete file');
+    }
+  },
+};
+
+/**
+ * Helper function to validate file before upload
+ */
+export function validateImageFile(
+  file: File,
+  options: {
+    maxSize?: number; // in bytes
+    allowedTypes?: string[];
+  } = {},
+): { valid: boolean; error?: string } {
+  const {
+    maxSize = 10 * 1024 * 1024, // 10MB default
+    allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  } = options;
+
+  if (!allowedTypes.includes(file.type)) {
+    return {
+      valid: false,
+      error: `Invalid file type. Allowed: ${allowedTypes.map((t) => t.split('/')[1]).join(', ')}`,
+    };
+  }
+
+  if (file.size > maxSize) {
+    return {
+      valid: false,
+      error: `File too large. Maximum size: ${Math.round(maxSize / (1024 * 1024))}MB`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Helper to create object URL for preview (remember to revoke!)
+ */
+export function createPreviewUrl(file: File): string {
+  return URL.createObjectURL(file);
+}
+
+/**
+ * Helper to revoke object URL after use
+ */
+export function revokePreviewUrl(url: string): void {
+  URL.revokeObjectURL(url);
+}

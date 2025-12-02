@@ -1,20 +1,22 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UsersModule } from './users/users.module';
-import { AuthModule } from './auth/auth.module';
-import { User } from './users/entities/user.entity';
-import { ExternalAuth } from './auth/entities/external-auth.entity';
+
 import { AdminModule } from './admin/admin.module';
-import { QuizzesModule } from './quizzes/quizzes.module';
-import { Quiz } from './quizzes/entities/quiz.entity';
-import { Question } from './quizzes/entities/question.entity';
-import { DashboardModule } from './dashboard/dashboard.module';
+import { AuthModule } from './auth/auth.module';
+import { ExternalAuth } from './auth/entities/external-auth.entity';
 import { CoursesModule } from './courses/courses.module';
-import { Enrollment } from './courses/entities/enrollment.entity';
-import { Course } from './courses/entities/course.entity';
 import { CourseSection } from './courses/entities/course-section.entity';
+import { Course } from './courses/entities/course.entity';
+import { Enrollment } from './courses/entities/enrollment.entity';
 import { Lesson } from './courses/entities/lesson.entity';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { Question } from './quizzes/entities/question.entity';
+import { Quiz } from './quizzes/entities/quiz.entity';
+import { QuizzesModule } from './quizzes/quizzes.module';
+import { UploadModule } from './upload/upload.module';
+import { User } from './users/entities/user.entity';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -85,6 +87,7 @@ import { Lesson } from './courses/entities/lesson.entity';
     QuizzesModule,
     DashboardModule,
     CoursesModule,
+    UploadModule,
   ],
 })
 export class AppModule {}

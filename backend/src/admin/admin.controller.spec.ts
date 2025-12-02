@@ -1,9 +1,10 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
-import { UsersService } from '../users/users.service';
 import { UserRole } from '../users/enums/user-role.enum';
+import { UsersService } from '../users/users.service';
+
 import type { User } from '../users/entities/user.entity';
 
 describe('AdminController', () => {

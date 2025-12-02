@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { GoogleGenAI } from '@google/genai';
 import { ConfigService } from '@nestjs/config';
+
+import { GoogleGenAI } from '@google/genai';
 
 export interface GeneratedQuestion {
   questionText: string;
@@ -24,6 +25,8 @@ export class AiQuizGeneratorService {
     lessonText: string,
     numberOfQuestions: number = 5,
   ): Promise<GeneratedQuestion[]> {
+    // Runtime safety: genAI is null when API key is not configured
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!this.genAI) {
       throw new Error('Gemini API key not configured');
     }

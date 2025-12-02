@@ -19,7 +19,7 @@ You are the QA Engineer. Please generate Playwright E2E tests for the following 
 4.  Configure base URL to support both local and CI environments:
     ```typescript
     // playwright.config.ts
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:5173";
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173';
     ```
 5.  Handle authentication state properly for Vercel preview deployments.
 

@@ -1,8 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { type INestApplication } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unnecessary-condition -- Runtime safety in tests */
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import { type App } from 'supertest/types';
+
+import { AppModule } from '../src/app.module';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -17,7 +20,9 @@ describe('AppController (e2e)', () => {
   });
 
   afterAll(async () => {
-    if (app) await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   it('/ (GET)', async () => {

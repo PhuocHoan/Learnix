@@ -1,7 +1,8 @@
-import { PassportStrategy } from '@nestjs/passport';
-import { Strategy, Profile } from 'passport-github2';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PassportStrategy } from '@nestjs/passport';
+
+import { Strategy, Profile } from 'passport-github2';
 
 /**
  * GitHub App Authentication Strategy
@@ -21,12 +22,12 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     super({
       // GitHub App Client ID (not OAuth App)
       clientID:
-        configService.get<string>('GITHUB_APP_CLIENT_ID') || 'placeholder',
+        configService.get<string>('GITHUB_APP_CLIENT_ID') ?? 'placeholder',
       // GitHub App Client Secret
       clientSecret:
-        configService.get<string>('GITHUB_APP_CLIENT_SECRET') || 'placeholder',
+        configService.get<string>('GITHUB_APP_CLIENT_SECRET') ?? 'placeholder',
       callbackURL:
-        configService.get<string>('GITHUB_CALLBACK_URL') ||
+        configService.get<string>('GITHUB_CALLBACK_URL') ??
         'http://localhost:3000/auth/github/callback',
       // Scopes for GitHub App OAuth
       scope: ['read:user', 'user:email'],
@@ -40,9 +41,11 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     done: (error: Error | null, user?: Record<string, unknown>) => void,
   ): void {
     const { displayName, emails, photos } = profile;
+    // Profile values from GitHub may be null at runtime despite type definitions
     const user = {
       email: emails?.[0]?.value ?? '',
-      fullName: displayName || profile.username || '',
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      fullName: displayName ?? profile.username ?? '',
       avatarUrl: photos?.[0]?.value ?? '',
       providerId: profile.id,
       accessToken,

@@ -1,21 +1,25 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { type ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+/* eslint-disable @typescript-eslint/no-unnecessary-condition -- Runtime safety in tests */
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ExternalAuth } from '../src/auth/entities/external-auth.entity';
-import * as bcrypt from 'bcrypt';
-import type { Response } from 'express';
-import { ConfigService } from '@nestjs/config';
 
-import { AuthService } from '../src/auth/auth.service';
-import { AuthController } from '../src/auth/auth.controller';
-import { UsersService } from '../src/users/users.service';
+import * as bcrypt from 'bcrypt';
+
 import { AdminController } from '../src/admin/admin.controller';
-import { AdminService } from '../src/admin/admin.service';
-import { LoginDto } from '../src/auth/dto/login.dto';
-import { User } from '../src/users/entities/user.entity';
+import { type AdminService } from '../src/admin/admin.service';
+import { type UpdateUserRoleDto } from '../src/admin/dto/update-user-role.dto';
+import { type UpdateUserStatusDto } from '../src/admin/dto/update-user-status.dto';
+import { AuthController } from '../src/auth/auth.controller';
+import { AuthService } from '../src/auth/auth.service';
+import { type LoginDto } from '../src/auth/dto/login.dto';
+import { ExternalAuth } from '../src/auth/entities/external-auth.entity';
+import { MailService } from '../src/mail/mail.service';
+import { type User } from '../src/users/entities/user.entity';
 import { UserRole } from '../src/users/enums/user-role.enum';
-import { UpdateUserRoleDto } from '../src/admin/dto/update-user-role.dto';
-import { UpdateUserStatusDto } from '../src/admin/dto/update-user-status.dto';
+import { UsersService } from '../src/users/users.service';
+
+import type { Response } from 'express';
 
 describe('Auth unit tests (mocked DB)', () => {
   let module: TestingModule;
@@ -35,12 +39,18 @@ describe('Auth unit tests (mocked DB)', () => {
     sign: jest.fn().mockReturnValue('signed-jwt-token'),
   };
 
+  const mockMailService: Partial<MailService> = {
+    sendActivationEmail: jest.fn(),
+    sendWelcomeEmail: jest.fn(),
+  };
+
   beforeAll(async () => {
     module = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UsersService, useValue: mockUsersService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: MailService, useValue: mockMailService },
         { provide: getRepositoryToken(ExternalAuth), useValue: {} },
       ],
     }).compile();
@@ -49,7 +59,9 @@ describe('Auth unit tests (mocked DB)', () => {
   });
 
   afterAll(async () => {
-    if (module) await module.close();
+    if (module) {
+      await module.close();
+    }
   });
 
   it('validateUser returns user when password matches (mocked)', async () => {
@@ -76,6 +88,7 @@ describe('Auth unit tests (mocked DB)', () => {
       id: userId,
       email: 'u@example.com',
       role: UserRole.STUDENT,
+      isEmailVerified: true, // Email must be verified for login
     };
     // mock validateUser to return user
     jest

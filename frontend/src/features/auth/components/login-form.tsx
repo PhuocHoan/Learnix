@@ -1,10 +1,13 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { useAuth } from "@/contexts/use-auth";
-import { loginSchema, authApi, type LoginData } from "../api/auth-api";
-import { Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
+import { useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { useNavigate, Link } from 'react-router-dom';
+
+import { useAuth } from '@/contexts/use-auth';
+
+import { loginSchema, authApi, type LoginData } from '../api/auth-api';
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -27,18 +30,18 @@ export function LoginForm() {
       const user = await refreshUser();
       // If user doesn't have a role, redirect to select-role
       if (!user?.role) {
-        navigate("/select-role");
+        void navigate('/select-role');
       } else {
-        navigate("/dashboard");
+        void navigate('/dashboard');
       }
     } catch (err: unknown) {
-      console.error("Login error:", err);
+      console.error('Login error:', err);
       const errorMessage =
-        err instanceof Error && "response" in err
+        err instanceof Error && 'response' in err
           ? (err as { response?: { data?: { message?: string } } }).response
               ?.data?.message
-          : "Failed to login";
-      setError(errorMessage || "Failed to login");
+          : 'Failed to login';
+      setError(errorMessage ?? 'Failed to login');
     }
   };
 
@@ -52,11 +55,17 @@ export function LoginForm() {
       )}
 
       <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Email</label>
+        <label
+          htmlFor="login-email"
+          className="text-sm font-medium text-foreground"
+        >
+          Email
+        </label>
         <div className="relative">
           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
-            {...register("email")}
+            {...register('email')}
+            id="login-email"
             type="email"
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-muted/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary focus:bg-background transition-all"
             placeholder="john@example.com"
@@ -72,20 +81,24 @@ export function LoginForm() {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-foreground">
+          <label
+            htmlFor="login-password"
+            className="text-sm font-medium text-foreground"
+          >
             Password
           </label>
-          <a
-            href="#"
+          <Link
+            to="/forgot-password"
             className="text-xs text-primary hover:text-primary/80 transition-colors"
           >
             Forgot password?
-          </a>
+          </Link>
         </div>
         <div className="relative">
           <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
-            {...register("password")}
+            {...register('password')}
+            id="login-password"
             type="password"
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-muted/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary focus:bg-background transition-all"
             placeholder="••••••••"
@@ -110,9 +123,28 @@ export function LoginForm() {
             Signing in...
           </>
         ) : (
-          "Sign In"
+          'Sign In'
         )}
       </button>
+
+      <p className="text-xs text-center text-muted-foreground">
+        By signing in, you agree to our{' '}
+        <Link
+          to="/terms"
+          className="text-primary hover:text-primary/80 transition-colors underline"
+          target="_blank"
+        >
+          Terms of Service
+        </Link>{' '}
+        and{' '}
+        <Link
+          to="/privacy"
+          className="text-primary hover:text-primary/80 transition-colors underline"
+          target="_blank"
+        >
+          Privacy Policy
+        </Link>
+      </p>
     </form>
   );
 }

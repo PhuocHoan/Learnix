@@ -16,13 +16,17 @@
     "format:check": "prettier --check .",
     "test": "pnpm --filter frontend test run && pnpm --filter backend test",
     "test:related": "pnpm --filter frontend test run --changed && pnpm --filter backend test --onlyChanged",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
     "build": "pnpm --filter frontend build && pnpm --filter backend build",
     "precommit": "pnpm format && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "prettier": "^3.7.1"
+    "prettier": "^3.7.3"
   },
   "lint-staged": {
     "*.{js,ts,tsx,json,md,yml,yaml}": [

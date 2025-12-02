@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
 import { UserRole } from '../enums/user-role.enum';
 
 @Entity('users')
@@ -18,11 +19,14 @@ export class User {
   @Column({ type: 'varchar', select: false, nullable: true }) // Don't return password by default, allow NULL for OAuth users
   password: string | null;
 
-  @Column({ nullable: true })
-  fullName: string;
+  @Column({ type: 'varchar', nullable: true })
+  fullName: string | null;
 
-  @Column({ nullable: true })
-  avatarUrl: string;
+  @Column({ type: 'varchar', nullable: true })
+  avatarUrl: string | null;
+
+  @Column({ type: 'varchar', nullable: true }) // Original avatar from OAuth provider (Google/GitHub)
+  oauthAvatarUrl: string | null;
 
   @Column({
     type: 'enum',
@@ -33,6 +37,21 @@ export class User {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ default: false })
+  isEmailVerified: boolean;
+
+  @Column({ type: 'varchar', nullable: true, select: false })
+  activationToken: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  activationTokenExpiry: Date | null;
+
+  @Column({ type: 'varchar', nullable: true, select: false })
+  passwordResetToken: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  passwordResetTokenExpiry: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

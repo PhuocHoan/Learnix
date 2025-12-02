@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+
+# Cache
+.cache/
+.turbo/
+
+# Generated files
+pnpm-lock.yaml
+package-lock.json
+
+# Coverage
+coverage/
+
+# Environment files
+.env*
+
+# IDE
+.vscode/
+.idea/
+
+# Uploads
+uploads/

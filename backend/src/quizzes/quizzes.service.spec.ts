@@ -1,11 +1,12 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
-import { QuizzesService } from './quizzes.service';
-import { Quiz, QuizStatus } from './entities/quiz.entity';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+
 import { Question } from './entities/question.entity';
+import { Quiz, QuizStatus } from './entities/quiz.entity';
+import { QuizzesService } from './quizzes.service';
 import { AiQuizGeneratorService } from './services/ai-quiz-generator.service';
+
 import type { Repository, DeleteResult } from 'typeorm';
 
 describe('QuizzesService', () => {

@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api } from '@/lib/api';
 
 export interface Question {
   id: string;
@@ -13,7 +13,7 @@ export interface Quiz {
   id: string;
   title: string;
   description: string;
-  status: "draft" | "ai_generated" | "approved";
+  status: 'draft' | 'ai_generated' | 'approved';
   aiGenerated: boolean;
   questions: Question[];
   createdAt: string;
@@ -27,22 +27,22 @@ export interface GenerateQuizRequest {
 
 export const quizzesApi = {
   generateQuiz: async (data: GenerateQuizRequest): Promise<Quiz> => {
-    const response = await api.post("/quizzes/generate", data);
+    const response = await api.post<Quiz>('/quizzes/generate', data);
     return response.data;
   },
 
   getMyQuizzes: async (): Promise<Quiz[]> => {
-    const response = await api.get("/quizzes/my-quizzes");
+    const response = await api.get<Quiz[]>('/quizzes/my-quizzes');
     return response.data;
   },
 
   getQuiz: async (id: string): Promise<Quiz> => {
-    const response = await api.get(`/quizzes/${id}`);
+    const response = await api.get<Quiz>(`/quizzes/${id}`);
     return response.data;
   },
 
   approveQuiz: async (id: string): Promise<Quiz> => {
-    const response = await api.patch(`/quizzes/${id}/approve`);
+    const response = await api.patch<Quiz>(`/quizzes/${id}/approve`);
     return response.data;
   },
 
@@ -50,7 +50,10 @@ export const quizzesApi = {
     questionId: string,
     data: Partial<Question>,
   ): Promise<Question> => {
-    const response = await api.patch(`/quizzes/questions/${questionId}`, data);
+    const response = await api.patch<Question>(
+      `/quizzes/questions/${questionId}`,
+      data,
+    );
     return response.data;
   },
 

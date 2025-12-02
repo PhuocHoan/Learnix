@@ -27,21 +27,6 @@ You are an expert Full Stack Developer working on **Learnix**, a modern web appl
 2.  **Planning**:
     - Before complex tasks, use the **Architect Agent** or `plan-feature.prompt.md` to design the solution.
     - Break down features into: Database -> Backend API -> Frontend UI.
-3.  **Post-Implementation Verification (MANDATORY)**:
-    - After **every** implementation, run the verification steps below.
-    - **Never** consider an implementation complete until all steps pass.
-
-## Post-Implementation Verification
-
-After completing any code changes, you **MUST** run this command from the monorepo root:
-
-```bash
-pnpm precommit
-```
-
-This runs: `format` → `lint` → `typecheck` → `test` → `build`
-
-**Never consider an implementation complete until `pnpm precommit` passes.**
 
 ## Detailed Standards (Must Read)
 

@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api } from '@/lib/api';
 
 export interface DashboardStats {
   coursesEnrolled?: number;
@@ -31,18 +31,21 @@ export interface Activity {
 
 export const dashboardApi = {
   getStats: async (): Promise<DashboardStats> => {
-    // api instance automatically sends the HTTP-only cookie
-    const response = await api.get("/dashboard/stats");
+    const response = await api.get<DashboardStats>('/dashboard/stats');
     return response.data;
   },
 
   getProgress: async (): Promise<{ currentCourses: CourseProgress[] }> => {
-    const response = await api.get("/dashboard/progress");
+    const response = await api.get<{ currentCourses: CourseProgress[] }>(
+      '/dashboard/progress',
+    );
     return response.data;
   },
 
   getActivity: async (): Promise<{ activities: Activity[] }> => {
-    const response = await api.get("/dashboard/activity");
+    const response = await api.get<{ activities: Activity[] }>(
+      '/dashboard/activity',
+    );
     return response.data;
   },
 };

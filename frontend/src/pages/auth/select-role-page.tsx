@@ -1,7 +1,5 @@
-import { useState } from "react";
-import { useAuth } from "@/contexts/use-auth";
-import { authApi } from "@/features/auth/api/auth-api";
-import { cn } from "@/lib/utils";
+import { useState } from 'react';
+
 import {
   GraduationCap,
   BookOpen,
@@ -13,40 +11,54 @@ import {
   Lightbulb,
   BarChart3,
   CheckCircle2,
-} from "lucide-react";
+} from 'lucide-react';
 
-type Role = "student" | "instructor";
+import { useAuth } from '@/contexts/use-auth';
+import { authApi } from '@/features/auth/api/auth-api';
+import { cn } from '@/lib/utils';
+
+type Role = 'student' | 'instructor';
+
+function getRoleDisplayText(role: Role | null): string {
+  if (role === 'instructor') {
+    return 'Instructor';
+  }
+  if (role === 'student') {
+    return 'Student';
+  }
+  return '...';
+}
 
 const roleOptions = [
   {
-    role: "student" as Role,
-    title: "Learn",
-    subtitle: "As a Student",
+    role: 'student' as Role,
+    title: 'Learn',
+    subtitle: 'As a Student',
     description:
-      "Access courses, take quizzes, and track your learning progress",
+      'Access courses, take quizzes, and track your learning progress',
     icon: GraduationCap,
-    gradient: "from-blue-500 via-blue-600 to-indigo-600",
-    bgGradient: "from-blue-500/10 via-blue-600/10 to-indigo-600/10",
-    hoverGlow: "group-hover:shadow-blue-500/20",
+    gradient: 'from-blue-500 via-blue-600 to-indigo-600',
+    bgGradient: 'from-blue-500/10 via-blue-600/10 to-indigo-600/10',
+    hoverGlow: 'group-hover:shadow-blue-500/20',
     features: [
-      { icon: BookOpen, text: "Access unlimited courses" },
-      { icon: Trophy, text: "Earn achievements & badges" },
-      { icon: BarChart3, text: "Track detailed progress" },
+      { icon: BookOpen, text: 'Access unlimited courses' },
+      { icon: Trophy, text: 'Earn achievements & badges' },
+      { icon: BarChart3, text: 'Track detailed progress' },
     ],
   },
   {
-    role: "instructor" as Role,
-    title: "Teach",
-    subtitle: "As an Instructor",
-    description: "Create courses, design quizzes with AI, and inspire learners",
+    role: 'instructor' as Role,
+    title: 'Teach',
+    subtitle: 'As an Instructor',
+    description: 'Create courses, design quizzes with AI, and inspire learners',
     icon: BookOpen,
-    gradient: "from-purple-500 via-purple-600 to-pink-600",
-    bgGradient: "from-purple-500/10 via-purple-600/10 to-pink-600/10",
-    hoverGlow: "group-hover:shadow-purple-500/20",
+    gradient: 'from-purple-500 via-purple-600 to-pink-600',
+    bgGradient: 'from-purple-500/10 via-purple-600/10 to-pink-600/10',
+    hoverGlow: 'group-hover:shadow-purple-500/20',
     features: [
-      { icon: Lightbulb, text: "Create engaging courses" },
-      { icon: Sparkles, text: "AI-powered quiz generator" },
-      { icon: Users, text: "Build learning communities" },
+      { icon: Lightbulb, text: 'Create engaging courses' },
+      { icon: Sparkles, text: 'AI-powered quiz generator' },
+      { icon: Users, text: 'Build learning communities' },
     ],
   },
 ];
@@ -58,7 +70,9 @@ export function SelectRolePage() {
   const [error, setError] = useState<string | null>(null);
 
   const handleSelectRole = async () => {
-    if (!selectedRole) return;
+    if (!selectedRole) {
+      return;
+    }
 
     try {
       setError(null);
@@ -69,17 +83,17 @@ export function SelectRolePage() {
       // Verify role was updated successfully
       if (updatedUser?.role) {
         // Use window.location to ensure proper redirect after role update
-        window.location.href = "/dashboard";
+        window.location.href = '/dashboard';
       } else {
-        throw new Error("Role update failed");
+        throw new Error('Role update failed');
       }
     } catch (err: unknown) {
       const errorMessage =
-        err instanceof Error && "response" in err
+        err instanceof Error && 'response' in err
           ? (err as { response?: { data?: { message?: string } } }).response
               ?.data?.message
-          : "Failed to select role";
-      setError(errorMessage || "Failed to select role");
+          : 'Failed to select role';
+      setError(errorMessage ?? 'Failed to select role');
       setIsSubmitting(false);
     }
   };
@@ -138,10 +152,10 @@ export function SelectRolePage() {
                 disabled={isSubmitting}
                 style={{ animationDelay: `${index * 150}ms` }}
                 className={cn(
-                  "relative group text-left p-6 rounded-2xl border-2 transition-all duration-300 overflow-hidden animate-fade-in",
+                  'relative group text-left p-6 rounded-2xl border-2 transition-all duration-300 overflow-hidden animate-fade-in',
                   isSelected
-                    ? "border-primary bg-primary/5 shadow-2xl shadow-primary/20 scale-[1.03] ring-2 ring-primary/30"
-                    : "border-border bg-card/50 backdrop-blur-sm hover:border-primary/50 hover:bg-card hover:shadow-xl",
+                    ? 'border-primary bg-primary/5 shadow-2xl shadow-primary/20 scale-[1.03] ring-2 ring-primary/30'
+                    : 'border-border bg-card/50 backdrop-blur-sm hover:border-primary/50 hover:bg-card hover:shadow-xl',
                   option.hoverGlow,
                 )}
               >
@@ -157,9 +171,9 @@ export function SelectRolePage() {
                 {/* Gradient background on hover/select with smoother transition */}
                 <div
                   className={cn(
-                    "absolute inset-0 opacity-0 transition-opacity duration-500 bg-linear-to-br",
+                    'absolute inset-0 opacity-0 transition-opacity duration-500 bg-linear-to-br',
                     option.bgGradient,
-                    isSelected ? "opacity-100" : "group-hover:opacity-70",
+                    isSelected ? 'opacity-100' : 'group-hover:opacity-70',
                   )}
                 />
 
@@ -172,11 +186,11 @@ export function SelectRolePage() {
                   {/* Icon with enhanced animation */}
                   <div
                     className={cn(
-                      "w-14 h-14 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 bg-linear-to-br shadow-md",
+                      'w-14 h-14 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 bg-linear-to-br shadow-md',
                       option.gradient,
                       isSelected
-                        ? "shadow-2xl shadow-primary/40 scale-110 animate-bounce"
-                        : "group-hover:shadow-xl group-hover:shadow-primary/30 group-hover:scale-105",
+                        ? 'shadow-2xl shadow-primary/40 scale-110 animate-bounce'
+                        : 'group-hover:shadow-xl group-hover:shadow-primary/30 group-hover:scale-105',
                     )}
                   >
                     <Icon className="w-7 h-7 text-white" />
@@ -207,10 +221,10 @@ export function SelectRolePage() {
                         >
                           <div
                             className={cn(
-                              "p-1.5 rounded-lg transition-all duration-300",
+                              'p-1.5 rounded-lg transition-all duration-300',
                               isSelected
-                                ? "bg-primary/20 text-primary shadow-md shadow-primary/20"
-                                : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary",
+                                ? 'bg-primary/20 text-primary shadow-md shadow-primary/20'
+                                : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary',
                             )}
                           >
                             <FeatureIcon className="w-4 h-4" />
@@ -234,10 +248,10 @@ export function SelectRolePage() {
             onClick={handleSelectRole}
             disabled={!selectedRole || isSubmitting}
             className={cn(
-              "relative px-10 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center gap-3 overflow-hidden group/btn",
+              'relative px-10 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center gap-3 overflow-hidden group/btn',
               selectedRole
-                ? "gradient-primary text-white shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.05] active:scale-[0.98]"
-                : "bg-muted text-muted-foreground cursor-not-allowed opacity-50",
+                ? 'gradient-primary text-white shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.05] active:scale-[0.98]'
+                : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50',
             )}
           >
             {/* Animated shine effect */}
@@ -253,12 +267,7 @@ export function SelectRolePage() {
                 </>
               ) : (
                 <>
-                  Continue as{" "}
-                  {selectedRole === "instructor"
-                    ? "Instructor"
-                    : selectedRole === "student"
-                      ? "Student"
-                      : "..."}
+                  Continue as {getRoleDisplayText(selectedRole)}
                   <Sparkles className="w-5 h-5 animate-pulse" />
                 </>
               )}
@@ -278,3 +287,5 @@ export function SelectRolePage() {
     </div>
   );
 }
+
+export default SelectRolePage;

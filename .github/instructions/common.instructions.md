@@ -1,6 +1,6 @@
 ---
-description: "Common Standards: TypeScript, Security, Performance, and DevOps"
-applyTo: "**"
+description: 'Common Standards: TypeScript, Security, Performance, and DevOps'
+applyTo: '**'
 ---
 
 # Common Development Instructions

@@ -1,4 +1,4 @@
-import { createContext } from "react";
+import { createContext } from 'react';
 
 export interface User {
   id?: string;
@@ -8,6 +8,7 @@ export interface User {
   name?: string;
   fullName?: string;
   avatarUrl?: string;
+  oauthAvatarUrl?: string;
 }
 
 export interface AuthContextType {

@@ -1,13 +1,15 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { UserRole } from './users/enums/user-role.enum';
+
+import * as bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
+
+import { AppModule } from './app.module';
 import { Course, CourseLevel } from './courses/entities/course.entity';
 import { LessonType } from './courses/entities/lesson.entity';
 import { User } from './users/entities/user.entity';
-import * as bcrypt from 'bcrypt';
+import { UserRole } from './users/enums/user-role.enum';
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule);
   const dataSource = app.get(DataSource);
   const userRepository = dataSource.getRepository(User);
@@ -56,7 +58,7 @@ async function bootstrap() {
     level: CourseLevel.BEGINNER,
     isPublished: true,
     tags: ['react', 'frontend', 'javascript'],
-    instructor: instructor,
+    instructor,
     thumbnailUrl:
       'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80',
     sections: [
@@ -122,7 +124,7 @@ async function bootstrap() {
     level: CourseLevel.ADVANCED,
     isPublished: true,
     tags: ['nestjs', 'backend', 'typescript', 'architecture'],
-    instructor: instructor,
+    instructor,
     thumbnailUrl:
       'https://images.unsplash.com/photo-1623479322729-28b25c16b011?w=800&q=80',
     sections: [
@@ -171,7 +173,7 @@ async function bootstrap() {
     level: CourseLevel.INTERMEDIATE,
     isPublished: true,
     tags: ['ai', 'fullstack', 'api'],
-    instructor: instructor,
+    instructor,
     thumbnailUrl:
       'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80',
     sections: [

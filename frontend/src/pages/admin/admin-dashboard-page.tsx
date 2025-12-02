@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import {
   Users,
   BarChart3,
@@ -6,44 +5,46 @@ import {
   Shield,
   ArrowRight,
   Sparkles,
-} from "lucide-react";
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 export function AdminDashboardPage() {
   const adminCards = [
     {
-      title: "User Management",
+      title: 'User Management',
       description:
-        "View, edit roles, and manage user accounts across the platform",
+        'View, edit roles, and manage user accounts across the platform',
       icon: Users,
-      href: "/admin/users",
-      iconBg: "bg-blue-500/10",
-      iconColor: "text-blue-500",
+      href: '/admin/users',
+      iconBg: 'bg-blue-500/10',
+      iconColor: 'text-blue-500',
       available: true,
     },
     {
-      title: "System Statistics",
-      description: "View platform analytics, metrics, and performance data",
+      title: 'System Statistics',
+      description: 'View platform analytics, metrics, and performance data',
       icon: BarChart3,
-      href: "/admin/stats",
-      iconBg: "bg-green-500/10",
-      iconColor: "text-green-500",
+      href: '/admin/stats',
+      iconBg: 'bg-green-500/10',
+      iconColor: 'text-green-500',
       available: true,
     },
     {
-      title: "Course Moderation",
-      description: "Review and approve instructor course submissions",
+      title: 'Course Moderation',
+      description: 'Review and approve instructor course submissions',
       icon: BookOpen,
-      href: "/admin/courses",
-      iconBg: "bg-purple-500/10",
-      iconColor: "text-purple-500",
+      href: '/admin/courses',
+      iconBg: 'bg-purple-500/10',
+      iconColor: 'text-purple-500',
       available: false,
     },
   ];
@@ -120,8 +121,8 @@ export function AdminDashboardPage() {
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
-                      <div className={cn("p-3 rounded-xl", card.iconBg)}>
-                        <Icon className={cn("w-6 h-6", card.iconColor)} />
+                      <div className={cn('p-3 rounded-xl', card.iconBg)}>
+                        <Icon className={cn('w-6 h-6', card.iconColor)} />
                       </div>
                       <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
                         Coming Soon
@@ -141,11 +142,11 @@ export function AdminDashboardPage() {
                     <div className="flex items-start justify-between">
                       <div
                         className={cn(
-                          "p-3 rounded-xl transition-transform group-hover:scale-110",
+                          'p-3 rounded-xl transition-transform group-hover:scale-110',
                           card.iconBg,
                         )}
                       >
-                        <Icon className={cn("w-6 h-6", card.iconColor)} />
+                        <Icon className={cn('w-6 h-6', card.iconColor)} />
                       </div>
                       <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                     </div>
@@ -163,3 +164,5 @@ export function AdminDashboardPage() {
     </div>
   );
 }
+
+export default AdminDashboardPage;

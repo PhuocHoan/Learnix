@@ -1,32 +1,35 @@
-import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
-import { coursesApi } from "@/features/courses/api/courses-api";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowRight, BookOpen, Sparkles, User } from "lucide-react";
-import { useAuth } from "@/contexts/use-auth";
+import { useQuery } from '@tanstack/react-query';
+import { ArrowRight, BookOpen, Sparkles, User } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/contexts/use-auth';
+import { coursesApi, type Course } from '@/features/courses/api/courses-api';
 
 export function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
   const { data: response, isLoading: isLoadingCourses } = useQuery({
-    queryKey: ["courses", "latest"],
+    queryKey: ['courses', 'latest'],
     // UPDATED: Pass object with limit and sort options
     queryFn: () =>
       coursesApi.getAllCourses({
         limit: 6,
-        sort: "date",
-        order: "DESC",
+        sort: 'date',
+        order: 'DESC',
       }),
   });
 
   // UPDATED: Handle both legacy array response and new paginated response
-  const latestCourses = Array.isArray(response) ? response : response?.data;
+  const latestCourses: Course[] | undefined = Array.isArray(response)
+    ? response
+    : response?.data;
 
   const { data: tags, isLoading: isLoadingTags } = useQuery({
-    queryKey: ["courses", "tags"],
+    queryKey: ['courses', 'tags'],
     queryFn: coursesApi.getTags,
   });
 
@@ -50,14 +53,14 @@ export function HomePage() {
 
           <h1
             className="text-4xl md:text-6xl font-bold mb-6 leading-tight animate-fade-in"
-            style={{ animationDelay: "100ms" }}
+            style={{ animationDelay: '100ms' }}
           >
             Master New Skills with <br /> AI-Powered Learning
           </h1>
 
           <p
             className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed animate-fade-in"
-            style={{ animationDelay: "200ms" }}
+            style={{ animationDelay: '200ms' }}
           >
             Join Learnix to access interactive courses, personalized quizzes,
             and a community of learners. Start your journey today.
@@ -65,7 +68,7 @@ export function HomePage() {
 
           <div
             className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in"
-            style={{ animationDelay: "300ms" }}
+            style={{ animationDelay: '300ms' }}
           >
             <Link to="/courses">
               <Button
@@ -139,7 +142,7 @@ export function HomePage() {
               to="/courses"
               className="hidden md:flex items-center text-primary font-semibold hover:gap-2 transition-all group"
             >
-              View All Courses{" "}
+              View All Courses{' '}
               <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
@@ -159,7 +162,7 @@ export function HomePage() {
                     className="group h-full"
                   >
                     <Card className="h-full overflow-hidden hover:shadow-xl transition-all duration-300 border-border/50 flex flex-col hover:-translate-y-1">
-                      <div className="h-48 bg-gradient-to-br from-primary/5 to-primary/20 relative overflow-hidden">
+                      <div className="h-48 bg-linear-to-br from-primary/5 to-primary/20 relative overflow-hidden">
                         {course.thumbnailUrl ? (
                           <img
                             src={course.thumbnailUrl}
@@ -190,11 +193,11 @@ export function HomePage() {
                           <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                             <User className="w-3.5 h-3.5" />
                             <span>
-                              {course.instructor?.fullName || "Instructor"}
+                              {course.instructor?.fullName ?? 'Instructor'}
                             </span>
                           </div>
                           <span className="font-bold text-primary">
-                            {course.price === 0 ? "Free" : `$${course.price}`}
+                            {course.price === 0 ? 'Free' : `$${course.price}`}
                           </span>
                         </div>
                       </CardContent>
@@ -215,3 +218,5 @@ export function HomePage() {
     </div>
   );
 }
+
+export default HomePage;

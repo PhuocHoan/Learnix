@@ -1,17 +1,63 @@
-import { Controller, Get, Post, Param, UseGuards, Query } from '@nestjs/common';
-import { CoursesService } from './courses.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
+
+import {
+  CoursesService,
+  EnrolledCourseDto,
+  CoursesListResult,
+  CourseRecommendation,
+} from './courses.service';
+import { CourseLevel, Course } from './entities/course.entity';
+import { Enrollment } from './entities/enrollment.entity';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { User } from '../users/entities/user.entity';
-import { CourseLevel } from './entities/course.entity';
 
 @Controller('courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
   @Get('tags')
-  getTags() {
+  getTags(): Promise<string[]> {
     return this.coursesService.getUniqueTags();
+  }
+
+  /**
+   * Get course recommendations based on enrolled course tags
+   */
+  @Get('recommendations')
+  @UseGuards(JwtAuthGuard)
+  getRecommendations(
+    @CurrentUser() user: User,
+    @Query('limit') limit?: number,
+  ): Promise<CourseRecommendation[]> {
+    return this.coursesService.getRecommendations(
+      user.id,
+      limit ? Number(limit) : 6,
+    );
+  }
+
+  /**
+   * Get enrolled courses for the current user (My Learning)
+   */
+  @Get('enrolled')
+  @UseGuards(JwtAuthGuard)
+  getEnrolledCourses(
+    @CurrentUser() user: User,
+    @Query('archived') archived?: string,
+    @Query('status') status?: 'all' | 'in-progress' | 'completed',
+  ): Promise<EnrolledCourseDto[]> {
+    return this.coursesService.getEnrolledCourses(user.id, {
+      archived: archived === 'true',
+      status: status ?? 'all',
+    });
   }
 
   @Get()
@@ -23,7 +69,7 @@ export class CoursesController {
     @Query('tags') tags?: string, // Received as comma-separated string "react,js"
     @Query('sort') sort?: 'price' | 'date',
     @Query('order') order?: 'ASC' | 'DESC',
-  ) {
+  ): Promise<CoursesListResult> {
     // Parse tags string into array if it exists
     const tagsArray = tags ? tags.split(',').map((t) => t.trim()) : undefined;
 
@@ -39,21 +85,27 @@ export class CoursesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string): Promise<Course> {
     return this.coursesService.findOne(id);
   }
 
   @Post(':id/enroll')
   @UseGuards(JwtAuthGuard)
-  async enroll(@Param('id') id: string, @CurrentUser() user: User) {
+  async enroll(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ): Promise<Enrollment> {
     return this.coursesService.enroll(user.id, id);
   }
 
   @Get(':id/enrollment')
   @UseGuards(JwtAuthGuard)
-  async checkEnrollment(@Param('id') id: string, @CurrentUser() user: User) {
+  async checkEnrollment(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ): Promise<{ isEnrolled: boolean; progress: Enrollment | null }> {
     const enrollment = await this.coursesService.checkEnrollment(user.id, id);
-    return { isEnrolled: !!enrollment, progress: enrollment };
+    return { isEnrolled: Boolean(enrollment), progress: enrollment };
   }
 
   @Post(':id/lessons/:lessonId/complete')
@@ -62,7 +114,33 @@ export class CoursesController {
     @Param('id') courseId: string,
     @Param('lessonId') lessonId: string,
     @CurrentUser() user: User,
-  ) {
+  ): Promise<Enrollment> {
     return this.coursesService.completeLesson(user.id, courseId, lessonId);
+  }
+
+  /**
+   * Archive a course (hide from main list, preserve progress)
+   */
+  @Patch(':id/archive')
+  @UseGuards(JwtAuthGuard)
+  async archiveCourse(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ): Promise<{ success: boolean; message: string }> {
+    await this.coursesService.archiveCourse(user.id, id);
+    return { success: true, message: 'Course archived successfully' };
+  }
+
+  /**
+   * Unarchive a course (restore to main list)
+   */
+  @Patch(':id/unarchive')
+  @UseGuards(JwtAuthGuard)
+  async unarchiveCourse(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ): Promise<{ success: boolean; message: string }> {
+    await this.coursesService.unarchiveCourse(user.id, id);
+    return { success: true, message: 'Course unarchived successfully' };
   }
 }

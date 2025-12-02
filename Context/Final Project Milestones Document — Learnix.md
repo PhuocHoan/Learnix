@@ -14,11 +14,14 @@ Build the core technical foundation of Learnix, including authentication, author
 
 - **Repository & architecture setup** **_(~2-3 hours)_**
   - Create FE/BE repos, folder structure, environment configs.
+
     > **Team member:** Core/All
+
 - **Database design** **_(~5-6 hours)_**
   - Main entities: `users`, `courses`, `lessons`, `enrollments`,
     `quizzes`, `questions`, `progress`, `submissions`, `reviews`.
   - Define relationships and constraints (1-N, N-N).
+
     > **Team member:** Backend
 
 ### Common Auth
@@ -30,25 +33,30 @@ Build the core technical foundation of Learnix, including authentication, author
   - Sign In page + API
   - Token/session handling
 
-  > **Team member:** Full-stack dev
+    > **Team member:** Full-stack dev
 
-  **Google OAuth**
+    **Google OAuth**
+
   - Configure Google OAuth client
   - Implement Google login flow
   - Map Google account → Learnix user
 
-  > **Team member:** Frontend + Backend
+    > **Team member:** Frontend + Backend
 
 - **Authorization (Role-based) _(2–3 hours)_**
   - Create roles: guest, student, instructor, admin.
   - Implement route guards & protected routes.
   - Hide/show/ Restricted UI elements depending on permissions.
+
     > **Team member:** Frontend dev
+
 - **Layout & Theme System _(2–3 hours)_**
   - Create AppShell (header, sidebar, content area).
   - Build global theme (colors, typography, spacing).
   - Create reusable components (Button, Card, FormField).
+
     > **Team member:** Frontend dev
+
 - **Dashboard Prototype _(2–3 hours)_**
   - Create dashboard layout.
   - Add 3 widgets with mock data:
@@ -56,6 +64,7 @@ Build the core technical foundation of Learnix, including authentication, author
     - Progress overview
     - Activity list
   - Role-based dashboard display.
+
     > **Team member:** Frontend dev
 
 ## **Total time:** _16**–**22 hours_
@@ -75,39 +84,52 @@ Build the core technical foundation of Learnix, including authentication, author
 - **Homepage (Public) _(2–3 hours)_**
   - Display latest courses.
   - Display categories and trending tags.
+
     > **Team member:** Frontend dev
+
 - **Course List Page _(2–3 hours)_**
   - Filter by category or tag.
   - Display course cards (title, instructor, difficulty).
   - Display whether pagination or infinite scroll.
+
     > **Team member:** Frontend + Backend
+
 - **Course Detail Page _(2–3 hours)_**
   - Show course overview, tags, instructor info, student count.
   - Lock lessons/quizzes for guest users (Display a pop up requesting for subcribing account)
+
     > **Team member:** Frontend + Backend
+
 - **Search System _(0.5–1 hours)_**
   - Implement full-text search across title, summary, and tags.
+
     > **Team member:** Frontend + Backend
+
 - **Public Navigation _(1 hours)_**
   - Navbar (Home, Courses, Login/Signup).
+
     > **Team member:** Frontend
 
 ### Student Features
 
 - **Enroll / Unenroll Flow _(3–4 hours)_**
   - Allow to enroll courses based on the student’s budget.
-  - Unenroll from “My Courses”.
+    - Unenroll from “My Courses”.
+
     > **Team member:** Frontend + Backend
+
 - **Lesson Viewer (text + video)** **_(7–8 hours)_**
   - Show lesson list after enrollment.
   - Render text lessons (paper material/pdf slides) + embedded video lessons.
+
     > **Team member:** Frontend + Backend
+
 - **Student Dashboard _(6–12 hours)_**
   - List enrolled courses.
   - Course status: in-progress / completed.
   - Completion % = completed lessons / total lessons.
   - Suggested courses base on previous courses and interests (if applicable).
-  - The current budget includes bonus credits awarded for high-performance courses. For any course in which a student achieves a high score (e.g., at least 90/100 overall or demonstrates active participation), the student will receive bonus credits as specified for that course. These credits can then be used as payment for future courses.
+
     > **Team member:** Frontend + Backend
 
 ## Total time: _~26-35 hours_

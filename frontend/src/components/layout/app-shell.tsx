@@ -1,10 +1,22 @@
-import { Outlet } from "react-router-dom";
-import { Sidebar } from "./sidebar";
-import { Header } from "./header";
-import { useState } from "react";
+import { useState } from 'react';
+
+import { Outlet } from 'react-router-dom';
+
+import { Header } from './header';
+import { Sidebar } from './sidebar';
 
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleOverlayClick = () => {
+    setSidebarOpen(false);
+  };
+
+  const handleOverlayKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+      setSidebarOpen(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans">
@@ -12,7 +24,11 @@ export function AppShell() {
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden animate-fade-in"
-          onClick={() => setSidebarOpen(false)}
+          onClick={handleOverlayClick}
+          onKeyDown={handleOverlayKeyDown}
+          role="button"
+          tabIndex={0}
+          aria-label="Close sidebar"
         />
       )}
 

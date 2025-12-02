@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
 import { CourseSection } from './course-section.entity';
 
 export enum LessonType {

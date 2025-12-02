@@ -1,7 +1,6 @@
-import { useState } from "react"; // Added useState
-import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { coursesApi } from "@/features/courses/api/courses-api";
+import { useState } from 'react'; // Added useState
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   BookOpen,
   PlayCircle,
@@ -9,11 +8,34 @@ import {
   Lock,
   CheckCircle,
   Loader2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/use-auth";
-import { cn } from "@/lib/utils";
-import { AuthRequiredModal } from "@/features/auth/components/auth-required-modal";
+  Users,
+  Clock,
+  Calendar,
+  User,
+} from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/use-auth';
+import { AuthRequiredModal } from '@/features/auth/components/auth-required-modal';
+import { coursesApi } from '@/features/courses/api/courses-api';
+import {
+  cn,
+  formatLastUpdated,
+  formatStudentCount,
+  formatDate,
+} from '@/lib/utils';
+
+// Helper function to get lesson icon
+function getLessonIcon(isCompleted: boolean, lessonType: string) {
+  if (isCompleted) {
+    return <CheckCircle className="w-4 h-4" />;
+  }
+  if (lessonType === 'video') {
+    return <PlayCircle className="w-4 h-4" />;
+  }
+  return <FileText className="w-4 h-4" />;
+}
 
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -25,22 +47,22 @@ export function CourseDetailPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const { data: course, isLoading: isLoadingCourse } = useQuery({
-    queryKey: ["course", id],
-    queryFn: () => coursesApi.getCourse(id!),
-    enabled: !!id,
+    queryKey: ['course', id],
+    queryFn: () => coursesApi.getCourse(id ?? ''),
+    enabled: Boolean(id),
   });
 
   const { data: enrollment, isLoading: isLoadingEnrollment } = useQuery({
-    queryKey: ["enrollment", id],
-    queryFn: () => coursesApi.getEnrollment(id!),
-    enabled: !!id && isAuthenticated,
+    queryKey: ['enrollment', id],
+    queryFn: () => coursesApi.getEnrollment(id ?? ''),
+    enabled: Boolean(id) && isAuthenticated,
   });
 
   const enrollMutation = useMutation({
-    mutationFn: () => coursesApi.enroll(id!),
+    mutationFn: () => coursesApi.enroll(id ?? ''),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enrollment", id] });
-      navigate(`/courses/${id}/learn`);
+      void queryClient.invalidateQueries({ queryKey: ['enrollment', id] });
+      void navigate(`/courses/${id}/learn`);
     },
   });
 
@@ -50,7 +72,7 @@ export function CourseDetailPage() {
       setShowAuthModal(true);
       return;
     }
-    enrollMutation.mutate();
+    void enrollMutation.mutate();
   };
 
   // Handle locked lesson click
@@ -62,18 +84,22 @@ export function CourseDetailPage() {
     // (e.g., scroll to enroll button or show "Enroll to view" toast)
   };
 
-  if (isLoadingCourse) return <div className="p-8 text-center">Loading...</div>;
-  if (!course) return <div className="p-8 text-center">Course not found</div>;
+  if (isLoadingCourse) {
+    return <div className="p-8 text-center">Loading...</div>;
+  }
+  if (!course) {
+    return <div className="p-8 text-center">Course not found</div>;
+  }
 
   const totalLessons =
     course.sections?.reduce(
       (acc, section) => acc + section.lessons.length,
       0,
-    ) || 0;
+    ) ?? 0;
 
   // Force isEnrolled to false if not authenticated, ignoring cached enrollment data
   const isEnrolled = isAuthenticated && enrollment?.isEnrolled;
-  const completedIds = enrollment?.progress?.completedLessonIds || [];
+  const completedIds = enrollment?.progress?.completedLessonIds ?? [];
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8 animate-fade-in">
@@ -93,18 +119,49 @@ export function CourseDetailPage() {
             {course.description}
           </p>
 
-          <div className="flex items-center gap-6 text-sm text-muted-foreground pt-2">
+          {/* Course Stats */}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground pt-2">
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
               <span>{totalLessons} Lessons</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-foreground">Instructor:</span>
-              <span>
-                {course.instructor?.fullName ||
-                  course.instructor?.name ||
-                  "Instructor"}
-              </span>
+            {course.studentCount !== undefined && (
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span>{formatStudentCount(course.studentCount)}</span>
+              </div>
+            )}
+            {course.updatedAt && (
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span>{formatLastUpdated(course.updatedAt)}</span>
+              </div>
+            )}
+            {course.createdAt && (
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                <span>Created {formatDate(course.createdAt)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Instructor Info */}
+          <div className="flex items-center gap-3 pt-4 border-t border-border/50">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+              {(course.instructor?.fullName ?? course.instructor?.name ?? 'I')
+                .charAt(0)
+                .toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium">
+                  {course.instructor?.fullName ??
+                    course.instructor?.name ??
+                    'Instructor'}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">Course Instructor</p>
             </div>
           </div>
         </div>
@@ -127,7 +184,7 @@ export function CourseDetailPage() {
           ) : (
             <>
               <div className="text-3xl font-bold text-primary">
-                {course.price === 0 ? "Free" : `$${course.price}`}
+                {course.price === 0 ? 'Free' : `$${course.price}`}
               </div>
               <Button
                 size="lg"
@@ -140,11 +197,11 @@ export function CourseDetailPage() {
               >
                 {enrollMutation.isPending ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />{" "}
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />{' '}
                     Enrolling...
                   </>
                 ) : (
-                  "Enroll Now"
+                  'Enroll Now'
                 )}
               </Button>
               <p className="text-xs text-center text-muted-foreground">
@@ -180,31 +237,38 @@ export function CourseDetailPage() {
                     return (
                       <div
                         key={lesson.id}
+                        role={isLocked ? 'button' : undefined}
+                        tabIndex={isLocked ? 0 : undefined}
                         className={cn(
-                          "p-4 flex items-center gap-4 transition-colors",
+                          'p-4 flex items-center gap-4 transition-colors',
                           isLocked
-                            ? "opacity-75 hover:bg-muted/10 cursor-pointer"
-                            : "hover:bg-muted/20",
+                            ? 'opacity-75 hover:bg-muted/10 cursor-pointer'
+                            : 'hover:bg-muted/20',
                         )}
-                        onClick={() =>
-                          isLocked ? handleLockedLessonClick() : null
-                        }
+                        onClick={() => {
+                          if (isLocked) {
+                            handleLockedLessonClick();
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (
+                            isLocked &&
+                            (e.key === 'Enter' || e.key === ' ')
+                          ) {
+                            e.preventDefault();
+                            handleLockedLessonClick();
+                          }
+                        }}
                       >
                         <div
                           className={cn(
-                            "p-2 rounded-lg",
+                            'p-2 rounded-lg',
                             isCompleted
-                              ? "bg-green-100 text-green-600"
-                              : "bg-primary/5 text-primary",
+                              ? 'bg-green-100 text-green-600'
+                              : 'bg-primary/5 text-primary',
                           )}
                         >
-                          {isCompleted ? (
-                            <CheckCircle className="w-4 h-4" />
-                          ) : lesson.type === "video" ? (
-                            <PlayCircle className="w-4 h-4" />
-                          ) : (
-                            <FileText className="w-4 h-4" />
-                          )}
+                          {getLessonIcon(isCompleted, lesson.type)}
                         </div>
                         <div className="flex-1 text-sm font-medium">
                           {lesson.title}
@@ -218,10 +282,12 @@ export function CourseDetailPage() {
                             className="text-xs h-8"
                             onClick={(e) => {
                               e.stopPropagation(); // Prevent parent click
-                              navigate(`/courses/${id}/learn`);
+                              void navigate(
+                                `/courses/${id}/learn?lesson=${lesson.id}`,
+                              );
                             }}
                           >
-                            {isEnrolled ? "View" : "Preview"}
+                            {isEnrolled ? 'View' : 'Preview'}
                           </Button>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -251,3 +317,5 @@ export function CourseDetailPage() {
     </div>
   );
 }
+
+export default CourseDetailPage;

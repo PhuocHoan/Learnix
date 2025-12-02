@@ -1,14 +1,15 @@
-import { Link } from "react-router-dom";
-import { RegisterForm } from "@/features/auth/components/register-form";
 import {
   GraduationCap,
   BookOpen,
   Award,
   Users,
   ChevronLeft,
-} from "lucide-react";
-import { oauthUrls } from "@/lib/config";
-import { Button } from "@/components/ui/button";
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+import { Button } from '@/components/ui/button';
+import { RegisterForm } from '@/features/auth/components/register-form';
+import { oauthUrls } from '@/lib/config';
 
 export function RegisterPage() {
   const handleGoogleLogin = () => {
@@ -22,11 +23,11 @@ export function RegisterPage() {
   const features = [
     {
       icon: BookOpen,
-      title: "Interactive Courses",
-      desc: "Learn at your own pace",
+      title: 'Interactive Courses',
+      desc: 'Learn at your own pace',
     },
-    { icon: Award, title: "AI-Powered Quizzes", desc: "Test your knowledge" },
-    { icon: Users, title: "Community", desc: "Learn with others" },
+    { icon: Award, title: 'AI-Powered Quizzes', desc: 'Test your knowledge' },
+    { icon: Users, title: 'Community', desc: 'Learn with others' },
   ];
 
   return (
@@ -119,7 +120,7 @@ export function RegisterPage() {
             </div>
 
             <p className="mt-8 text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
+              Already have an account?{' '}
               <Link
                 to="/login"
                 className="font-semibold text-primary hover:text-primary/80 transition-colors"
@@ -128,17 +129,6 @@ export function RegisterPage() {
               </Link>
             </p>
           </div>
-
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            By creating an account, you agree to our{" "}
-            <a href="#" className="underline hover:text-foreground">
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="#" className="underline hover:text-foreground">
-              Privacy Policy
-            </a>
-          </p>
         </div>
       </div>
 
@@ -185,3 +175,5 @@ export function RegisterPage() {
     </div>
   );
 }
+
+export default RegisterPage;

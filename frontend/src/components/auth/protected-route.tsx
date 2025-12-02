@@ -1,8 +1,9 @@
-import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/use-auth";
-import type { ReactNode } from "react";
-import { GraduationCap, Loader2, ShieldX } from "lucide-react";
-import { Link } from "react-router-dom";
+import type { ReactNode } from 'react';
+
+import { GraduationCap, Loader2, ShieldX } from 'lucide-react';
+import { Navigate, useLocation, Link } from 'react-router-dom';
+
+import { useAuth } from '@/contexts/use-auth';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -40,11 +41,11 @@ export function ProtectedRoute({
   }
 
   // Redirect to select-role if user hasn't selected a role yet
-  if (user && !user.role && location.pathname !== "/select-role") {
+  if (user && !user?.role && location.pathname !== '/select-role') {
     return <Navigate to="/select-role" replace />;
   }
 
-  if (allowedRoles && user && user.role && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
     return (
       <div className="min-h-screen flex items-center justify-center gradient-hero p-4">
         <div className="text-center max-w-md animate-fade-in">
@@ -56,7 +57,7 @@ export function ProtectedRoute({
           </h1>
           <p className="text-muted-foreground mb-6">
             You don't have permission to access this page. This area is
-            restricted to {allowedRoles.join(" or ")} users only.
+            restricted to {allowedRoles.join(' or ')} users only.
           </p>
           <Link
             to="/dashboard"

@@ -12,13 +12,13 @@ export const config = {
    */
   apiUrl:
     import.meta.env.VITE_API_URL ||
-    (import.meta.env.PROD ? "/api" : "http://localhost:3000"),
+    (import.meta.env.PROD ? '/api' : 'http://localhost:3000'),
 
   /**
    * Application name
    * @default 'Learnix'
    */
-  appName: import.meta.env.VITE_APP_NAME || "Learnix",
+  appName: import.meta.env.VITE_APP_NAME || 'Learnix',
 
   /**
    * Is production environment

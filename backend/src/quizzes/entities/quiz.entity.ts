@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
+
 import { Question } from './question.entity';
 
 export enum QuizStatus {

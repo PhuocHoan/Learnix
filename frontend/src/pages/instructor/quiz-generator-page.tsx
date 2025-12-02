@@ -1,26 +1,34 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from 'react';
+
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+
 import {
   quizzesApi,
   type Quiz,
   type Question,
-} from "@/features/quizzes/api/quizzes-api";
-import { useNavigate } from "react-router-dom";
+} from '@/features/quizzes/api/quizzes-api';
 
 export function QuizGeneratorPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [lessonText, setLessonText] = useState("");
-  const [title, setTitle] = useState("");
+  const [lessonText, setLessonText] = useState('');
+  const [title, setTitle] = useState('');
   const [numberOfQuestions, setNumberOfQuestions] = useState(5);
   const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(
+    null,
+  );
 
   const generateMutation = useMutation({
     mutationFn: quizzesApi.generateQuiz,
     onSuccess: (data) => {
       setGeneratedQuiz(data);
-      queryClient.invalidateQueries({ queryKey: ["quizzes", "my-quizzes"] });
+      void queryClient.invalidateQueries({
+        queryKey: ['quizzes', 'my-quizzes'],
+      });
     },
   });
 
@@ -34,8 +42,8 @@ export function QuizGeneratorPage() {
     }) => quizzesApi.updateQuestion(questionId, data),
     onSuccess: () => {
       if (generatedQuiz) {
-        queryClient.invalidateQueries({
-          queryKey: ["quizzes", generatedQuiz.id],
+        void queryClient.invalidateQueries({
+          queryKey: ['quizzes', generatedQuiz.id],
         });
       }
       setEditingQuestion(null);
@@ -46,8 +54,8 @@ export function QuizGeneratorPage() {
     mutationFn: quizzesApi.deleteQuestion,
     onSuccess: () => {
       if (generatedQuiz) {
-        queryClient.invalidateQueries({
-          queryKey: ["quizzes", generatedQuiz.id],
+        void queryClient.invalidateQueries({
+          queryKey: ['quizzes', generatedQuiz.id],
         });
       }
     },
@@ -56,14 +64,16 @@ export function QuizGeneratorPage() {
   const approveMutation = useMutation({
     mutationFn: quizzesApi.approveQuiz,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["quizzes", "my-quizzes"] });
-      navigate("/instructor/quizzes");
+      void queryClient.invalidateQueries({
+        queryKey: ['quizzes', 'my-quizzes'],
+      });
+      void navigate('/instructor/quizzes');
     },
   });
 
   const handleGenerate = () => {
     if (!title || !lessonText) {
-      alert("Please provide both title and lesson text");
+      toast.error('Please provide both title and lesson text');
       return;
     }
     generateMutation.mutate({ title, lessonText, numberOfQuestions });
@@ -82,10 +92,14 @@ export function QuizGeneratorPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label
+                  htmlFor="quizTitle"
+                  className="block text-sm font-medium mb-2"
+                >
                   Quiz Title
                 </label>
                 <input
+                  id="quizTitle"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -95,10 +109,14 @@ export function QuizGeneratorPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label
+                  htmlFor="lessonText"
+                  className="block text-sm font-medium mb-2"
+                >
                   Lesson Text
                 </label>
                 <textarea
+                  id="lessonText"
                   value={lessonText}
                   onChange={(e) => setLessonText(e.target.value)}
                   className="w-full px-3 py-2 rounded-md border border-input bg-background min-h-[300px]"
@@ -107,10 +125,14 @@ export function QuizGeneratorPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label
+                  htmlFor="numberOfQuestions"
+                  className="block text-sm font-medium mb-2"
+                >
                   Number of Questions
                 </label>
                 <input
+                  id="numberOfQuestions"
                   type="number"
                   min={3}
                   max={20}
@@ -128,13 +150,13 @@ export function QuizGeneratorPage() {
                 className="w-full py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
               >
                 {generateMutation.isPending
-                  ? "Generating..."
-                  : "Generate Quiz with AI"}
+                  ? 'Generating...'
+                  : 'Generate Quiz with AI'}
               </button>
 
               {generateMutation.isError && (
                 <div className="p-3 bg-red-100 text-red-800 rounded-md">
-                  Error: {(generateMutation.error as Error).message}
+                  Error: {generateMutation.error.message}
                 </div>
               )}
             </div>
@@ -184,11 +206,7 @@ export function QuizGeneratorPage() {
                         Edit
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm("Delete this question?")) {
-                            deleteQuestionMutation.mutate(question.id);
-                          }
-                        }}
+                        onClick={() => setDeletingQuestionId(question.id)}
                         className="text-sm text-red-600 hover:underline"
                       >
                         Delete
@@ -201,9 +219,9 @@ export function QuizGeneratorPage() {
                       <div
                         key={i}
                         className={`p-2 rounded ${
-                          option.startsWith(question.correctAnswer + ":")
-                            ? "bg-green-100 text-green-800"
-                            : "bg-muted"
+                          option.startsWith(`${question.correctAnswer}:`)
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-muted'
                         }`}
                       >
                         {option}
@@ -228,7 +246,10 @@ export function QuizGeneratorPage() {
             <h2 className="text-xl font-bold mb-4">Edit Question</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label
+                  htmlFor="edit-question-text"
+                  className="block text-sm font-medium mb-2"
+                >
                   Question Text
                 </label>
                 <textarea
@@ -239,18 +260,24 @@ export function QuizGeneratorPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Options (one per line, format: "A: text")
+                <label
+                  htmlFor="edit-options"
+                  className="block text-sm font-medium mb-2"
+                >
+                  Options (one per line, format: &quot;A: text&quot;)
                 </label>
                 <textarea
-                  defaultValue={editingQuestion.options.join("\n")}
+                  defaultValue={editingQuestion.options.join('\n')}
                   id="edit-options"
                   className="w-full px-3 py-2 rounded-md border border-input"
                   rows={4}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label
+                  htmlFor="edit-correct-answer"
+                  className="block text-sm font-medium mb-2"
+                >
                   Correct Answer (A, B, C, or D)
                 </label>
                 <input
@@ -266,19 +293,19 @@ export function QuizGeneratorPage() {
                   onClick={() => {
                     const questionText = (
                       document.getElementById(
-                        "edit-question-text",
+                        'edit-question-text',
                       ) as HTMLTextAreaElement
                     ).value;
                     const options = (
                       document.getElementById(
-                        "edit-options",
+                        'edit-options',
                       ) as HTMLTextAreaElement
                     ).value
-                      .split("\n")
+                      .split('\n')
                       .filter((o) => o.trim());
                     const correctAnswer = (
                       document.getElementById(
-                        "edit-correct-answer",
+                        'edit-correct-answer',
                       ) as HTMLInputElement
                     ).value;
 
@@ -302,6 +329,38 @@ export function QuizGeneratorPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingQuestionId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4">Confirm Delete</h2>
+            <p className="text-muted-foreground mb-6">
+              Are you sure you want to delete this question? This action cannot
+              be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingQuestionId(null)}
+                className="flex-1 py-2 border border-border rounded hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  deleteQuestionMutation.mutate(deletingQuestionId);
+                  setDeletingQuestionId(null);
+                }}
+                className="flex-1 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+export default QuizGeneratorPage;

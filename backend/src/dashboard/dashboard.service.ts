@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+
 import { Repository } from 'typeorm';
-import { User } from '../users/entities/user.entity';
+
 import { Course } from '../courses/entities/course.entity';
 import { Enrollment } from '../courses/entities/enrollment.entity';
+import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
 
 // Define a local interface for the activity object structure
@@ -13,6 +15,37 @@ export interface ActivityItem {
   title: string;
   course?: string;
   timestamp: string;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalCourses: number;
+  totalEnrollments: number;
+  activeStudents: number;
+}
+
+export interface InstructorStats {
+  coursesCreated: number;
+  totalStudents: number;
+  averageRating: number;
+}
+
+export interface StudentStats {
+  coursesEnrolled: number;
+  hoursLearned: number;
+  averageScore: number;
+}
+
+export interface CourseProgress {
+  id: string;
+  title: string;
+  progress: number;
+  totalLessons: number;
+  completedLessons: number;
+}
+
+export interface ProgressResult {
+  currentCourses: CourseProgress[];
 }
 
 @Injectable()
@@ -26,7 +59,9 @@ export class DashboardService {
     private enrollmentRepository: Repository<Enrollment>,
   ) {}
 
-  async getUserStats(user: User) {
+  async getUserStats(
+    user: User,
+  ): Promise<AdminStats | InstructorStats | StudentStats> {
     // 1. ADMIN STATS
     if (user.role === UserRole.ADMIN) {
       const totalUsers = await this.userRepository.count();
@@ -65,7 +100,7 @@ export class DashboardService {
 
       return {
         coursesCreated,
-        totalStudents: parseInt(result?.total || '0', 10),
+        totalStudents: parseInt(result?.total ?? '0', 10),
         averageRating: 0,
       };
     }
@@ -79,11 +114,14 @@ export class DashboardService {
     let totalDurationSeconds = 0;
 
     for (const enrollment of enrollments) {
+      /* eslint-disable @typescript-eslint/no-unnecessary-condition -- completedLessonIds is nullable in DB */
       if (
         !enrollment.completedLessonIds ||
         enrollment.completedLessonIds.length === 0
-      )
+      ) {
+        /* eslint-enable @typescript-eslint/no-unnecessary-condition */
         continue;
+      }
 
       const allLessons = enrollment.course.sections.flatMap((s) => s.lessons);
 
@@ -104,7 +142,7 @@ export class DashboardService {
     };
   }
 
-  async getUserProgress(user: User) {
+  async getUserProgress(user: User): Promise<ProgressResult> {
     const enrollments = await this.enrollmentRepository.find({
       where: { userId: user.id },
       relations: ['course', 'course.sections', 'course.sections.lessons'],
@@ -114,7 +152,8 @@ export class DashboardService {
     const currentCourses = enrollments.map((enrollment) => {
       const allLessons = enrollment.course.sections.flatMap((s) => s.lessons);
       const totalLessons = allLessons.length;
-      const completedCount = enrollment.completedLessonIds?.length || 0;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- completedLessonIds is nullable in DB
+      const completedCount = enrollment.completedLessonIds?.length ?? 0;
 
       const progress =
         totalLessons > 0
@@ -133,7 +172,7 @@ export class DashboardService {
     return { currentCourses };
   }
 
-  async getUserActivity(user: User) {
+  async getUserActivity(user: User): Promise<{ activities: ActivityItem[] }> {
     // FIX: Explicitly type the array here
     const activities: ActivityItem[] = [];
 

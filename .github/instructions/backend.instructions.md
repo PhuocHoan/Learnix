@@ -1,6 +1,6 @@
 ---
-description: "NestJS 11, TypeORM, and PostgreSQL Standards"
-applyTo: "**/*.{ts,js}"
+description: 'NestJS 11, TypeORM, and PostgreSQL Standards'
+applyTo: '**/*.{ts,js}'
 ---
 
 # Backend Development Instructions

@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
+
 import { UsersService } from '../users/users.service';
+
+export interface SystemStats {
+  totalUsers: number;
+  totalCourses: number;
+  totalEnrollments: number;
+}
 
 @Injectable()
 export class AdminService {
   constructor(private usersService: UsersService) {}
 
-  async getSystemStats() {
+  async getSystemStats(): Promise<SystemStats> {
     const totalUsers = await this.usersService.count();
 
     return {

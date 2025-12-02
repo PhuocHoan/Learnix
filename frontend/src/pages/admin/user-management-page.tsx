@@ -1,8 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { adminApi, type User } from "@/features/admin/api/admin-api";
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState, type ReactNode } from 'react';
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users,
   Search,
@@ -13,21 +11,36 @@ import {
   Loader2,
   UserCheck,
   UserX,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+} from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { adminApi, type User } from '@/features/admin/api/admin-api';
+import { cn } from '@/lib/utils';
 
 // Skeleton component
 function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("skeleton rounded-md", className)} />;
+  return <div className={cn('skeleton rounded-md', className)} />;
+}
+
+// Helper function to get button text for status toggle
+function getStatusButtonContent(
+  isPending: boolean,
+  isActive: boolean,
+): ReactNode {
+  if (isPending) {
+    return <Loader2 className="w-4 h-4 animate-spin" />;
+  }
+  return isActive ? 'Lock' : 'Unlock';
 }
 
 export function UserManagementPage() {
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: users, isLoading } = useQuery({
-    queryKey: ["admin", "users"],
+    queryKey: ['admin', 'users'],
     queryFn: adminApi.getAllUsers,
   });
 
@@ -35,7 +48,7 @@ export function UserManagementPage() {
     mutationFn: ({ userId, role }: { userId: string; role: string }) =>
       adminApi.updateUserRole(userId, role),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       setSelectedUser(null);
     },
   });
@@ -44,7 +57,7 @@ export function UserManagementPage() {
     mutationFn: ({ userId, isActive }: { userId: string; isActive: boolean }) =>
       adminApi.updateUserStatus(userId, isActive),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     },
   });
 
@@ -56,9 +69,9 @@ export function UserManagementPage() {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case "admin":
+      case 'admin':
         return Shield;
-      case "instructor":
+      case 'instructor':
         return BookOpen;
       default:
         return GraduationCap;
@@ -67,17 +80,17 @@ export function UserManagementPage() {
 
   const getRoleBadgeVariant = (
     role: string,
-  ): "default" | "secondary" | "success" | "warning" | "danger" => {
-    switch (role) {
-      case "admin":
-        return "danger";
-      case "instructor":
-        return "default";
-      case "student":
-        return "success";
-      default:
-        return "secondary";
+  ): 'default' | 'secondary' | 'success' | 'warning' | 'danger' => {
+    if (role === 'admin') {
+      return 'danger';
     }
+    if (role === 'instructor') {
+      return 'default';
+    }
+    if (role === 'student') {
+      return 'success';
+    }
+    return 'secondary';
   };
 
   return (
@@ -94,7 +107,7 @@ export function UserManagementPage() {
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-xl">
           <Users className="w-4 h-4" />
-          <span>{users?.length || 0} total users</span>
+          <span>{users?.length ?? 0} total users</span>
         </div>
       </div>
 
@@ -119,115 +132,120 @@ export function UserManagementPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {isLoading ? (
-            <div className="divide-y divide-border">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="p-4 flex items-center gap-4">
-                  <Skeleton className="w-12 h-12 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-48" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                  <Skeleton className="h-8 w-20" />
+          {(() => {
+            if (isLoading) {
+              return (
+                <div className="divide-y divide-border">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="p-4 flex items-center gap-4">
+                      <Skeleton className="w-12 h-12 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                      <Skeleton className="h-8 w-20" />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : filteredUsers && filteredUsers.length > 0 ? (
-            <div className="divide-y divide-border">
-              {filteredUsers.map((user) => {
-                const RoleIcon = getRoleIcon(user.role);
-                return (
-                  <div
-                    key={user.id}
-                    className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-muted/30 transition-colors"
-                  >
-                    {/* Avatar & Info */}
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
-                        {user.fullName?.charAt(0).toUpperCase() ||
-                          user.email.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-foreground truncate">
-                          {user.fullName || "No name"}
-                        </p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
+              );
+            }
+            if (filteredUsers && filteredUsers.length > 0) {
+              return (
+                <div className="divide-y divide-border">
+                  {filteredUsers.map((user) => {
+                    const RoleIcon = getRoleIcon(user.role);
+                    return (
+                      <div
+                        key={user.id}
+                        className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-muted/30 transition-colors"
+                      >
+                        {/* Avatar & Info */}
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
+                            {user.fullName?.charAt(0).toUpperCase() ??
+                              user.email.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-foreground truncate">
+                              {user.fullName ?? 'No name'}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {user.email}
+                            </p>
+                          </div>
+                        </div>
 
-                    {/* Role & Status */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge
-                        variant={getRoleBadgeVariant(user.role)}
-                        className="gap-1"
-                      >
-                        <RoleIcon className="w-3 h-3" />
-                        {user.role}
-                      </Badge>
-                      <Badge
-                        variant={user.isActive ? "success" : "danger"}
-                        className="gap-1"
-                      >
-                        {user.isActive ? (
-                          <UserCheck className="w-3 h-3" />
-                        ) : (
-                          <UserX className="w-3 h-3" />
-                        )}
-                        {user.isActive ? "Active" : "Locked"}
-                      </Badge>
-                    </div>
+                        {/* Role & Status */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge
+                            variant={getRoleBadgeVariant(user.role)}
+                            className="gap-1"
+                          >
+                            <RoleIcon className="w-3 h-3" />
+                            {user.role}
+                          </Badge>
+                          <Badge
+                            variant={user.isActive ? 'success' : 'danger'}
+                            className="gap-1"
+                          >
+                            {user.isActive ? (
+                              <UserCheck className="w-3 h-3" />
+                            ) : (
+                              <UserX className="w-3 h-3" />
+                            )}
+                            {user.isActive ? 'Active' : 'Locked'}
+                          </Badge>
+                        </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 sm:ml-auto">
-                      <button
-                        onClick={() => setSelectedUser(user)}
-                        className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-sm"
-                      >
-                        Change Role
-                      </button>
-                      <button
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            userId: user.id,
-                            isActive: !user.isActive,
-                          })
-                        }
-                        disabled={updateStatusMutation.isPending}
-                        className={cn(
-                          "px-4 py-2 text-sm font-medium rounded-xl transition-all shadow-sm disabled:opacity-50",
-                          user.isActive
-                            ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            : "bg-green-600 text-white hover:bg-green-700",
-                        )}
-                      >
-                        {updateStatusMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : user.isActive ? (
-                          "Lock"
-                        ) : (
-                          "Unlock"
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
-                <Users className="w-8 h-8 text-muted-foreground" />
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 sm:ml-auto">
+                          <button
+                            onClick={() => setSelectedUser(user)}
+                            className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-sm"
+                          >
+                            Change Role
+                          </button>
+                          <button
+                            onClick={() => {
+                              void updateStatusMutation.mutateAsync({
+                                userId: user.id,
+                                isActive: !user.isActive,
+                              });
+                            }}
+                            disabled={updateStatusMutation.isPending}
+                            className={cn(
+                              'px-4 py-2 text-sm font-medium rounded-xl transition-all shadow-sm disabled:opacity-50',
+                              user.isActive
+                                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                                : 'bg-green-600 text-white hover:bg-green-700',
+                            )}
+                          >
+                            {getStatusButtonContent(
+                              updateStatusMutation.isPending,
+                              user.isActive,
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            }
+            return (
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
+                  <Users className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="font-medium text-foreground">No users found</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {searchTerm
+                    ? 'Try a different search term'
+                    : 'No users have registered yet'}
+                </p>
               </div>
-              <p className="font-medium text-foreground">No users found</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {searchTerm
-                  ? "Try a different search term"
-                  : "No users have registered yet"}
-              </p>
-            </div>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
 
@@ -247,12 +265,12 @@ export function UserManagementPage() {
 
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mb-6">
               <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white font-semibold">
-                {selectedUser.fullName?.charAt(0).toUpperCase() ||
+                {selectedUser.fullName?.charAt(0).toUpperCase() ??
                   selectedUser.email.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-medium truncate">
-                  {selectedUser.fullName || "No name"}
+                  {selectedUser.fullName ?? 'No name'}
                 </p>
                 <p className="text-sm text-muted-foreground truncate">
                   {selectedUser.email}
@@ -263,49 +281,52 @@ export function UserManagementPage() {
             <div className="space-y-2">
               {[
                 {
-                  role: "guest",
-                  label: "Guest",
-                  desc: "Limited access, view only",
+                  role: 'guest',
+                  label: 'Guest',
+                  desc: 'Limited access, view only',
                   icon: Users,
                 },
                 {
-                  role: "student",
-                  label: "Student",
-                  desc: "Can enroll in courses and take quizzes",
+                  role: 'student',
+                  label: 'Student',
+                  desc: 'Can enroll in courses and take quizzes',
                   icon: GraduationCap,
                 },
                 {
-                  role: "instructor",
-                  label: "Instructor",
-                  desc: "Can create courses and quizzes",
+                  role: 'instructor',
+                  label: 'Instructor',
+                  desc: 'Can create courses and quizzes',
                   icon: BookOpen,
                 },
                 {
-                  role: "admin",
-                  label: "Admin",
-                  desc: "Full platform access and control",
+                  role: 'admin',
+                  label: 'Admin',
+                  desc: 'Full platform access and control',
                   icon: Shield,
                 },
               ].map(({ role, label, desc, icon: Icon }) => (
                 <button
                   key={role}
-                  onClick={() =>
-                    updateRoleMutation.mutate({ userId: selectedUser.id, role })
-                  }
+                  onClick={() => {
+                    void updateRoleMutation.mutateAsync({
+                      userId: selectedUser.id,
+                      role,
+                    });
+                  }}
                   disabled={updateRoleMutation.isPending}
                   className={cn(
-                    "w-full p-4 text-left rounded-xl border-2 transition-all flex items-center gap-3 disabled:opacity-50",
+                    'w-full p-4 text-left rounded-xl border-2 transition-all flex items-center gap-3 disabled:opacity-50',
                     selectedUser.role === role
-                      ? "border-primary bg-primary/10 shadow-md"
-                      : "border-border hover:border-primary/50 hover:bg-muted/50",
+                      ? 'border-primary bg-primary/10 shadow-md'
+                      : 'border-border hover:border-primary/50 hover:bg-muted/50',
                   )}
                 >
                   <div
                     className={cn(
-                      "p-2 rounded-lg",
+                      'p-2 rounded-lg',
                       selectedUser.role === role
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground",
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground',
                     )}
                   >
                     <Icon className="w-5 h-5" />
@@ -334,3 +355,5 @@ export function UserManagementPage() {
     </div>
   );
 }
+
+export default UserManagementPage;

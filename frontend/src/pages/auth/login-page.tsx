@@ -1,17 +1,18 @@
-import { Link, useSearchParams } from "react-router-dom";
-import { LoginForm } from "@/features/auth/components/login-form";
 import {
   GraduationCap,
   Sparkles,
   CheckCircle2,
   ChevronLeft,
-} from "lucide-react";
-import { oauthUrls } from "@/lib/config";
-import { Button } from "@/components/ui/button";
+} from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+
+import { Button } from '@/components/ui/button';
+import { LoginForm } from '@/features/auth/components/login-form';
+import { oauthUrls } from '@/lib/config';
 
 export function LoginPage() {
   const [searchParams] = useSearchParams();
-  const registered = searchParams.get("registered") === "true";
+  const registered = searchParams.get('registered') === 'true';
 
   const handleGoogleLogin = () => {
     window.location.href = oauthUrls.google;
@@ -155,7 +156,7 @@ export function LoginPage() {
             </div>
 
             <p className="mt-8 text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Don't have an account?{' '}
               <Link
                 to="/register"
                 className="font-semibold text-primary hover:text-primary/80 transition-colors"
@@ -164,19 +165,10 @@ export function LoginPage() {
               </Link>
             </p>
           </div>
-
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            By continuing, you agree to our{" "}
-            <a href="#" className="underline hover:text-foreground">
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="#" className="underline hover:text-foreground">
-              Privacy Policy
-            </a>
-          </p>
         </div>
       </div>
     </div>
   );
 }
+
+export default LoginPage;

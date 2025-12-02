@@ -1,14 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+
 import { Repository } from 'typeorm';
-import { Quiz, QuizStatus } from './entities/quiz.entity';
+
+import { GenerateQuizDto } from './dto/generate-quiz.dto';
+import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Question } from './entities/question.entity';
+import { Quiz, QuizStatus } from './entities/quiz.entity';
 import {
   AiQuizGeneratorService,
   GeneratedQuestion,
 } from './services/ai-quiz-generator.service';
-import { GenerateQuizDto } from './dto/generate-quiz.dto';
-import { UpdateQuestionDto } from './dto/update-question.dto';
 
 @Injectable()
 export class QuizzesService {

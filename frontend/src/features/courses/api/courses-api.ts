@@ -1,10 +1,10 @@
-import { api } from "@/lib/api";
-import type { User } from "@/contexts/auth-context-types";
+import type { User } from '@/contexts/auth-context-types';
+import { api } from '@/lib/api';
 
 export interface Lesson {
   id: string;
   title: string;
-  type: "video" | "text";
+  type: 'video' | 'text';
   durationSeconds: number;
   isFreePreview: boolean;
   orderIndex: number;
@@ -25,12 +25,14 @@ export interface Course {
   description: string;
   thumbnailUrl?: string;
   price: number;
-  level: "beginner" | "intermediate" | "advanced";
+  level: 'beginner' | 'intermediate' | 'advanced';
   isPublished: boolean;
   tags?: string[];
   instructor: User;
   sections?: CourseSection[];
+  studentCount?: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface CoursesParams {
@@ -39,8 +41,8 @@ export interface CoursesParams {
   search?: string;
   level?: string;
   tags?: string;
-  sort?: "price" | "date";
-  order?: "ASC" | "DESC";
+  sort?: 'price' | 'date';
+  order?: 'ASC' | 'DESC';
 }
 
 export interface CoursesResponse {
@@ -62,9 +64,43 @@ export interface EnrollmentResponse {
   } | null;
 }
 
+/** Enrolled course with progress (for My Learning page) */
+export interface EnrolledCourse {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string | null;
+  level: string;
+  instructor: {
+    id: string;
+    fullName: string;
+  };
+  progress: number;
+  totalLessons: number;
+  completedLessons: number;
+  status: 'in-progress' | 'completed';
+  isArchived: boolean;
+  lastAccessedAt: string;
+  enrolledAt: string;
+}
+
+export interface EnrolledCoursesParams {
+  archived?: boolean;
+  status?: 'all' | 'in-progress' | 'completed';
+}
+
+/** Recommended course with matching tags and score */
+export interface RecommendedCourse {
+  course: Course;
+  matchingTags: string[];
+  score: number;
+}
+
 export const coursesApi = {
   getAllCourses: async (params?: CoursesParams): Promise<CoursesResponse> => {
-    const response = await api.get("/courses", { params });
+    const response = await api.get<Course[] | CoursesResponse>('/courses', {
+      params,
+    });
     // Check if backend returns array (legacy) or object (new pagination)
     if (Array.isArray(response.data)) {
       return {
@@ -81,28 +117,78 @@ export const coursesApi = {
   },
 
   getTags: async (): Promise<string[]> => {
-    const response = await api.get("/courses/tags");
+    const response = await api.get<string[]>('/courses/tags');
     return response.data;
   },
 
   getCourse: async (id: string): Promise<Course> => {
-    const response = await api.get(`/courses/${id}`);
+    const response = await api.get<Course>(`/courses/${id}`);
     return response.data;
   },
 
-  enroll: async (courseId: string) => {
-    const response = await api.post(`/courses/${courseId}/enroll`);
+  enroll: async (
+    courseId: string,
+  ): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post<{ success: boolean; message: string }>(
+      `/courses/${courseId}/enroll`,
+    );
     return response.data;
   },
 
   getEnrollment: async (courseId: string): Promise<EnrollmentResponse> => {
-    const response = await api.get(`/courses/${courseId}/enrollment`);
+    const response = await api.get<EnrollmentResponse>(
+      `/courses/${courseId}/enrollment`,
+    );
     return response.data;
   },
 
-  completeLesson: async (courseId: string, lessonId: string) => {
-    const response = await api.post(
+  completeLesson: async (
+    courseId: string,
+    lessonId: string,
+  ): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post<{ success: boolean; message: string }>(
       `/courses/${courseId}/lessons/${lessonId}/complete`,
+    );
+    return response.data;
+  },
+
+  /** Get all enrolled courses for the current user (My Learning) */
+  getEnrolledCourses: async (
+    params?: EnrolledCoursesParams,
+  ): Promise<EnrolledCourse[]> => {
+    const response = await api.get<EnrolledCourse[]>('/courses/enrolled', {
+      params,
+    });
+    return response.data;
+  },
+
+  /** Archive a course (hide from main list, preserve progress) */
+  archiveCourse: async (
+    courseId: string,
+  ): Promise<{ success: boolean; message: string }> => {
+    const response = await api.patch<{ success: boolean; message: string }>(
+      `/courses/${courseId}/archive`,
+    );
+    return response.data;
+  },
+
+  /** Unarchive a course (restore to main list) */
+  unarchiveCourse: async (
+    courseId: string,
+  ): Promise<{ success: boolean; message: string }> => {
+    const response = await api.patch<{ success: boolean; message: string }>(
+      `/courses/${courseId}/unarchive`,
+    );
+    return response.data;
+  },
+
+  /** Get course recommendations based on enrolled course tags */
+  getRecommendations: async (limit = 6): Promise<RecommendedCourse[]> => {
+    const response = await api.get<RecommendedCourse[]>(
+      '/courses/recommendations',
+      {
+        params: { limit },
+      },
     );
     return response.data;
   },

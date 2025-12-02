@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CoursesService } from './courses.service';
+
 import { CoursesController } from './courses.controller';
-import { Course } from './entities/course.entity';
+import { CoursesService } from './courses.service';
 import { CourseSection } from './entities/course-section.entity';
-import { Lesson } from './entities/lesson.entity';
+import { Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
+import { Lesson } from './entities/lesson.entity';
 
 @Module({
   imports: [

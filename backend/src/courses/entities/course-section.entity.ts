@@ -8,6 +8,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
 import { Course } from './course.entity';
 import { Lesson } from './lesson.entity';
 

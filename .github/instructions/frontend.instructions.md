@@ -1,6 +1,6 @@
 ---
-description: "React 19, Tailwind v4, and Accessibility Standards"
-applyTo: "**/*.{tsx,jsx,ts,js,css}"
+description: 'React 19, Tailwind v4, and Accessibility Standards'
+applyTo: '**/*.{tsx,jsx,ts,js,css}'
 ---
 
 # Frontend Development Instructions

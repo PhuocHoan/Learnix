@@ -1,6 +1,6 @@
 ---
-description: "End-to-End Testing with Playwright"
-applyTo: "**/e2e/**"
+description: 'End-to-End Testing with Playwright'
+applyTo: '**/e2e/**'
 ---
 
 # E2E Testing Instructions (Playwright)
@@ -46,7 +46,7 @@ pnpm test:e2e
 ```typescript
 // playwright.config.ts
 export default defineConfig({
-  baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:5173",
+  baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
   // ... other config
 });
 ```
@@ -63,13 +63,13 @@ export default defineConfig({
 ## Example
 
 ```typescript
-import { test, expect } from "@playwright/test";
+import { test, expect } from '@playwright/test';
 
-test("user can login", async ({ page }) => {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("user@example.com");
-  await page.getByLabel("Password").fill("password");
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByText("Welcome, User")).toBeVisible();
+test('user can login', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Email').fill('user@example.com');
+  await page.getByLabel('Password').fill('password');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByText('Welcome, User')).toBeVisible();
 });
 ```

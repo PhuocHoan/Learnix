@@ -1,12 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { adminApi } from "@/features/admin/api/admin-api";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { useQuery } from '@tanstack/react-query';
 import {
   Users,
   BookOpen,
@@ -14,44 +6,53 @@ import {
   TrendingUp,
   BarChart3,
   Activity,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+} from 'lucide-react';
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import { adminApi } from '@/features/admin/api/admin-api';
+import { cn } from '@/lib/utils';
 
 // Skeleton component
 function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("skeleton rounded-md", className)} />;
+  return <div className={cn('skeleton rounded-md', className)} />;
 }
 
 export function SystemStatsPage() {
   const { data: stats, isLoading } = useQuery({
-    queryKey: ["admin", "stats"],
+    queryKey: ['admin', 'stats'],
     queryFn: adminApi.getSystemStats,
   });
 
   const statCards = [
     {
-      label: "Total Users",
-      value: stats?.totalUsers || 0,
+      label: 'Total Users',
+      value: stats?.totalUsers ?? 0,
       icon: Users,
-      iconBg: "bg-blue-500/10",
-      iconColor: "text-blue-500",
-      description: "Registered accounts",
+      iconBg: 'bg-blue-500/10',
+      iconColor: 'text-blue-500',
+      description: 'Registered accounts',
     },
     {
-      label: "Total Courses",
-      value: stats?.totalCourses || 0,
+      label: 'Total Courses',
+      value: stats?.totalCourses ?? 0,
       icon: BookOpen,
-      iconBg: "bg-purple-500/10",
-      iconColor: "text-purple-500",
-      description: "Published courses",
+      iconBg: 'bg-purple-500/10',
+      iconColor: 'text-purple-500',
+      description: 'Published courses',
     },
     {
-      label: "Total Enrollments",
-      value: stats?.totalEnrollments || 0,
+      label: 'Total Enrollments',
+      value: stats?.totalEnrollments ?? 0,
       icon: GraduationCap,
-      iconBg: "bg-green-500/10",
-      iconColor: "text-green-500",
-      description: "Course enrollments",
+      iconBg: 'bg-green-500/10',
+      iconColor: 'text-green-500',
+      description: 'Course enrollments',
     },
   ];
 
@@ -87,8 +88,8 @@ export function SystemStatsPage() {
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
-                  <div className={cn("p-3 rounded-xl", stat.iconBg)}>
-                    <Icon className={cn("w-6 h-6", stat.iconColor)} />
+                  <div className={cn('p-3 rounded-xl', stat.iconBg)}>
+                    <Icon className={cn('w-6 h-6', stat.iconColor)} />
                   </div>
                 </div>
                 <div className="mt-4">
@@ -189,3 +190,5 @@ export function SystemStatsPage() {
     </div>
   );
 }
+
+export default SystemStatsPage;
