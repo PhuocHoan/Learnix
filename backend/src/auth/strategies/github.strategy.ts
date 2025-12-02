@@ -2,7 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 
-import { Strategy, Profile } from 'passport-github2';
+import { Strategy } from 'passport-github2';
+
+// GitHub OAuth profile structure
+interface GitHubProfile {
+  id: string;
+  username?: string;
+  displayName?: string;
+  emails?: Array<{ value: string }>;
+  photos?: Array<{ value: string }>;
+}
 
 /**
  * GitHub App Authentication Strategy
@@ -37,17 +46,16 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   validate(
     accessToken: string,
     refreshToken: string,
-    profile: Profile,
+    profile: GitHubProfile,
     done: (error: Error | null, user?: Record<string, unknown>) => void,
   ): void {
-    const { displayName, emails, photos } = profile;
+    const { displayName, emails, photos, id, username } = profile;
     // Profile values from GitHub may be null at runtime despite type definitions
     const user = {
       email: emails?.[0]?.value ?? '',
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      fullName: displayName ?? profile.username ?? '',
+      fullName: displayName ?? username ?? '',
       avatarUrl: photos?.[0]?.value ?? '',
-      providerId: profile.id,
+      providerId: id,
       accessToken,
       refreshToken,
     };

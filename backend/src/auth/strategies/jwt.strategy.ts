@@ -11,15 +11,12 @@ interface JwtPayload {
   role: string;
 }
 
-interface RequestWithCookies extends Request {
-  cookies: Record<string, string>;
-}
-
 // Custom extractor that tries cookie first, then falls back to Bearer token
-const cookieExtractor = (req: RequestWithCookies): string | null => {
+const cookieExtractor = (req: Request): string | null => {
   // First try to get token from HTTP-only cookie
-  if (req.cookies.access_token) {
-    return req.cookies.access_token;
+  const cookies = req.cookies as Record<string, string> | undefined;
+  if (cookies?.access_token) {
+    return cookies.access_token;
   }
   // Fallback to Authorization header (for API clients, testing, etc.)
   const authHeader = req.headers.authorization;
