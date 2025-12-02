@@ -5,19 +5,26 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '@/contexts/use-auth';
 
-// Cookie utility for setting the auth token
-function setAuthCookie(token: string) {
-  const isProduction = window.location.hostname !== 'localhost';
-  const cookieOptions = [
-    `access_token=${token}`,
-    'path=/',
-    `max-age=${24 * 60 * 60}`, // 24 hours
-    isProduction ? 'secure' : '',
-    'samesite=lax',
-  ]
-    .filter(Boolean)
-    .join('; ');
-  document.cookie = cookieOptions;
+/**
+ * Set auth cookie with proper SameSite and Secure flags.
+ * This cookie will be sent with requests to /api/* which are proxied to backend.
+ */
+function setAuthCookie(token: string): void {
+  const isSecure = window.location.protocol === 'https:';
+  const maxAge = 24 * 60 * 60; // 24 hours in seconds
+
+  // Build cookie string with proper attributes
+  // - path=/: Available for all paths
+  // - max-age: 24 hours in seconds
+  // - SameSite=Lax: Allows cookie on top-level navigations (OAuth redirects)
+  // - Secure: Only sent over HTTPS (required in production)
+  let cookieString = `access_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax`;
+
+  if (isSecure) {
+    cookieString += '; Secure';
+  }
+
+  document.cookie = cookieString;
 }
 
 export function AuthCallbackPage() {
@@ -29,31 +36,32 @@ export function AuthCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Check if token is in URL (cross-domain OAuth flow)
+        // Check if token is in URL (OAuth callback from backend)
         const token = searchParams.get('token');
 
         if (token) {
           // Set token as cookie on frontend domain
+          // This cookie will be forwarded by Vercel rewrites to backend
           setAuthCookie(token);
 
           // Clear token from URL for security (without triggering navigation)
           window.history.replaceState({}, '', '/auth/callback');
         }
 
-        // Refresh user state from server (which will use the cookie)
+        // Small delay to ensure cookie is set before making API call
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Refresh user state from server (cookie is sent automatically via withCredentials)
         const user = await refreshUser();
 
-        // If user doesn't have a role, redirect to select-role
+        // Redirect based on user role status
         if (!user?.role) {
-          // Force full page reload to ensure clean state
           window.location.href = '/select-role';
         } else {
-          // Force full page reload to ensure clean state
           window.location.href = '/dashboard';
         }
       } catch {
         setError('Authentication failed. Please try again.');
-        // Redirect to login after a short delay
         setTimeout(() => {
           void navigate('/login');
         }, 2000);

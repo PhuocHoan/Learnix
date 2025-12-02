@@ -36,16 +36,27 @@ import type {
   MessageResult,
   SafeUser,
 } from './auth.service';
-import type { Response, Request } from 'express';
+import type { Response, Request, CookieOptions } from 'express';
 
 // Cookie configuration for secure token storage
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
-  maxAge: 24 * 60 * 60 * 1000,
-  path: '/',
+const getCookieOptions = (isOAuthRedirect = false): CookieOptions => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    // For OAuth redirects across domains, we need 'none' with secure
+    // For same-origin requests, 'lax' is preferred
+    sameSite:
+      isProduction && isOAuthRedirect ? ('none' as const) : ('lax' as const),
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    path: '/',
+    // In production, don't set domain to allow cookie to work with Vercel proxy
+    ...(isProduction && { domain: undefined }),
+  };
 };
+
+const COOKIE_OPTIONS = getCookieOptions(false);
 
 @Controller('auth')
 export class AuthController {
@@ -120,13 +131,19 @@ export class AuthController {
     );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // For cross-domain OAuth (backend and frontend on different domains),
-    // we pass the token in URL. The frontend callback page will extract it
-    // and store it securely, then clear from URL.
-    // This is safe because:
-    // 1. Token is short-lived
-    // 2. Redirect happens immediately after Google callback
-    // 3. Frontend immediately clears token from URL and stores in cookie
+    // Set HTTP-only cookie as backup (useful if callback URL is proxied through frontend)
+    const oauthCookieOptions = getCookieOptions(true);
+    res.cookie('access_token', result.access_token, oauthCookieOptions);
+
+    // Also pass token in URL for frontend to set cookie on its domain
+    // This is necessary because:
+    // 1. Backend and frontend are on different Vercel deployments (different domains)
+    // 2. The cookie we set here is on backend domain, not frontend domain
+    // 3. Frontend sets cookie on its domain so it's sent with /api/* requests
+    // The token in URL is secure because:
+    // - It's passed via server redirect, not exposed to client scripts until callback loads
+    // - Frontend immediately clears it from URL after extraction
+    // - Token has limited lifetime
     res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
   }
 
@@ -148,9 +165,11 @@ export class AuthController {
     );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // For cross-domain OAuth (backend and frontend on different domains),
-    // we pass the token in URL. The frontend callback page will extract it
-    // and store it securely, then clear from URL.
+    // Set HTTP-only cookie as backup (useful if callback URL is proxied through frontend)
+    const oauthCookieOptions = getCookieOptions(true);
+    res.cookie('access_token', result.access_token, oauthCookieOptions);
+
+    // Also pass token in URL for frontend to set cookie on its domain
     res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
   }
 

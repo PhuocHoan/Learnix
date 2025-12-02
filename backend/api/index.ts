@@ -15,8 +15,30 @@ async function bootstrap(): Promise<INestApplication> {
 
       app.use(cookieParser());
 
+      // Configure CORS for both direct requests and Vercel proxy rewrites
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const allowedOrigins = [
+        frontendUrl,
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:5175',
+      ];
+
       app.enableCors({
-        origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+        origin: (origin, callback) => {
+          // Allow requests with no origin (Vercel rewrites, mobile apps, curl)
+          if (!origin) {
+            callback(null, true);
+            return;
+          }
+          if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+          } else {
+            // In production, log unallowed origins for debugging
+            console.warn(`CORS blocked origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+          }
+        },
         credentials: true,
       });
 
