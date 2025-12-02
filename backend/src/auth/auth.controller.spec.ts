@@ -195,16 +195,8 @@ describe('AuthController', () => {
       await controller.googleAuthRedirect(req, res);
 
       expect(authService.validateOAuthLogin).toHaveBeenCalled();
-      expect(res.clearCookie).toHaveBeenCalledWith('access_token', {
-        path: '/',
-      });
-      expect(res.cookie).toHaveBeenCalledWith(
-        'access_token',
-        'jwt-token',
-        expect.objectContaining({ httpOnly: true }),
-      );
       expect(res.redirect).toHaveBeenCalledWith(
-        'http://localhost:5173/auth/callback',
+        'http://localhost:5173/auth/callback?token=jwt-token',
       );
     });
   });
@@ -230,7 +222,7 @@ describe('AuthController', () => {
 
       expect(authService.validateOAuthLogin).toHaveBeenCalled();
       expect(res.redirect).toHaveBeenCalledWith(
-        'http://localhost:5173/auth/callback',
+        'http://localhost:5173/auth/callback?token=jwt-token',
       );
     });
   });

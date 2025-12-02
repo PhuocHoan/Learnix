@@ -120,14 +120,14 @@ export class AuthController {
     );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // Clear any existing cookie before setting new one
-    res.clearCookie('access_token', { path: '/' });
-
-    // Set new JWT token in HTTP-only cookie
-    res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
-
-    // Redirect to frontend without token in URL (more secure)
-    res.redirect(`${frontendUrl}/auth/callback`);
+    // For cross-domain OAuth (backend and frontend on different domains),
+    // we pass the token in URL. The frontend callback page will extract it
+    // and store it securely, then clear from URL.
+    // This is safe because:
+    // 1. Token is short-lived
+    // 2. Redirect happens immediately after Google callback
+    // 3. Frontend immediately clears token from URL and stores in cookie
+    res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
   }
 
   @Get('github')
@@ -148,14 +148,10 @@ export class AuthController {
     );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // Clear any existing cookie before setting new one
-    res.clearCookie('access_token', { path: '/' });
-
-    // Set new JWT token in HTTP-only cookie
-    res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
-
-    // Redirect to frontend without token in URL (more secure)
-    res.redirect(`${frontendUrl}/auth/callback`);
+    // For cross-domain OAuth (backend and frontend on different domains),
+    // we pass the token in URL. The frontend callback page will extract it
+    // and store it securely, then clear from URL.
+    res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
   }
 
   @Get('me')

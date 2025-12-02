@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://learnix-oyum.vercel.app"
+      "destination": "https://learnix-oyum.vercel.app/:path*"
     },
     {
       "source": "/(.*)",

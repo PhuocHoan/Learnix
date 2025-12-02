@@ -1,20 +1,46 @@
 import { useEffect, useState } from 'react';
 
 import { GraduationCap, Loader2, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '@/contexts/use-auth';
 
+// Cookie utility for setting the auth token
+function setAuthCookie(token: string) {
+  const isProduction = window.location.hostname !== 'localhost';
+  const cookieOptions = [
+    `access_token=${token}`,
+    'path=/',
+    `max-age=${24 * 60 * 60}`, // 24 hours
+    isProduction ? 'secure' : '',
+    'samesite=lax',
+  ]
+    .filter(Boolean)
+    .join('; ');
+  document.cookie = cookieOptions;
+}
+
 export function AuthCallbackPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { refreshUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // OAuth callback sets HTTP-only cookie on the server side
-    // We just need to refresh the user state from the server
     const handleCallback = async () => {
       try {
+        // Check if token is in URL (cross-domain OAuth flow)
+        const token = searchParams.get('token');
+
+        if (token) {
+          // Set token as cookie on frontend domain
+          setAuthCookie(token);
+
+          // Clear token from URL for security (without triggering navigation)
+          window.history.replaceState({}, '', '/auth/callback');
+        }
+
+        // Refresh user state from server (which will use the cookie)
         const user = await refreshUser();
 
         // If user doesn't have a role, redirect to select-role
@@ -35,7 +61,7 @@ export function AuthCallbackPage() {
     };
 
     void handleCallback();
-  }, [refreshUser, navigate]);
+  }, [refreshUser, navigate, searchParams]);
 
   if (error) {
     return (
