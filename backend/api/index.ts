@@ -66,10 +66,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return instance(req, res);
   } catch (error) {
     console.error('Handler error:', error);
-    res.status(500).json({
-      statusCode: 500,
-      message: 'Internal server error',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+
+    // Check for database connection errors
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    const isDbConnectionError =
+      errorMessage.includes('connection') ||
+      errorMessage.includes('ECONNREFUSED') ||
+      errorMessage.includes('remaining connection slots');
+
+    if (isDbConnectionError) {
+      // Reset app instance to force reconnection on next request
+      app = null;
+      res.status(503).json({
+        statusCode: 503,
+        message: 'Database temporarily unavailable. Please retry.',
+        error: 'Service Unavailable',
+      });
+    } else {
+      res.status(500).json({
+        statusCode: 500,
+        message: 'Internal server error',
+        error: errorMessage,
+      });
+    }
   }
 }

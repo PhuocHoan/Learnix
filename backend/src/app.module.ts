@@ -55,19 +55,21 @@ import { UsersModule } from './users/users.module';
               ? { rejectUnauthorized: true, ca: caCert }
               : { rejectUnauthorized: false },
             // Reduce retry attempts for serverless - fail fast instead of queuing
-            retryAttempts: isProduction ? 2 : 10,
-            retryDelay: 1000,
-            // Connection pool settings for serverless environment
-            // IMPORTANT: Use Aiven's PgBouncer (port 6543) for better pooling
+            retryAttempts: isProduction ? 1 : 10,
+            retryDelay: 500,
+            // Connection pool settings for serverless (Vercel)
+            // NOTE: Aiven free tier has NO PgBouncer. Consider Neon/Supabase for free pooling.
             extra: {
-              // Max 1 connection per Lambda when using PgBouncer
+              // Single connection per serverless function instance
               max: isProduction ? 1 : 10,
               min: 0,
               // Fail fast if no connection available
-              connectionTimeoutMillis: 3000,
+              connectionTimeoutMillis: isProduction ? 5000 : 10000,
               // Release idle connections quickly in serverless
-              idleTimeoutMillis: 1000,
+              idleTimeoutMillis: isProduction ? 1000 : 30000,
               allowExitOnIdle: true,
+              // Disable keepalive for serverless - connections are short-lived
+              keepAlive: !isProduction,
             },
           };
         }
