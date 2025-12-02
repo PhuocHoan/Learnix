@@ -1,5 +1,53 @@
-/node_modules
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Turborepo
+.turbo/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing
+/.nyc_output
 
 # Uploaded files
-/uploads
-/backend/uploads
+uploads/
+
+# Vercel
+.vercel/
+
+# Temporary
+.temp/
+.tmp/
+*.local
+
+# SSL certs
+ca.pem

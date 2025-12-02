@@ -2,31 +2,27 @@
   "name": "learnix-monorepo",
   "private": true,
   "version": "0.0.0",
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
   "scripts": {
     "prepare": "husky",
-    "typecheck:frontend": "pnpm --filter frontend exec tsc -p tsconfig.app.json --noEmit",
-    "typecheck:backend": "pnpm --filter backend exec tsc -p tsconfig.json --noEmit",
-    "typecheck": "pnpm typecheck:frontend && pnpm typecheck:backend",
-    "lint": "pnpm --filter frontend lint && pnpm --filter backend lint",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "pnpm --filter frontend test run && pnpm --filter backend test",
-    "test:related": "pnpm --filter frontend test run --changed && pnpm --filter backend test --onlyChanged",
+    "test": "turbo test",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "build": "pnpm --filter frontend build && pnpm --filter backend build",
-    "precommit": "pnpm format && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "precommit": "pnpm format && turbo lint typecheck test build"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
+    "@vercel/node": "^5.5.13",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "prettier": "^3.7.3"
+    "prettier": "^3.7.3",
+    "turbo": "^2.6.1"
   },
   "lint-staged": {
     "*.{js,ts,tsx,json,md,yml,yaml}": [
@@ -38,5 +34,6 @@
     "backend/src/**/*.ts": [
       "pnpm --filter backend eslint --max-warnings=0 --fix"
     ]
-  }
+  },
+  "packageManager": "pnpm@10.24.0"
 }

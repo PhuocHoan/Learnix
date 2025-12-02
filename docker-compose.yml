@@ -36,7 +36,7 @@ services:
       - backend_node_modules:/app/node_modules
     ports:
       - '3000:3000'
-    command: sh -c "corepack enable pnpm && pnpm install && pnpm start:dev"
+    command: sh -c "corepack enable pnpm && pnpm install && pnpm dev"
 
   frontend:
     image: node:24-alpine

@@ -53,7 +53,7 @@ export class UploadService {
     this.uploadPath =
       this.configService.get<string>('UPLOAD_PATH') ?? './uploads';
     this.baseUrl =
-      this.configService.get<string>('BACKEND_URL') ?? 'http://localhost:3001';
+      this.configService.get<string>('BACKEND_URL') ?? 'http://localhost:3000';
   }
 
   /**

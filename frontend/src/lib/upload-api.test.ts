@@ -186,7 +186,7 @@ describe('Upload API Functions', () => {
           originalName: 'avatar.jpg',
           mimetype: 'image/jpeg',
           size: 1024,
-          url: 'http://localhost:3001/uploads/images/abc123.jpg',
+          url: 'http://localhost:3000/uploads/images/abc123.jpg',
         }),
       };
       (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -231,7 +231,7 @@ describe('Upload API Functions', () => {
         ok: true,
         json: vi.fn().mockResolvedValue({
           filename: 'def456.png',
-          url: 'http://localhost:3001/uploads/images/def456.png',
+          url: 'http://localhost:3000/uploads/images/def456.png',
         }),
       };
       (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(

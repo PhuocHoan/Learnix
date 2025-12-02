@@ -7,7 +7,8 @@ import { useAuth } from '@/contexts/use-auth';
 
 /**
  * Set auth cookie with proper SameSite and Secure flags.
- * This cookie will be sent with requests to /api/* which are proxied to backend.
+ * This cookie will be sent with requests to /api/* on the same domain.
+ * In monorepo deployment, frontend and API are on the same Vercel domain.
  */
 function setAuthCookie(token: string): void {
   const isSecure = window.location.protocol === 'https:';
@@ -16,7 +17,7 @@ function setAuthCookie(token: string): void {
   // Build cookie string with proper attributes
   // - path=/: Available for all paths
   // - max-age: 24 hours in seconds
-  // - SameSite=Lax: Allows cookie on top-level navigations (OAuth redirects)
+  // - SameSite=Lax: Safe default, allows cookie on top-level navigations (OAuth redirects)
   // - Secure: Only sent over HTTPS (required in production)
   let cookieString = `access_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax`;
 

@@ -39,24 +39,23 @@ import type {
 import type { Response, Request, CookieOptions } from 'express';
 
 // Cookie configuration for secure token storage
-const getCookieOptions = (isOAuthRedirect = false): CookieOptions => {
+// In monorepo deployment, frontend and API are on the same domain,
+// so we can use 'lax' for better security
+const getCookieOptions = (): CookieOptions => {
   const isProduction = process.env.NODE_ENV === 'production';
 
   return {
     httpOnly: true,
     secure: isProduction,
-    // For OAuth redirects across domains, we need 'none' with secure
-    // For same-origin requests, 'lax' is preferred
-    sameSite:
-      isProduction && isOAuthRedirect ? ('none' as const) : ('lax' as const),
+    // 'lax' is secure and works for same-domain requests (monorepo setup)
+    // It also allows cookies on OAuth redirects (top-level navigations)
+    sameSite: 'lax' as const,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     path: '/',
-    // In production, don't set domain to allow cookie to work with Vercel proxy
-    ...(isProduction && { domain: undefined }),
   };
 };
 
-const COOKIE_OPTIONS = getCookieOptions(false);
+const COOKIE_OPTIONS = getCookieOptions();
 
 @Controller('auth')
 export class AuthController {
@@ -131,19 +130,12 @@ export class AuthController {
     );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // Set HTTP-only cookie as backup (useful if callback URL is proxied through frontend)
-    const oauthCookieOptions = getCookieOptions(true);
-    res.cookie('access_token', result.access_token, oauthCookieOptions);
+    // Set HTTP-only cookie - in monorepo deployment, this cookie works directly
+    // since frontend and API are on the same domain
+    res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
 
-    // Also pass token in URL for frontend to set cookie on its domain
-    // This is necessary because:
-    // 1. Backend and frontend are on different Vercel deployments (different domains)
-    // 2. The cookie we set here is on backend domain, not frontend domain
-    // 3. Frontend sets cookie on its domain so it's sent with /api/* requests
-    // The token in URL is secure because:
-    // - It's passed via server redirect, not exposed to client scripts until callback loads
-    // - Frontend immediately clears it from URL after extraction
-    // - Token has limited lifetime
+    // Redirect to frontend callback page
+    // Token in URL is kept for backward compatibility and as fallback
     res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
   }
 
@@ -165,11 +157,10 @@ export class AuthController {
     );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // Set HTTP-only cookie as backup (useful if callback URL is proxied through frontend)
-    const oauthCookieOptions = getCookieOptions(true);
-    res.cookie('access_token', result.access_token, oauthCookieOptions);
+    // Set HTTP-only cookie - in monorepo deployment, this cookie works directly
+    res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
 
-    // Also pass token in URL for frontend to set cookie on its domain
+    // Redirect to frontend callback page
     res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
   }
 

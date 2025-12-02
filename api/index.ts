@@ -1,8 +1,10 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module';
 import { ValidationPipe, INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+// Import from backend workspace
+import { AppModule } from '../backend/src/app.module';
 
 let app: INestApplication | null = null;
 
@@ -15,7 +17,8 @@ async function bootstrap(): Promise<INestApplication> {
 
       app.use(cookieParser());
 
-      // Configure CORS for both direct requests and Vercel proxy rewrites
+      // In monorepo deployment, frontend and API are on same domain
+      // CORS is still needed for local development
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const allowedOrigins = [
         frontendUrl,
@@ -26,7 +29,7 @@ async function bootstrap(): Promise<INestApplication> {
 
       app.enableCors({
         origin: (origin, callback) => {
-          // Allow requests with no origin (Vercel rewrites, mobile apps, curl)
+          // Allow requests with no origin (same-origin requests, mobile apps, curl)
           if (!origin) {
             callback(null, true);
             return;
@@ -34,7 +37,6 @@ async function bootstrap(): Promise<INestApplication> {
           if (allowedOrigins.includes(origin)) {
             callback(null, true);
           } else {
-            // In production, log unallowed origins for debugging
             console.warn(`CORS blocked origin: ${origin}`);
             callback(new Error('Not allowed by CORS'));
           }
@@ -63,11 +65,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const application = await bootstrap();
     const instance = application.getHttpAdapter().getInstance();
+
+    // Strip /api prefix from the URL so NestJS routes work correctly
+    // e.g., /api/auth/login -> /auth/login
+    if (req.url?.startsWith('/api')) {
+      req.url = req.url.replace('/api', '') || '/';
+    }
+
     return instance(req, res);
   } catch (error) {
     console.error('Handler error:', error);
 
-    // Check for database connection errors
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
     const isDbConnectionError =
@@ -76,7 +84,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       errorMessage.includes('remaining connection slots');
 
     if (isDbConnectionError) {
-      // Reset app instance to force reconnection on next request
       app = null;
       res.status(503).json({
         statusCode: 503,

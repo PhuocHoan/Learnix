@@ -20,7 +20,7 @@ describe('UploadService', () => {
           return './uploads';
         }
         if (key === 'BACKEND_URL') {
-          return 'http://localhost:3001';
+          return 'http://localhost:3000';
         }
         return null;
       }),
@@ -171,7 +171,7 @@ describe('UploadService', () => {
         originalName: 'my-photo.jpg',
         mimetype: 'image/jpeg',
         size: 1024,
-        url: 'http://localhost:3001/uploads/images/abc123.jpg',
+        url: 'http://localhost:3000/uploads/images/abc123.jpg',
       });
     });
 
@@ -187,7 +187,7 @@ describe('UploadService', () => {
       const result = service.processUploadedFile(file);
 
       expect(result.url).toBe(
-        'http://localhost:3001/uploads/avatars/abc123.png',
+        'http://localhost:3000/uploads/avatars/abc123.png',
       );
     });
   });
@@ -239,7 +239,7 @@ describe('UploadService', () => {
       mockedFs.unlinkSync.mockReturnValue(undefined);
 
       const result = service.deleteFile(
-        'http://localhost:3001/uploads/images/test.jpg',
+        'http://localhost:3000/uploads/images/test.jpg',
       );
 
       expect(result).toBe(true);
@@ -259,7 +259,7 @@ describe('UploadService', () => {
 
       expect(() =>
         service.deleteFile(
-          'http://localhost:3001/uploads/images/nonexistent.jpg',
+          'http://localhost:3000/uploads/images/nonexistent.jpg',
         ),
       ).toThrow(NotFoundException);
     });
@@ -272,7 +272,7 @@ describe('UploadService', () => {
       });
 
       expect(() =>
-        service.deleteFile('http://localhost:3001/uploads/images/test.jpg'),
+        service.deleteFile('http://localhost:3000/uploads/images/test.jpg'),
       ).toThrow(BadRequestException);
     });
   });
@@ -304,13 +304,13 @@ describe('UploadService', () => {
     it('should return correct URL for default category', () => {
       const result = service.getFileUrl('test.jpg');
 
-      expect(result).toBe('http://localhost:3001/uploads/images/test.jpg');
+      expect(result).toBe('http://localhost:3000/uploads/images/test.jpg');
     });
 
     it('should return correct URL for custom category', () => {
       const result = service.getFileUrl('test.mp4', 'videos');
 
-      expect(result).toBe('http://localhost:3001/uploads/videos/test.mp4');
+      expect(result).toBe('http://localhost:3000/uploads/videos/test.mp4');
     });
   });
 });

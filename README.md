@@ -25,7 +25,7 @@ cp backend/.env.example backend/.env
 # Edit backend/.env with your credentials
 
 # 4. Start development
-cd backend && pnpm start:dev   # Terminal 1: API on :3000
+cd backend && pnpm dev        # Terminal 1: API on :3000
 cd frontend && pnpm dev        # Terminal 2: App on :5173
 ```
 
