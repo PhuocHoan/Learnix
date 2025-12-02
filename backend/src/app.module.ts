@@ -54,15 +54,19 @@ import { UsersModule } from './users/users.module';
             ssl: caCert
               ? { rejectUnauthorized: true, ca: caCert }
               : { rejectUnauthorized: false },
-            // Connection pool settings for serverless environment (Aiven limit: 20)
+            // Reduce retry attempts for serverless - fail fast instead of queuing
+            retryAttempts: isProduction ? 2 : 10,
+            retryDelay: 1000,
+            // Connection pool settings for serverless environment
+            // IMPORTANT: Use Aiven's PgBouncer (port 6543) for better pooling
             extra: {
-              // Max 2 connections per Lambda to stay under Aiven's 20 limit
-              max: isProduction ? 2 : 10,
+              // Max 1 connection per Lambda when using PgBouncer
+              max: isProduction ? 1 : 10,
               min: 0,
               // Fail fast if no connection available
-              connectionTimeoutMillis: 5000,
+              connectionTimeoutMillis: 3000,
               // Release idle connections quickly in serverless
-              idleTimeoutMillis: 5000,
+              idleTimeoutMillis: 1000,
               allowExitOnIdle: true,
             },
           };

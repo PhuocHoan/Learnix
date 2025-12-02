@@ -113,7 +113,7 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    const profile = req.user as OAuthProfile;
+    const profile = req.user as unknown as OAuthProfile;
     const result = await this.authService.validateOAuthLogin(
       AuthProvider.GOOGLE,
       profile,
@@ -144,7 +144,7 @@ export class AuthController {
   ): Promise<void> {
     const result = await this.authService.validateOAuthLogin(
       AuthProvider.GITHUB,
-      req.user as OAuthProfile,
+      req.user as unknown as OAuthProfile,
     );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
