@@ -33,12 +33,12 @@ pnpm precommit      # Full checks
 
 ## Tech Stack
 
-| Frontend | Backend | DevOps |
-|----------|---------|--------|
-| React 19 | NestJS 11 | Turborepo 2.6 |
-| Vite 7 | TypeORM + PostgreSQL | GitHub Actions |
-| TailwindCSS 4 | Passport.js (JWT/OAuth) | Playwright |
-| TanStack Query | Cloudinary | Vercel |
+| Frontend       | Backend                 | DevOps         |
+| -------------- | ----------------------- | -------------- |
+| React 19       | NestJS 11               | Turborepo 2.6  |
+| Vite 7         | TypeORM + PostgreSQL    | GitHub Actions |
+| TailwindCSS 4  | Passport.js (JWT/OAuth) | Playwright     |
+| TanStack Query | Cloudinary              | Vercel         |
 
 ## Environment
 
