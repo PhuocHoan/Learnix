@@ -14,8 +14,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 
-import { UploadService } from './upload.service';
 import { CloudinaryService } from './cloudinary.service';
+import { UploadService } from './upload.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 import type { FileUploadResult } from './upload.service';
@@ -188,13 +188,17 @@ export class UploadController {
       const results = await Promise.all(
         files.map((file) => this.cloudinaryService.uploadCourseImage(file)),
       );
-      return results.map((result, index) => ({
-        filename: result.publicId,
-        originalName: files[index].originalname,
-        mimetype: files[index].mimetype,
-        size: result.bytes,
-        url: result.secureUrl,
-      }));
+      return results.map((result, idx) => {
+        // eslint-disable-next-line security/detect-object-injection -- idx is from array iteration, not user input
+        const file = files[idx];
+        return {
+          filename: result.publicId,
+          originalName: file.originalname,
+          mimetype: file.mimetype,
+          size: result.bytes,
+          url: result.secureUrl,
+        };
+      });
     }
 
     return this.uploadService.processUploadedFiles(files);
@@ -244,7 +248,9 @@ export class UploadController {
     // Try to delete from Cloudinary first if it looks like a Cloudinary public ID
     if (this.useCloudinary || filename.includes('/')) {
       const deleted = await this.cloudinaryService.deleteFile(filename);
-      if (deleted) return;
+      if (deleted) {
+        return;
+      }
     }
 
     // Fall back to local file deletion

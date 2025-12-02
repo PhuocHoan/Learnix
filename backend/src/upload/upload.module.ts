@@ -8,9 +8,9 @@ import { MulterModule } from '@nestjs/platform-express';
 
 import { diskStorage, memoryStorage } from 'multer';
 
+import { CloudinaryService } from './cloudinary.service';
 import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
-import { CloudinaryService } from './cloudinary.service';
 
 @Module({
   imports: [
@@ -18,10 +18,10 @@ import { CloudinaryService } from './cloudinary.service';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         // Check if Cloudinary is configured
-        const cloudinaryConfigured = !!(
+        const cloudinaryConfigured = Boolean(
           configService.get<string>('CLOUDINARY_CLOUD_NAME') &&
           configService.get<string>('CLOUDINARY_API_KEY') &&
-          configService.get<string>('CLOUDINARY_API_SECRET')
+          configService.get<string>('CLOUDINARY_API_SECRET'),
         );
 
         // Use memory storage if Cloudinary is configured (for cloud upload)

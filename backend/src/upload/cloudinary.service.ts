@@ -2,6 +2,7 @@ import { Readable } from 'stream';
 
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+
 import {
   v2 as cloudinary,
   UploadApiResponse,
@@ -28,7 +29,7 @@ export class CloudinaryService {
     const apiKey = this.configService.get<string>('CLOUDINARY_API_KEY');
     const apiSecret = this.configService.get<string>('CLOUDINARY_API_SECRET');
 
-    this.isConfigured = !!(cloudName && apiKey && apiSecret);
+    this.isConfigured = Boolean(cloudName && apiKey && apiSecret);
 
     if (this.isConfigured) {
       cloudinary.config({
@@ -120,8 +121,9 @@ export class CloudinaryService {
   ): Promise<CloudinaryUploadResult> {
     // For memory storage, file.buffer is available
     // For disk storage, we'd need to read the file
-    const buffer = file.buffer;
+    const { buffer } = file;
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- buffer can be undefined with disk storage
     if (!buffer) {
       throw new BadRequestException(
         'File buffer not available. Ensure memory storage is used.',
@@ -145,7 +147,9 @@ export class CloudinaryService {
   /**
    * Upload an avatar image with automatic optimization
    */
-  async uploadAvatar(file: Express.Multer.File): Promise<CloudinaryUploadResult> {
+  async uploadAvatar(
+    file: Express.Multer.File,
+  ): Promise<CloudinaryUploadResult> {
     return this.uploadFile(file, {
       folder: 'learnix/avatars',
       transformation: {
@@ -189,9 +193,9 @@ export class CloudinaryService {
     }
 
     try {
-      const result = await cloudinary.uploader.destroy(publicId, {
+      const result = (await cloudinary.uploader.destroy(publicId, {
         resource_type: resourceType,
-      });
+      })) as { result: string };
       return result.result === 'ok';
     } catch {
       return false;
@@ -210,7 +214,9 @@ export class CloudinaryService {
 
       // Find the index of 'upload' and get everything after version
       const uploadIndex = pathParts.indexOf('upload');
-      if (uploadIndex === -1) return null;
+      if (uploadIndex === -1) {
+        return null;
+      }
 
       // Skip 'upload' and version (vXXXXXXX)
       const publicIdParts = pathParts.slice(uploadIndex + 2);
