@@ -10,17 +10,25 @@ import { diskStorage, memoryStorage } from 'multer';
 
 import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
+import { CloudinaryService } from './cloudinary.service';
 
 @Module({
   imports: [
     MulterModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
+        // Check if Cloudinary is configured
+        const cloudinaryConfigured = !!(
+          configService.get<string>('CLOUDINARY_CLOUD_NAME') &&
+          configService.get<string>('CLOUDINARY_API_KEY') &&
+          configService.get<string>('CLOUDINARY_API_SECRET')
+        );
+
+        // Use memory storage if Cloudinary is configured (for cloud upload)
+        // or if running in serverless environment
         const isServerless = configService.get<string>('VERCEL') === '1';
 
-        // In serverless environment (Vercel), use memory storage
-        // Files should be uploaded to cloud storage (S3, Cloudinary, etc.)
-        if (isServerless) {
+        if (cloudinaryConfigured || isServerless) {
           return {
             storage: memoryStorage(),
             limits: {
@@ -29,7 +37,7 @@ import { UploadService } from './upload.service';
           };
         }
 
-        // For local development, use disk storage
+        // For local development without Cloudinary, use disk storage
         const uploadPath =
           configService.get<string>('UPLOAD_PATH') ?? './uploads';
 
@@ -85,7 +93,7 @@ import { UploadService } from './upload.service';
     }),
   ],
   controllers: [UploadController],
-  providers: [UploadService],
-  exports: [UploadService],
+  providers: [UploadService, CloudinaryService],
+  exports: [UploadService, CloudinaryService],
 })
 export class UploadModule {}

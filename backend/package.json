@@ -31,6 +31,7 @@
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
+    "cloudinary": "^2.8.0",
     "cookie-parser": "^1.4.7",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.11",
@@ -84,7 +85,7 @@
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.48.0"
+    "typescript-eslint": "^8.48.1"
   },
   "jest": {
     "moduleFileExtensions": [
