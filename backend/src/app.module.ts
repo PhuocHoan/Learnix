@@ -28,6 +28,9 @@ import { UsersModule } from './users/users.module';
       useFactory: (configService: ConfigService) => {
         const databaseUrl = configService.get<string>('DATABASE_URL');
 
+        const isProduction =
+          configService.get<string>('NODE_ENV') === 'production';
+
         // Use DATABASE_URL if provided (production/Aiven), otherwise use individual vars (local dev)
         if (databaseUrl) {
           // Aiven SSL configuration with CA certificate
@@ -47,10 +50,21 @@ import { UsersModule } from './users/users.module';
               CourseSection,
               Lesson,
             ],
-            synchronize: configService.get<string>('NODE_ENV') !== 'production',
+            synchronize: !isProduction,
             ssl: caCert
               ? { rejectUnauthorized: true, ca: caCert }
               : { rejectUnauthorized: false },
+            // Connection pool settings for serverless environment (Aiven limit: 20)
+            extra: {
+              // Max 2 connections per Lambda to stay under Aiven's 20 limit
+              max: isProduction ? 2 : 10,
+              min: 0,
+              // Fail fast if no connection available
+              connectionTimeoutMillis: 5000,
+              // Release idle connections quickly in serverless
+              idleTimeoutMillis: 5000,
+              allowExitOnIdle: true,
+            },
           };
         }
 
@@ -72,11 +86,18 @@ import { UsersModule } from './users/users.module';
             CourseSection,
             Lesson,
           ],
-          synchronize: configService.get<string>('NODE_ENV') !== 'production',
+          synchronize: !isProduction,
           ssl:
             configService.get<string>('DB_SSL') === 'true'
               ? { rejectUnauthorized: false }
               : false,
+          // Connection pool settings
+          extra: {
+            max: 10,
+            min: 0,
+            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 30000,
+          },
         };
       },
       inject: [ConfigService],
