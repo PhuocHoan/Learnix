@@ -12,8 +12,8 @@ interface GoogleProfile {
     givenName?: string;
     familyName?: string;
   };
-  emails?: Array<{ value: string; verified?: boolean }>;
-  photos?: Array<{ value: string }>;
+  emails?: { value: string; verified?: boolean }[];
+  photos?: { value: string }[];
 }
 
 @Injectable()

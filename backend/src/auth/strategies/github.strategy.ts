@@ -9,8 +9,8 @@ interface GitHubProfile {
   id: string;
   username?: string;
   displayName?: string;
-  emails?: Array<{ value: string }>;
-  photos?: Array<{ value: string }>;
+  emails?: { value: string }[];
+  photos?: { value: string }[];
 }
 
 /**
