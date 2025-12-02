@@ -17,14 +17,23 @@
     "test:e2e:headed": "playwright test --headed",
     "precommit": "pnpm format && turbo lint typecheck test"
   },
+  "dependencies": {
+    "@nestjs/common": "^11.1.9",
+    "@nestjs/core": "^11.1.9",
+    "@nestjs/platform-express": "^11.1.9",
+    "cookie-parser": "^1.4.7",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "@vercel/node": "^5.5.13",
+    "@types/cookie-parser": "^1.4.10",
+    "@vercel/node": "^5.5.14",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.3",
     "turbo": "^2.6.1",
-    "typescript": "5.9.2"
+    "typescript": "5.9.3"
   },
   "lint-staged": {
     "*.{js,ts,tsx,json,md,yml,yaml}": [
