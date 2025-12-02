@@ -1,6 +1,10 @@
 packages:
-  - frontend
-  - backend
+  - apps/*
 
-ignoredBuiltDependencies:
+onlyBuiltDependencies:
+  - '@nestjs/core'
   - '@swc/core'
+  - bcrypt
+  - esbuild
+  - msw
+  - unrs-resolver

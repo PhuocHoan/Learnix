@@ -9,7 +9,11 @@ on:
   workflow_call:
     inputs:
       project:
-        description: Project name (backend or frontend)
+        description: Project directory path (e.g., apps/api or apps/web)
+        required: true
+        type: string
+      filter:
+        description: pnpm filter name (e.g., @repo/api or @repo/web)
         required: true
         type: string
       node-version:
@@ -46,12 +50,7 @@ jobs:
           node-version: ${{ inputs.node-version }}
 
       - name: Run TypeScript typecheck
-        run: |
-          if [ "${{ inputs.project }}" = "frontend" ]; then
-            pnpm exec tsc -p tsconfig.app.json --noEmit
-          else
-            pnpm exec tsc -p tsconfig.json --noEmit
-          fi
+        run: pnpm --filter ${{ inputs.filter }} typecheck
 
   lint:
     name: Lint
@@ -70,7 +69,7 @@ jobs:
           node-version: ${{ inputs.node-version }}
 
       - name: Run ESLint
-        run: pnpm lint
+        run: pnpm --filter ${{ inputs.filter }} lint
 
   test:
     name: Test
@@ -90,13 +89,13 @@ jobs:
           node-version: ${{ inputs.node-version }}
 
       - name: Run tests
-        run: ${{ inputs.test-command }}
+        run: pnpm --filter ${{ inputs.filter }} test
 
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: ${{ inputs.project }}-coverage
+          name: ${{ inputs.filter }}-coverage
           path: ${{ inputs.project }}/coverage
           retention-days: 7
           if-no-files-found: ignore
@@ -120,4 +119,4 @@ jobs:
           node-version: ${{ inputs.node-version }}
 
       - name: Build
-        run: pnpm build
+        run: pnpm --filter ${{ inputs.filter }} build

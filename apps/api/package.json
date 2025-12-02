@@ -1,7 +1,7 @@
 {
-  "name": "backend",
+  "name": "@repo/api",
   "version": "0.0.1",
-  "description": "",
+  "description": "Learnix Backend API",
   "author": "",
   "private": true,
   "license": "UNLICENSED",

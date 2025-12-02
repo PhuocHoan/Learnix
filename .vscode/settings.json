@@ -1,4 +1,7 @@
 {
-  "files.autoSave": "afterDelay",
-  "editor.fontFamily": "'JetBrainsMono Nerd Font', 'monospace', monospace"
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ]
 }

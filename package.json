@@ -14,7 +14,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "precommit": "pnpm format && turbo lint typecheck test build"
+    "precommit": "pnpm format && turbo lint typecheck test"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
@@ -22,18 +22,22 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.3",
-    "turbo": "^2.6.1"
+    "turbo": "^2.6.1",
+    "typescript": "5.9.2"
   },
   "lint-staged": {
     "*.{js,ts,tsx,json,md,yml,yaml}": [
       "prettier --write"
     ],
-    "frontend/src/**/*.{ts,tsx}": [
-      "pnpm --filter frontend eslint --max-warnings=0"
+    "apps/web/src/**/*.{ts,tsx}": [
+      "pnpm --filter @repo/web eslint --max-warnings=0"
     ],
-    "backend/src/**/*.ts": [
-      "pnpm --filter backend eslint --max-warnings=0 --fix"
+    "apps/api/src/**/*.ts": [
+      "pnpm --filter @repo/api eslint --max-warnings=0 --fix"
     ]
   },
-  "packageManager": "pnpm@10.24.0"
+  "packageManager": "pnpm@10.24.0",
+  "engines": {
+    "node": ">=18"
+  }
 }

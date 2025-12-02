@@ -4,7 +4,7 @@ import cookieParser from 'cookie-parser';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Import from backend workspace
-import { AppModule } from '../backend/src/app.module';
+import { AppModule } from '../apps/api/src/app.module';
 
 let app: INestApplication | null = null;
 

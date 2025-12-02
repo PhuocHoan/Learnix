@@ -1,14 +1,14 @@
 {
   "version": 2,
   "buildCommand": "pnpm build",
-  "outputDirectory": "frontend/dist",
+  "outputDirectory": "apps/web/dist",
   "installCommand": "pnpm install",
   "framework": null,
   "functions": {
     "api/**/*.ts": {
       "memory": 1024,
       "maxDuration": 10,
-      "includeFiles": "backend/**"
+      "includeFiles": "apps/api/**"
     }
   },
   "rewrites": [

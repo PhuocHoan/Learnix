@@ -30,9 +30,9 @@ services:
       postgres:
         condition: service_healthy
     env_file:
-      - ./backend/.env
+      - ./apps/api/.env
     volumes:
-      - ./backend:/app
+      - ./apps/api:/app
       - backend_node_modules:/app/node_modules
     ports:
       - '3000:3000'
@@ -43,9 +43,9 @@ services:
     container_name: learnix-frontend
     working_dir: /app
     env_file:
-      - ./frontend/.env
+      - ./apps/web/.env
     volumes:
-      - ./frontend:/app
+      - ./apps/web:/app
       - frontend_node_modules:/app/node_modules
     ports:
       - '5173:5173'

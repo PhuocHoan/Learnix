@@ -10,8 +10,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'frontend/**'
-      - 'backend/**'
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'packages/**'
       - 'e2e/**'
       - 'playwright.config.ts'
       - '.github/workflows/ci.yml'
@@ -20,8 +21,9 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'frontend/**'
-      - 'backend/**'
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'packages/**'
       - 'e2e/**'
       - 'playwright.config.ts'
       - '.github/workflows/ci.yml'
@@ -59,7 +61,8 @@ jobs:
     name: Backend
     uses: ./.github/workflows/reusable-ci.yml
     with:
-      project: backend
+      project: apps/api
+      filter: '@repo/api'
       test-command: pnpm test
 
   # ==========================
@@ -69,7 +72,8 @@ jobs:
     name: Frontend
     uses: ./.github/workflows/reusable-ci.yml
     with:
-      project: frontend
+      project: apps/web
+      filter: '@repo/web'
       test-command: pnpm test
 
   # ==========================
@@ -107,11 +111,11 @@ jobs:
         run: pnpm exec playwright install-deps chromium
 
       - name: Build frontend
-        run: pnpm --filter frontend build
+        run: pnpm --filter @repo/web build
 
       - name: Start frontend preview server
         run: |
-          cd frontend
+          cd apps/web
           pnpm preview --port 5173 &
           # Wait for server to be ready
           npx wait-on http://localhost:5173 --timeout 30000
