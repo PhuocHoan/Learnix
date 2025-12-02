@@ -7,7 +7,7 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 
-import { Quiz } from './quiz.entity';
+import type { Quiz } from './quiz.entity';
 
 @Entity('questions')
 export class Question {
@@ -17,7 +17,7 @@ export class Question {
   @Column({ name: 'quiz_id' })
   quizId: string;
 
-  @ManyToOne(() => Quiz, (quiz) => quiz.questions, { onDelete: 'CASCADE' })
+  @ManyToOne('Quiz', (quiz: Quiz) => quiz.questions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'quiz_id' })
   quiz: Quiz;
 

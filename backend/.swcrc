@@ -12,7 +12,7 @@
       "decoratorMetadata": true
     },
     "keepClassNames": true,
-    "target": "es2022",
+    "target": "esnext",
     "loose": false,
     "minify": {
       "compress": {
@@ -22,7 +22,7 @@
     }
   },
   "module": {
-    "type": "nodenext"
+    "type": "commonjs"
   },
   "minify": false
 }

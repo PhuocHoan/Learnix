@@ -9,8 +9,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-import { Course } from './course.entity';
-import { Lesson } from './lesson.entity';
+import type { Course } from './course.entity';
+import type { Lesson } from './lesson.entity';
 
 @Entity('course_sections')
 export class CourseSection {
@@ -26,11 +26,13 @@ export class CourseSection {
   @Column({ name: 'course_id' })
   courseId: string;
 
-  @ManyToOne(() => Course, (course) => course.sections, { onDelete: 'CASCADE' })
+  @ManyToOne('Course', (course: Course) => course.sections, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'course_id' })
   course: Course;
 
-  @OneToMany(() => Lesson, (lesson) => lesson.section, { cascade: true })
+  @OneToMany('Lesson', (lesson: Lesson) => lesson.section, { cascade: true })
   lessons: Lesson[];
 
   @CreateDateColumn({ name: 'created_at' })

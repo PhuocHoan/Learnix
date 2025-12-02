@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-import { CourseSection } from './course-section.entity';
+import type { CourseSection } from './course-section.entity';
 
 export enum LessonType {
   VIDEO = 'video',
@@ -44,7 +44,7 @@ export class Lesson {
   @Column({ name: 'section_id' })
   sectionId: string;
 
-  @ManyToOne(() => CourseSection, (section) => section.lessons, {
+  @ManyToOne('CourseSection', (section: CourseSection) => section.lessons, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'section_id' })

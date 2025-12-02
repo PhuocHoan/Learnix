@@ -8,8 +8,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-import { Course } from './course.entity';
-import { User } from '../../users/entities/user.entity';
+import type { Course } from './course.entity';
+import type { User } from '../../users/entities/user.entity';
 
 @Entity('enrollments')
 export class Enrollment {
@@ -19,14 +19,14 @@ export class Enrollment {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne('User', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
   @Column({ name: 'course_id' })
   courseId: string;
 
-  @ManyToOne(() => Course, (course) => course.enrollments, {
+  @ManyToOne('Course', (course: Course) => course.enrollments, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'course_id' })

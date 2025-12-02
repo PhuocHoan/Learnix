@@ -9,9 +9,9 @@ import {
   JoinColumn,
 } from 'typeorm';
 
-import { CourseSection } from './course-section.entity';
-import { Enrollment } from './enrollment.entity';
-import { User } from '../../users/entities/user.entity';
+import type { CourseSection } from './course-section.entity';
+import type { Enrollment } from './enrollment.entity';
+import type { User } from '../../users/entities/user.entity';
 
 export enum CourseLevel {
   BEGINNER = 'beginner',
@@ -53,18 +53,18 @@ export class Course {
   @Column({ name: 'instructor_id' })
   instructorId: string;
 
-  @ManyToOne(() => User)
+  @ManyToOne('User')
   @JoinColumn({ name: 'instructor_id' })
   instructor: User;
 
   // Content relationship
-  @OneToMany(() => CourseSection, (section) => section.course, {
+  @OneToMany('CourseSection', (section: CourseSection) => section.course, {
     cascade: true,
   })
   sections: CourseSection[];
 
   // Student relationship
-  @OneToMany(() => Enrollment, (enrollment) => enrollment.course)
+  @OneToMany('Enrollment', (enrollment: Enrollment) => enrollment.course)
   enrollments: Enrollment[];
 
   @CreateDateColumn({ name: 'created_at' })

@@ -7,7 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 
-import { Question } from './question.entity';
+import type { Question } from './question.entity';
 
 export enum QuizStatus {
   DRAFT = 'draft',
@@ -45,7 +45,9 @@ export class Quiz {
   @Column({ name: 'ai_generated', default: false })
   aiGenerated: boolean;
 
-  @OneToMany(() => Question, (question) => question.quiz, { cascade: true })
+  @OneToMany('Question', (question: Question) => question.quiz, {
+    cascade: true,
+  })
   questions: Question[];
 
   @CreateDateColumn({ name: 'created_at' })
