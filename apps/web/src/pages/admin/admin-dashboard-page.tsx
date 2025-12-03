@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { PageContainer } from '@/components/layout/app-shell';
 import {
   Card,
   CardContent,
@@ -50,118 +51,122 @@ export function AdminDashboardPage() {
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl gradient-primary p-8 text-white">
-        <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+    <PageContainer>
+      <div className="space-y-8 animate-fade-in">
+        {/* Hero Section */}
+        <div className="relative overflow-hidden rounded-2xl gradient-primary p-8 text-white">
+          <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 text-white/80 mb-2">
-            <Shield className="w-5 h-5" />
-            <span className="text-sm font-medium">Administration Panel</span>
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 text-white/80 mb-2">
+              <Shield className="w-5 h-5" />
+              <span className="text-sm font-medium">Administration Panel</span>
+            </div>
+            <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
+            <p className="text-white/80 max-w-xl">
+              Manage users, monitor system activity, and oversee platform
+              operations from this central hub.
+            </p>
           </div>
-          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-white/80 max-w-xl">
-            Manage users, monitor system activity, and oversee platform
-            operations from this central hub.
-          </p>
         </div>
-      </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-blue-500/10">
-              <Users className="w-6 h-6 text-blue-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">—</p>
-              <p className="text-sm text-muted-foreground">Total Users</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-purple-500/10">
-              <BookOpen className="w-6 h-6 text-purple-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">—</p>
-              <p className="text-sm text-muted-foreground">Total Courses</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-500/10">
-              <Sparkles className="w-6 h-6 text-green-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">—</p>
-              <p className="text-sm text-muted-foreground">Active Today</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-blue-500/10">
+                <Users className="w-6 h-6 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">—</p>
+                <p className="text-sm text-muted-foreground">Total Users</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-purple-500/10">
+                <BookOpen className="w-6 h-6 text-purple-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">—</p>
+                <p className="text-sm text-muted-foreground">Total Courses</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-green-500/10">
+                <Sparkles className="w-6 h-6 text-green-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">—</p>
+                <p className="text-sm text-muted-foreground">Active Today</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Admin Sections */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Administration Tools</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {adminCards.map((card) => {
-            const Icon = card.icon;
+        {/* Admin Sections */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Administration Tools</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {adminCards.map((card) => {
+              const Icon = card.icon;
 
-            if (!card.available) {
+              if (!card.available) {
+                return (
+                  <Card
+                    key={card.title}
+                    className="opacity-60 cursor-not-allowed"
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className={cn('p-3 rounded-xl', card.iconBg)}>
+                          <Icon className={cn('w-6 h-6', card.iconColor)} />
+                        </div>
+                        <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                          Coming Soon
+                        </span>
+                      </div>
+                      <CardTitle className="text-lg mt-4">
+                        {card.title}
+                      </CardTitle>
+                      <CardDescription>{card.description}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                );
+              }
+
               return (
-                <Card
-                  key={card.title}
-                  className="opacity-60 cursor-not-allowed"
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className={cn('p-3 rounded-xl', card.iconBg)}>
-                        <Icon className={cn('w-6 h-6', card.iconColor)} />
+                <Link key={card.title} to={card.href}>
+                  <Card className="h-full group hover:shadow-lg hover:shadow-primary/5 hover:border-primary/30 transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div
+                          className={cn(
+                            'p-3 rounded-xl transition-transform group-hover:scale-110',
+                            card.iconBg,
+                          )}
+                        >
+                          <Icon className={cn('w-6 h-6', card.iconColor)} />
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                        Coming Soon
-                      </span>
-                    </div>
-                    <CardTitle className="text-lg mt-4">{card.title}</CardTitle>
-                    <CardDescription>{card.description}</CardDescription>
-                  </CardHeader>
-                </Card>
+                      <CardTitle className="text-lg mt-4 group-hover:text-primary transition-colors">
+                        {card.title}
+                      </CardTitle>
+                      <CardDescription>{card.description}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                </Link>
               );
-            }
-
-            return (
-              <Link key={card.title} to={card.href}>
-                <Card className="h-full group hover:shadow-lg hover:shadow-primary/5 hover:border-primary/30 transition-all duration-300 hover:-translate-y-1 cursor-pointer">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div
-                        className={cn(
-                          'p-3 rounded-xl transition-transform group-hover:scale-110',
-                          card.iconBg,
-                        )}
-                      >
-                        <Icon className={cn('w-6 h-6', card.iconColor)} />
-                      </div>
-                      <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                    </div>
-                    <CardTitle className="text-lg mt-4 group-hover:text-primary transition-colors">
-                      {card.title}
-                    </CardTitle>
-                    <CardDescription>{card.description}</CardDescription>
-                  </CardHeader>
-                </Card>
-              </Link>
-            );
-          })}
+            })}
+          </div>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

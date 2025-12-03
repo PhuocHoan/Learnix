@@ -14,7 +14,9 @@ import {
   User,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
+import { PageContainer } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/use-auth';
 import { AuthRequiredModal } from '@/features/auth/components/auth-required-modal';
@@ -79,9 +81,10 @@ export function CourseDetailPage() {
   const handleLockedLessonClick = () => {
     if (!isAuthenticated) {
       setShowAuthModal(true);
+      return;
     }
-    // If authenticated but not enrolled, logic could be handled here
-    // (e.g., scroll to enroll button or show "Enroll to view" toast)
+    // If authenticated but not enrolled, show toast
+    toast.info('Enroll in this course to access all lessons');
   };
 
   if (isLoadingCourse) {
@@ -102,219 +105,223 @@ export function CourseDetailPage() {
   const completedIds = enrollment?.progress?.completedLessonIds ?? [];
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-8 animate-fade-in">
-      <AuthRequiredModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-      />
+    <PageContainer>
+      <div className="space-y-8 animate-fade-in">
+        <AuthRequiredModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+        />
 
-      {/* Header */}
-      <div className="bg-card rounded-2xl p-8 border border-border shadow-sm flex flex-col md:flex-row gap-8">
-        <div className="flex-1 space-y-4">
-          <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium capitalize">
-            {course.level}
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold">{course.title}</h1>
-          <p className="text-muted-foreground text-lg leading-relaxed">
-            {course.description}
-          </p>
-
-          {/* Course Stats */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground pt-2">
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4" />
-              <span>{totalLessons} Lessons</span>
+        {/* Header */}
+        <div className="bg-card rounded-2xl p-8 border border-border shadow-sm flex flex-col md:flex-row gap-8">
+          <div className="flex-1 space-y-4">
+            <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium capitalize">
+              {course.level}
             </div>
-            {course.studentCount !== undefined && (
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                <span>{formatStudentCount(course.studentCount)}</span>
-              </div>
-            )}
-            {course.updatedAt && (
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span>{formatLastUpdated(course.updatedAt)}</span>
-              </div>
-            )}
-            {course.createdAt && (
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>Created {formatDate(course.createdAt)}</span>
-              </div>
-            )}
-          </div>
+            <h1 className="text-3xl md:text-4xl font-bold">{course.title}</h1>
+            <p className="text-muted-foreground text-lg leading-relaxed">
+              {course.description}
+            </p>
 
-          {/* Instructor Info */}
-          <div className="flex items-center gap-3 pt-4 border-t border-border/50">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
-              {(course.instructor?.fullName ?? course.instructor?.name ?? 'I')
-                .charAt(0)
-                .toUpperCase()}
+            {/* Course Stats */}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground pt-2">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
+                <span>{totalLessons} Lessons</span>
+              </div>
+              {course.studentCount !== undefined && (
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <span>{formatStudentCount(course.studentCount)}</span>
+                </div>
+              )}
+              {course.updatedAt && (
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span>{formatLastUpdated(course.updatedAt)}</span>
+                </div>
+              )}
+              {course.createdAt && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>Created {formatDate(course.createdAt)}</span>
+                </div>
+              )}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium">
-                  {course.instructor?.fullName ??
-                    course.instructor?.name ??
-                    'Instructor'}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">Course Instructor</p>
-            </div>
-          </div>
-        </div>
 
-        <div className="w-full md:w-80 shrink-0 flex flex-col gap-4 p-6 bg-muted/30 rounded-xl border border-border/50">
-          {isEnrolled ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-green-600 bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg text-sm font-medium">
-                <CheckCircle className="w-4 h-4" />
-                You are enrolled
+            {/* Instructor Info */}
+            <div className="flex items-center gap-3 pt-4 border-t border-border/50">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                {(course.instructor?.fullName ?? course.instructor?.name ?? 'I')
+                  .charAt(0)
+                  .toUpperCase()}
               </div>
-              <Button
-                size="lg"
-                className="w-full font-semibold"
-                onClick={() => navigate(`/courses/${id}/learn`)}
-              >
-                Continue Learning
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="text-3xl font-bold text-primary">
-                {course.price === 0 ? 'Free' : `$${course.price}`}
-              </div>
-              <Button
-                size="lg"
-                className="w-full font-semibold"
-                onClick={handleEnroll}
-                disabled={
-                  enrollMutation.isPending ||
-                  (isAuthenticated && isLoadingEnrollment)
-                }
-              >
-                {enrollMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />{' '}
-                    Enrolling...
-                  </>
-                ) : (
-                  'Enroll Now'
-                )}
-              </Button>
-              <p className="text-xs text-center text-muted-foreground">
-                Get full lifetime access
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Curriculum */}
-      <div className="grid md:grid-cols-3 gap-8">
-        <div className="md:col-span-2 space-y-6">
-          <h2 className="text-2xl font-bold">Course Content</h2>
-
-          <div className="space-y-4">
-            {course.sections?.map((section) => (
-              <div
-                key={section.id}
-                className="border border-border rounded-xl overflow-hidden"
-              >
-                <div className="bg-muted/50 px-6 py-4 font-semibold flex justify-between items-center">
-                  <span>{section.title}</span>
-                  <span className="text-xs text-muted-foreground font-normal">
-                    {section.lessons.length} lessons
+              <div>
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium">
+                    {course.instructor?.fullName ??
+                      course.instructor?.name ??
+                      'Instructor'}
                   </span>
                 </div>
-                <div className="divide-y divide-border">
-                  {section.lessons.map((lesson) => {
-                    const isCompleted = completedIds.includes(lesson.id);
-                    const isLocked = !isEnrolled && !lesson.isFreePreview;
+                <p className="text-sm text-muted-foreground">
+                  Course Instructor
+                </p>
+              </div>
+            </div>
+          </div>
 
-                    return (
-                      <div
-                        key={lesson.id}
-                        role={isLocked ? 'button' : undefined}
-                        tabIndex={isLocked ? 0 : undefined}
-                        className={cn(
-                          'p-4 flex items-center gap-4 transition-colors',
-                          isLocked
-                            ? 'opacity-75 hover:bg-muted/10 cursor-pointer'
-                            : 'hover:bg-muted/20',
-                        )}
-                        onClick={() => {
-                          if (isLocked) {
-                            handleLockedLessonClick();
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (
-                            isLocked &&
-                            (e.key === 'Enter' || e.key === ' ')
-                          ) {
-                            e.preventDefault();
-                            handleLockedLessonClick();
-                          }
-                        }}
-                      >
+          <div className="w-full md:w-80 shrink-0 flex flex-col gap-4 p-6 bg-muted/30 rounded-xl border border-border/50">
+            {isEnrolled ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-green-600 bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg text-sm font-medium">
+                  <CheckCircle className="w-4 h-4" />
+                  You are enrolled
+                </div>
+                <Button
+                  size="lg"
+                  className="w-full font-semibold"
+                  onClick={() => navigate(`/courses/${id}/learn`)}
+                >
+                  Continue Learning
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="text-3xl font-bold text-primary">
+                  {course.price === 0 ? 'Free' : `$${course.price}`}
+                </div>
+                <Button
+                  size="lg"
+                  className="w-full font-semibold"
+                  onClick={handleEnroll}
+                  disabled={
+                    enrollMutation.isPending ||
+                    (isAuthenticated && isLoadingEnrollment)
+                  }
+                >
+                  {enrollMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />{' '}
+                      Enrolling...
+                    </>
+                  ) : (
+                    'Enroll Now'
+                  )}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Get full lifetime access
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Curriculum */}
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-2 space-y-6">
+            <h2 className="text-2xl font-bold">Course Content</h2>
+
+            <div className="space-y-4">
+              {course.sections?.map((section) => (
+                <div
+                  key={section.id}
+                  className="border border-border rounded-xl overflow-hidden"
+                >
+                  <div className="bg-muted/50 px-6 py-4 font-semibold flex justify-between items-center">
+                    <span>{section.title}</span>
+                    <span className="text-xs text-muted-foreground font-normal">
+                      {section.lessons.length} lessons
+                    </span>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {section.lessons.map((lesson) => {
+                      const isCompleted = completedIds.includes(lesson.id);
+                      const isLocked = !isEnrolled && !lesson.isFreePreview;
+
+                      return (
                         <div
+                          key={lesson.id}
+                          role={isLocked ? 'button' : undefined}
+                          tabIndex={isLocked ? 0 : undefined}
                           className={cn(
-                            'p-2 rounded-lg',
-                            isCompleted
-                              ? 'bg-green-100 text-green-600'
-                              : 'bg-primary/5 text-primary',
+                            'p-4 flex items-center gap-4 transition-colors',
+                            isLocked
+                              ? 'opacity-75 hover:bg-muted/10 cursor-pointer'
+                              : 'hover:bg-muted/20',
                           )}
+                          onClick={() => {
+                            if (isLocked) {
+                              handleLockedLessonClick();
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (
+                              isLocked &&
+                              (e.key === 'Enter' || e.key === ' ')
+                            ) {
+                              e.preventDefault();
+                              handleLockedLessonClick();
+                            }
+                          }}
                         >
-                          {getLessonIcon(isCompleted, lesson.type)}
-                        </div>
-                        <div className="flex-1 text-sm font-medium">
-                          {lesson.title}
-                        </div>
-
-                        {/* Logic for Buttons/Icons */}
-                        {isEnrolled || lesson.isFreePreview ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs h-8"
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent parent click
-                              void navigate(
-                                `/courses/${id}/learn?lesson=${lesson.id}`,
-                              );
-                            }}
+                          <div
+                            className={cn(
+                              'p-2 rounded-lg',
+                              isCompleted
+                                ? 'bg-green-100 text-green-600'
+                                : 'bg-primary/5 text-primary',
+                            )}
                           >
-                            {isEnrolled ? 'View' : 'Preview'}
-                          </Button>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            {/* Replaced Icon with Button-like feel or just icon */}
+                            {getLessonIcon(isCompleted, lesson.type)}
+                          </div>
+                          <div className="flex-1 text-sm font-medium">
+                            {lesson.title}
+                          </div>
+
+                          {/* Logic for Buttons/Icons */}
+                          {isEnrolled || lesson.isFreePreview ? (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 hover:bg-transparent"
+                              className="text-xs h-8"
                               onClick={(e) => {
-                                e.stopPropagation();
-                                handleLockedLessonClick();
+                                e.stopPropagation(); // Prevent parent click
+                                void navigate(
+                                  `/courses/${id}/learn?lesson=${lesson.id}`,
+                                );
                               }}
                             >
-                              <Lock className="w-4 h-4 text-muted-foreground" />
+                              {isEnrolled ? 'View' : 'Preview'}
                             </Button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              {/* Replaced Icon with Button-like feel or just icon */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-transparent"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLockedLessonClick();
+                                }}
+                              >
+                                <Lock className="w-4 h-4 text-muted-foreground" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
@@ -10,6 +11,7 @@ import { Repository, Brackets } from 'typeorm';
 import { CourseFilterOptions } from './dto/filter-course.dto';
 import { Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
+import { Lesson } from './entities/lesson.entity';
 
 export interface EnrolledCourseDto {
   id: string;
@@ -58,6 +60,8 @@ export class CoursesService {
     private coursesRepository: Repository<Course>,
     @InjectRepository(Enrollment)
     private enrollmentRepository: Repository<Enrollment>,
+    @InjectRepository(Lesson)
+    private lessonRepository: Repository<Lesson>,
   ) {}
 
   async findAllPublished(
@@ -225,6 +229,49 @@ export class CoursesService {
     }
 
     return enrollment;
+  }
+
+  /**
+   * Get a specific lesson with access control
+   * Returns full lesson content only if:
+   * 1. User is enrolled in the course, OR
+   * 2. Lesson is marked as free preview
+   * Otherwise, throws ForbiddenException
+   */
+  async getLessonWithAccessControl(
+    userId: string,
+    courseId: string,
+    lessonId: string,
+  ): Promise<{ lesson: Lesson; hasAccess: boolean }> {
+    // Find the lesson
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: lessonId },
+      relations: ['section', 'section.course'],
+    });
+
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+
+    // Verify the lesson belongs to the specified course
+    if (lesson.section.course.id !== courseId) {
+      throw new NotFoundException('Lesson not found in this course');
+    }
+
+    // Check if user is enrolled
+    const enrollment = await this.checkEnrollment(userId, courseId);
+    const isEnrolled = Boolean(enrollment);
+
+    // Check access: enrolled OR free preview
+    const hasAccess = isEnrolled || lesson.isFreePreview;
+
+    if (!hasAccess) {
+      throw new ForbiddenException(
+        'You must enroll in this course to access this lesson',
+      );
+    }
+
+    return { lesson, hasAccess: true };
   }
 
   /**

@@ -35,7 +35,8 @@ export class CourseDetailPage {
       name: /Continue Learning/i,
     });
     this.enrolledBadge = page.getByText(/You are enrolled/i);
-    this.priceDisplay = page.locator('[class*="text-3xl"][class*="font-bold"]');
+    // Price is inside the enrollment card with text-3xl font-bold text-primary
+    this.priceDisplay = page.getByText(/Free|\$\d+/).first();
     this.instructorName = page.getByText(/Course Instructor/i).locator('..');
     this.courseContent = page.getByRole('heading', { name: /Course Content/i });
     this.sections = page.locator(

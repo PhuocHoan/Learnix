@@ -16,6 +16,7 @@ import {
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { PageContainer } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -214,93 +215,95 @@ export function MyLearningPage() {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-7xl mx-auto p-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">My Learning</h1>
-          <p className="text-muted-foreground mt-1">
-            Track your progress and continue learning
-          </p>
+    <PageContainer>
+      <div className="space-y-8 animate-fade-in">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">My Learning</h1>
+            <p className="text-muted-foreground mt-1">
+              Track your progress and continue learning
+            </p>
+          </div>
+          <div className="w-full md:w-80">
+            <Input
+              leftIcon={<Search className="w-4 h-4" />}
+              placeholder="Search your courses..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
-        <div className="w-full md:w-80">
-          <Input
-            leftIcon={<Search className="w-4 h-4" />}
-            placeholder="Search your courses..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+
+        {/* Tabs */}
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as TabValue)}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid h-12 p-1 bg-muted/50">
+            <TabsTrigger
+              value="all"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span className="hidden sm:inline">All Courses</span>
+              <span className="sm:hidden">All</span>
+              <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                {getTabCount('all')}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="in-progress"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
+            >
+              <Play className="w-4 h-4" />
+              <span className="hidden sm:inline">In Progress</span>
+              <span className="sm:hidden">Active</span>
+              <span className="text-xs bg-blue-500/10 text-blue-600 px-1.5 py-0.5 rounded-full">
+                {getTabCount('in-progress')}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="completed"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Completed</span>
+              <span className="sm:hidden">Done</span>
+              <span className="text-xs bg-green-500/10 text-green-600 px-1.5 py-0.5 rounded-full">
+                {getTabCount('completed')}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="archived"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
+            >
+              <FolderArchive className="w-4 h-4" />
+              <span className="hidden sm:inline">Archived</span>
+              <span className="sm:hidden">Archive</span>
+              <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                {getTabCount('archived')}
+              </span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tab Content - Same for all tabs, just filtered */}
+          {['all', 'in-progress', 'completed', 'archived'].map((tab) => (
+            <TabsContent key={tab} value={tab} className="mt-6">
+              {renderTabContent({
+                isLoading,
+                filteredCourses,
+                tab: tab as TabValue,
+                searchQuery,
+                archiveMutation,
+                unarchiveMutation,
+              })}
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
-
-      {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as TabValue)}
-        className="w-full"
-      >
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid h-12 p-1 bg-muted/50">
-          <TabsTrigger
-            value="all"
-            className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
-          >
-            <BookOpen className="w-4 h-4" />
-            <span className="hidden sm:inline">All Courses</span>
-            <span className="sm:hidden">All</span>
-            <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
-              {getTabCount('all')}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="in-progress"
-            className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
-          >
-            <Play className="w-4 h-4" />
-            <span className="hidden sm:inline">In Progress</span>
-            <span className="sm:hidden">Active</span>
-            <span className="text-xs bg-blue-500/10 text-blue-600 px-1.5 py-0.5 rounded-full">
-              {getTabCount('in-progress')}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="completed"
-            className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
-          >
-            <CheckCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">Completed</span>
-            <span className="sm:hidden">Done</span>
-            <span className="text-xs bg-green-500/10 text-green-600 px-1.5 py-0.5 rounded-full">
-              {getTabCount('completed')}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="archived"
-            className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
-          >
-            <FolderArchive className="w-4 h-4" />
-            <span className="hidden sm:inline">Archived</span>
-            <span className="sm:hidden">Archive</span>
-            <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
-              {getTabCount('archived')}
-            </span>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Tab Content - Same for all tabs, just filtered */}
-        {['all', 'in-progress', 'completed', 'archived'].map((tab) => (
-          <TabsContent key={tab} value={tab} className="mt-6">
-            {renderTabContent({
-              isLoading,
-              filteredCourses,
-              tab: tab as TabValue,
-              searchQuery,
-              archiveMutation,
-              unarchiveMutation,
-            })}
-          </TabsContent>
-        ))}
-      </Tabs>
-    </div>
+    </PageContainer>
   );
 }
 

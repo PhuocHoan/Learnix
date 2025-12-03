@@ -5,6 +5,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { CoursesService } from './courses.service';
 import { Course, CourseLevel } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
+import { Lesson } from './entities/lesson.entity';
 
 interface MockEnrollmentRepository {
   find: jest.Mock;
@@ -18,6 +19,14 @@ const mockEnrollmentRepositoryValue: MockEnrollmentRepository = {
   findOne: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
+};
+
+interface MockLessonRepository {
+  findOne: jest.Mock;
+}
+
+const mockLessonRepositoryValue: MockLessonRepository = {
+  findOne: jest.fn(),
 };
 
 interface MockCourseRepository {
@@ -88,6 +97,10 @@ describe('CoursesService', () => {
         {
           provide: getRepositoryToken(Enrollment),
           useValue: mockEnrollmentRepositoryValue,
+        },
+        {
+          provide: getRepositoryToken(Lesson),
+          useValue: mockLessonRepositoryValue,
         },
       ],
     }).compile();

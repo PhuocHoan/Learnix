@@ -6,13 +6,13 @@ test.describe('Navigation', () => {
       await page.goto('/');
 
       if (testInfo.project.name === 'mobile') {
-        // On mobile, open sidebar first
+        // On mobile, open hamburger menu first
         const mobileMenuButton = page.locator('button[aria-label="Open menu"]');
         await mobileMenuButton.click();
         await page.waitForTimeout(300);
 
         const coursesLink = page
-          .getByRole('link', { name: /Browse Courses/i })
+          .getByRole('link', { name: /Courses/i })
           .first();
         await coursesLink.click();
       } else {
@@ -77,13 +77,13 @@ test.describe('Navigation', () => {
       await page.goto('/');
 
       if (testInfo.project.name === 'mobile') {
-        // On mobile, open sidebar and navigate
+        // On mobile, open hamburger menu and navigate
         const mobileMenuButton = page.locator('button[aria-label="Open menu"]');
         await mobileMenuButton.click();
         await page.waitForTimeout(300);
 
         const coursesLink = page
-          .getByRole('link', { name: /Browse Courses/i })
+          .getByRole('link', { name: /Courses/i })
           .first();
         await coursesLink.click();
       } else {
@@ -105,13 +105,13 @@ test.describe('Navigation', () => {
       await page.goto('/');
 
       if (testInfo.project.name === 'mobile') {
-        // On mobile, open sidebar and navigate
+        // On mobile, open hamburger menu and navigate
         const mobileMenuButton = page.locator('button[aria-label="Open menu"]');
         await mobileMenuButton.click();
         await page.waitForTimeout(300);
 
         const coursesLink = page
-          .getByRole('link', { name: /Browse Courses/i })
+          .getByRole('link', { name: /Courses/i })
           .first();
         await coursesLink.click();
       } else {
@@ -137,20 +137,7 @@ test.describe('Navigation', () => {
     }, testInfo) => {
       await page.goto('/courses');
 
-      if (testInfo.project.name === 'mobile') {
-        // On mobile, the logo is in the sidebar - open it first
-        const mobileMenuButton = page.locator('button[aria-label="Open menu"]');
-        await mobileMenuButton.click();
-        await page.waitForTimeout(300);
-
-        // Click the Home link in sidebar instead (more reliable than logo)
-        const homeLink = page.getByRole('link', { name: 'Home' });
-        await expect(homeLink).toBeVisible();
-        await homeLink.click();
-        await expect(page).toHaveURL('/');
-        return;
-      }
-
+      // Logo is in the header - always visible
       const logo = page.getByRole('link', { name: /Learnix/i }).first();
       await expect(logo).toBeVisible();
       await logo.click();
@@ -208,30 +195,32 @@ test.describe('Navigation', () => {
     });
   });
 
-  test.describe('Sidebar Navigation', () => {
-    test('should show sidebar on desktop', async ({ page }) => {
+  test.describe('Desktop Navigation', () => {
+    test('should show navigation links in header on desktop', async ({
+      page,
+    }) => {
       await page.setViewportSize({ width: 1280, height: 800 });
       await page.goto('/');
 
-      // Look for sidebar or navigation
-      const sidebar = page.locator(
-        'aside, nav[class*="sidebar"], [class*="Sidebar"]',
-      );
-      const sidebarCount = await sidebar.count();
-
-      // Sidebar might be collapsed on some pages
-      expect(sidebarCount).toBeGreaterThanOrEqual(0);
-    });
-
-    test('should have sidebar links for public routes', async ({ page }) => {
-      await page.setViewportSize({ width: 1280, height: 800 });
-      await page.goto('/');
-
-      // Look for common sidebar links
+      // Look for navigation links in the header
       const homeLink = page.getByRole('link', { name: /Home/i });
       const coursesLink = page.getByRole('link', { name: /Courses/i });
 
-      // At least courses link should exist
+      // Both links should be visible in header on desktop
+      await expect(homeLink.first()).toBeVisible();
+      await expect(coursesLink.first()).toBeVisible();
+    });
+
+    test('should have navigation links for public routes', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto('/');
+
+      // Look for common navigation links
+      const homeLink = page.getByRole('link', { name: /Home/i });
+      const coursesLink = page.getByRole('link', { name: /Courses/i });
+
+      // Both links should exist
+      await expect(homeLink.first()).toBeVisible();
       await expect(coursesLink.first()).toBeVisible();
     });
   });
@@ -246,7 +235,7 @@ test.describe('Navigation', () => {
 
     test('should show mobile menu button', async ({ page }) => {
       await page.goto('/');
-      // Look for hamburger menu or mobile menu button
+      // Look for hamburger menu button
       const mobileMenu = page.locator(
         'button[aria-label*="menu" i], button:has([class*="Menu"])',
       );
@@ -266,11 +255,11 @@ test.describe('Navigation', () => {
       await expect(mobileMenuButton).toBeVisible({ timeout: 5000 });
       await mobileMenuButton.click();
 
-      // Menu should open - wait for sidebar to appear
+      // Menu should open - wait for navigation to appear
       await page.waitForTimeout(300); // Wait for animation
 
-      // Should see navigation links in the sidebar
-      const coursesLink = page.getByRole('link', { name: /Browse Courses/i });
+      // Should see navigation links in the mobile menu
+      const coursesLink = page.getByRole('link', { name: /Courses/i });
       await expect(coursesLink.first()).toBeVisible({ timeout: 5000 });
     });
 
@@ -285,13 +274,11 @@ test.describe('Navigation', () => {
       await expect(mobileMenuButton).toBeVisible({ timeout: 5000 });
       await mobileMenuButton.click();
 
-      // Wait for sidebar animation
+      // Wait for menu animation
       await page.waitForTimeout(300);
 
-      // Click Browse Courses in sidebar
-      const coursesLink = page
-        .getByRole('link', { name: /Browse Courses/i })
-        .first();
+      // Click Courses in mobile menu
+      const coursesLink = page.getByRole('link', { name: /Courses/i }).first();
       await expect(coursesLink).toBeVisible({ timeout: 5000 });
       await coursesLink.click();
       await expect(page).toHaveURL(/\/courses/);
@@ -308,13 +295,11 @@ test.describe('Navigation', () => {
       await expect(mobileMenuButton).toBeVisible({ timeout: 5000 });
       await mobileMenuButton.click();
 
-      // Wait for sidebar animation
+      // Wait for menu animation
       await page.waitForTimeout(300);
 
       // Navigate to courses
-      const coursesLink = page
-        .getByRole('link', { name: /Browse Courses/i })
-        .first();
+      const coursesLink = page.getByRole('link', { name: /Courses/i }).first();
       await expect(coursesLink).toBeVisible({ timeout: 5000 });
       await coursesLink.click();
 

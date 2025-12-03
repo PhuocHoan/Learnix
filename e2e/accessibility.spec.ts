@@ -275,7 +275,7 @@ test.describe('Accessibility - Responsive Design', () => {
         await expect(main.first()).toBeVisible();
       }
 
-      // Navigation should be present
+      // Navigation should be present (in header now)
       const nav = page.locator("nav, [role='navigation']");
       const navCount = await nav.count();
       expect(navCount).toBeGreaterThanOrEqual(0);

@@ -13,6 +13,7 @@ import {
   UserX,
 } from 'lucide-react';
 
+import { PageContainer } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { adminApi, type User } from '@/features/admin/api/admin-api';
@@ -94,265 +95,269 @@ export function UserManagementPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            User Management
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage user accounts and permissions
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-xl">
-          <Users className="w-4 h-4" />
-          <span>{users?.length ?? 0} total users</span>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Search users by email or name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-        />
-      </div>
-
-      {/* User List */}
-      <Card>
-        <CardHeader className="border-b border-border bg-muted/30">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
-            All Users
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {(() => {
-            if (isLoading) {
-              return (
-                <div className="divide-y divide-border">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="p-4 flex items-center gap-4">
-                      <Skeleton className="w-12 h-12 rounded-full" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-48" />
-                        <Skeleton className="h-3 w-32" />
-                      </div>
-                      <Skeleton className="h-8 w-20" />
-                    </div>
-                  ))}
-                </div>
-              );
-            }
-            if (filteredUsers && filteredUsers.length > 0) {
-              return (
-                <div className="divide-y divide-border">
-                  {filteredUsers.map((user) => {
-                    const RoleIcon = getRoleIcon(user.role);
-                    return (
-                      <div
-                        key={user.id}
-                        className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-muted/30 transition-colors"
-                      >
-                        {/* Avatar & Info */}
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
-                            {user.fullName?.charAt(0).toUpperCase() ??
-                              user.email.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-foreground truncate">
-                              {user.fullName ?? 'No name'}
-                            </p>
-                            <p className="text-sm text-muted-foreground truncate">
-                              {user.email}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Role & Status */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge
-                            variant={getRoleBadgeVariant(user.role)}
-                            className="gap-1"
-                          >
-                            <RoleIcon className="w-3 h-3" />
-                            {user.role}
-                          </Badge>
-                          <Badge
-                            variant={user.isActive ? 'success' : 'danger'}
-                            className="gap-1"
-                          >
-                            {user.isActive ? (
-                              <UserCheck className="w-3 h-3" />
-                            ) : (
-                              <UserX className="w-3 h-3" />
-                            )}
-                            {user.isActive ? 'Active' : 'Locked'}
-                          </Badge>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 sm:ml-auto">
-                          <button
-                            onClick={() => setSelectedUser(user)}
-                            className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-sm"
-                          >
-                            Change Role
-                          </button>
-                          <button
-                            onClick={() => {
-                              void updateStatusMutation.mutateAsync({
-                                userId: user.id,
-                                isActive: !user.isActive,
-                              });
-                            }}
-                            disabled={updateStatusMutation.isPending}
-                            className={cn(
-                              'px-4 py-2 text-sm font-medium rounded-xl transition-all shadow-sm disabled:opacity-50',
-                              user.isActive
-                                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                                : 'bg-green-600 text-white hover:bg-green-700',
-                            )}
-                          >
-                            {getStatusButtonContent(
-                              updateStatusMutation.isPending,
-                              user.isActive,
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            }
-            return (
-              <div className="p-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
-                  <Users className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <p className="font-medium text-foreground">No users found</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {searchTerm
-                    ? 'Try a different search term'
-                    : 'No users have registered yet'}
-                </p>
-              </div>
-            );
-          })()}
-        </CardContent>
-      </Card>
-
-      {/* Role Change Modal */}
-      {selectedUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-card rounded-2xl p-6 max-w-md w-full shadow-2xl animate-fade-in">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-foreground">Change Role</h2>
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mb-6">
-              <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white font-semibold">
-                {selectedUser.fullName?.charAt(0).toUpperCase() ??
-                  selectedUser.email.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium truncate">
-                  {selectedUser.fullName ?? 'No name'}
-                </p>
-                <p className="text-sm text-muted-foreground truncate">
-                  {selectedUser.email}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {[
-                {
-                  role: 'guest',
-                  label: 'Guest',
-                  desc: 'Limited access, view only',
-                  icon: Users,
-                },
-                {
-                  role: 'student',
-                  label: 'Student',
-                  desc: 'Can enroll in courses and take quizzes',
-                  icon: GraduationCap,
-                },
-                {
-                  role: 'instructor',
-                  label: 'Instructor',
-                  desc: 'Can create courses and quizzes',
-                  icon: BookOpen,
-                },
-                {
-                  role: 'admin',
-                  label: 'Admin',
-                  desc: 'Full platform access and control',
-                  icon: Shield,
-                },
-              ].map(({ role, label, desc, icon: Icon }) => (
-                <button
-                  key={role}
-                  onClick={() => {
-                    void updateRoleMutation.mutateAsync({
-                      userId: selectedUser.id,
-                      role,
-                    });
-                  }}
-                  disabled={updateRoleMutation.isPending}
-                  className={cn(
-                    'w-full p-4 text-left rounded-xl border-2 transition-all flex items-center gap-3 disabled:opacity-50',
-                    selectedUser.role === role
-                      ? 'border-primary bg-primary/10 shadow-md'
-                      : 'border-border hover:border-primary/50 hover:bg-muted/50',
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'p-2 rounded-lg',
-                      selectedUser.role === role
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground',
-                    )}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{label}</p>
-                    <p className="text-sm text-muted-foreground">{desc}</p>
-                  </div>
-                  {updateRoleMutation.isPending &&
-                    selectedUser.role !== role && (
-                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    )}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setSelectedUser(null)}
-              className="mt-6 w-full py-3 border border-border rounded-xl hover:bg-muted font-medium transition-colors"
-            >
-              Cancel
-            </button>
+    <PageContainer>
+      <div className="space-y-6 animate-fade-in">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              User Management
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Manage user accounts and permissions
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-xl">
+            <Users className="w-4 h-4" />
+            <span>{users?.length ?? 0} total users</span>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search users by email or name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+          />
+        </div>
+
+        {/* User List */}
+        <Card>
+          <CardHeader className="border-b border-border bg-muted/30">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              All Users
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {(() => {
+              if (isLoading) {
+                return (
+                  <div className="divide-y divide-border">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="p-4 flex items-center gap-4">
+                        <Skeleton className="w-12 h-12 rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-48" />
+                          <Skeleton className="h-3 w-32" />
+                        </div>
+                        <Skeleton className="h-8 w-20" />
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+              if (filteredUsers && filteredUsers.length > 0) {
+                return (
+                  <div className="divide-y divide-border">
+                    {filteredUsers.map((user) => {
+                      const RoleIcon = getRoleIcon(user.role);
+                      return (
+                        <div
+                          key={user.id}
+                          className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-muted/30 transition-colors"
+                        >
+                          {/* Avatar & Info */}
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
+                              {user.fullName?.charAt(0).toUpperCase() ??
+                                user.email.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-foreground truncate">
+                                {user.fullName ?? 'No name'}
+                              </p>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {user.email}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Role & Status */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge
+                              variant={getRoleBadgeVariant(user.role)}
+                              className="gap-1"
+                            >
+                              <RoleIcon className="w-3 h-3" />
+                              {user.role}
+                            </Badge>
+                            <Badge
+                              variant={user.isActive ? 'success' : 'danger'}
+                              className="gap-1"
+                            >
+                              {user.isActive ? (
+                                <UserCheck className="w-3 h-3" />
+                              ) : (
+                                <UserX className="w-3 h-3" />
+                              )}
+                              {user.isActive ? 'Active' : 'Locked'}
+                            </Badge>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 sm:ml-auto">
+                            <button
+                              onClick={() => setSelectedUser(user)}
+                              className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-sm"
+                            >
+                              Change Role
+                            </button>
+                            <button
+                              onClick={() => {
+                                void updateStatusMutation.mutateAsync({
+                                  userId: user.id,
+                                  isActive: !user.isActive,
+                                });
+                              }}
+                              disabled={updateStatusMutation.isPending}
+                              className={cn(
+                                'px-4 py-2 text-sm font-medium rounded-xl transition-all shadow-sm disabled:opacity-50',
+                                user.isActive
+                                  ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                                  : 'bg-green-600 text-white hover:bg-green-700',
+                              )}
+                            >
+                              {getStatusButtonContent(
+                                updateStatusMutation.isPending,
+                                user.isActive,
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+              return (
+                <div className="p-8 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
+                    <Users className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <p className="font-medium text-foreground">No users found</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {searchTerm
+                      ? 'Try a different search term'
+                      : 'No users have registered yet'}
+                  </p>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
+        {/* Role Change Modal */}
+        {selectedUser && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+            <div className="bg-card rounded-2xl p-6 max-w-md w-full shadow-2xl animate-fade-in">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-foreground">
+                  Change Role
+                </h2>
+                <button
+                  onClick={() => setSelectedUser(null)}
+                  className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mb-6">
+                <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white font-semibold">
+                  {selectedUser.fullName?.charAt(0).toUpperCase() ??
+                    selectedUser.email.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate">
+                    {selectedUser.fullName ?? 'No name'}
+                  </p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {selectedUser.email}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {[
+                  {
+                    role: 'guest',
+                    label: 'Guest',
+                    desc: 'Limited access, view only',
+                    icon: Users,
+                  },
+                  {
+                    role: 'student',
+                    label: 'Student',
+                    desc: 'Can enroll in courses and take quizzes',
+                    icon: GraduationCap,
+                  },
+                  {
+                    role: 'instructor',
+                    label: 'Instructor',
+                    desc: 'Can create courses and quizzes',
+                    icon: BookOpen,
+                  },
+                  {
+                    role: 'admin',
+                    label: 'Admin',
+                    desc: 'Full platform access and control',
+                    icon: Shield,
+                  },
+                ].map(({ role, label, desc, icon: Icon }) => (
+                  <button
+                    key={role}
+                    onClick={() => {
+                      void updateRoleMutation.mutateAsync({
+                        userId: selectedUser.id,
+                        role,
+                      });
+                    }}
+                    disabled={updateRoleMutation.isPending}
+                    className={cn(
+                      'w-full p-4 text-left rounded-xl border-2 transition-all flex items-center gap-3 disabled:opacity-50',
+                      selectedUser.role === role
+                        ? 'border-primary bg-primary/10 shadow-md'
+                        : 'border-border hover:border-primary/50 hover:bg-muted/50',
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'p-2 rounded-lg',
+                        selectedUser.role === role
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground',
+                      )}
+                    >
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">{label}</p>
+                      <p className="text-sm text-muted-foreground">{desc}</p>
+                    </div>
+                    {updateRoleMutation.isPending &&
+                      selectedUser.role !== role && (
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      )}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="mt-6 w-full py-3 border border-border rounded-xl hover:bg-muted font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </PageContainer>
   );
 }
 

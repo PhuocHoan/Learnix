@@ -16,6 +16,7 @@ import {
 } from './courses.service';
 import { CourseLevel, Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
+import { Lesson } from './entities/lesson.entity';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { User } from '../users/entities/user.entity';
@@ -106,6 +107,24 @@ export class CoursesController {
   ): Promise<{ isEnrolled: boolean; progress: Enrollment | null }> {
     const enrollment = await this.coursesService.checkEnrollment(user.id, id);
     return { isEnrolled: Boolean(enrollment), progress: enrollment };
+  }
+
+  /**
+   * Get a specific lesson with access control
+   * Returns lesson content only if user is enrolled or lesson is free preview
+   */
+  @Get(':id/lessons/:lessonId')
+  @UseGuards(JwtAuthGuard)
+  async getLesson(
+    @Param('id') courseId: string,
+    @Param('lessonId') lessonId: string,
+    @CurrentUser() user: User,
+  ): Promise<{ lesson: Lesson; hasAccess: boolean }> {
+    return this.coursesService.getLessonWithAccessControl(
+      user.id,
+      courseId,
+      lessonId,
+    );
   }
 
   @Post(':id/lessons/:lessonId/complete')

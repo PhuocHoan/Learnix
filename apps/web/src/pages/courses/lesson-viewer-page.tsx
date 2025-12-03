@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -9,10 +9,13 @@ import {
   Menu,
   X,
   Loader2,
+  Lock,
 } from 'lucide-react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/use-auth';
 import { coursesApi, type Lesson } from '@/features/courses/api/courses-api';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +28,17 @@ function getSidebarLessonIcon(isCompleted: boolean, lessonType: string) {
     return <PlayCircle className="w-4 h-4" />;
   }
   return <FileText className="w-4 h-4" />;
+}
+
+// Helper function to get sidebar icon color class
+function getSidebarIconColor(isLocked: boolean, isCompleted: boolean) {
+  if (isLocked) {
+    return 'text-muted-foreground/50';
+  }
+  if (isCompleted) {
+    return 'text-green-600';
+  }
+  return 'text-muted-foreground';
 }
 
 // Helper function to render video content
@@ -82,6 +96,7 @@ export function LessonViewerPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { isAuthenticated } = useAuth();
 
   // Get lesson ID from URL search params
   const lessonIdFromUrl = searchParams.get('lesson');
@@ -93,12 +108,55 @@ export function LessonViewerPage() {
     enabled: Boolean(id),
   });
 
-  // Fetch Enrollment/Progress
-  const { data: enrollment } = useQuery({
+  // Fetch Enrollment/Progress - this determines if user can access lessons
+  const { data: enrollment, isLoading: isLoadingEnrollment } = useQuery({
     queryKey: ['enrollment', id],
     queryFn: () => coursesApi.getEnrollment(id ?? ''),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && isAuthenticated,
   });
+
+  const isEnrolled = enrollment?.isEnrolled ?? false;
+
+  // Get active lesson ID from URL or default to first lesson
+  const activeLessonId =
+    lessonIdFromUrl ?? course?.sections?.[0]?.lessons?.[0]?.id;
+
+  // Find current lesson based on activeLessonId
+  const currentLesson: Lesson | undefined = course?.sections?.reduce<
+    Lesson | undefined
+  >(
+    (found, section) =>
+      found ?? section.lessons.find((l) => l.id === activeLessonId),
+    undefined,
+  );
+
+  // Check if current lesson is a free preview
+  const isPreviewLesson = currentLesson?.isFreePreview ?? false;
+
+  // Determine if user has access: enrolled OR viewing a free preview lesson
+  const hasAccess = isEnrolled || isPreviewLesson;
+
+  // Redirect to course page if not enrolled AND not viewing a preview lesson
+  useEffect(() => {
+    if (
+      !isLoadingEnrollment &&
+      !isLoadingCourse &&
+      course &&
+      !hasAccess &&
+      isAuthenticated
+    ) {
+      toast.error('You must enroll in this course to access this lesson');
+      void navigate(`/courses/${id}`, { replace: true });
+    }
+  }, [
+    isLoadingEnrollment,
+    isLoadingCourse,
+    course,
+    hasAccess,
+    isAuthenticated,
+    id,
+    navigate,
+  ]);
 
   // Complete Lesson Mutation
   const completeLessonMutation = useMutation({
@@ -109,7 +167,7 @@ export function LessonViewerPage() {
     },
   });
 
-  if (isLoadingCourse || !course) {
+  if (isLoadingCourse || isLoadingEnrollment || !course) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -117,18 +175,14 @@ export function LessonViewerPage() {
     );
   }
 
-  // Get active lesson ID from URL or default to first lesson
-  const activeLessonId =
-    lessonIdFromUrl ?? course.sections?.[0]?.lessons?.[0]?.id;
-
-  // Find current lesson based on activeLessonId
-  const currentLesson: Lesson | undefined = course.sections?.reduce<
-    Lesson | undefined
-  >(
-    (found, section) =>
-      found ?? section.lessons.find((l) => l.id === activeLessonId),
-    undefined,
-  );
+  // If user doesn't have access (not enrolled AND not a preview lesson), show loading while redirect happens
+  if (!hasAccess && isAuthenticated) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const completedIds = enrollment?.progress?.completedLessonIds ?? [];
 
@@ -175,29 +229,31 @@ export function LessonViewerPage() {
 
                 <div className="flex justify-between items-center">
                   <h1 className="text-2xl font-bold">{currentLesson.title}</h1>
-                  <Button
-                    size="lg"
-                    onClick={() => {
-                      void completeLessonMutation.mutate(currentLesson.id);
-                    }}
-                    disabled={
-                      completedIds.includes(currentLesson.id) ||
-                      completeLessonMutation.isPending
-                    }
-                    className={cn(
-                      completedIds.includes(currentLesson.id) &&
-                        'bg-green-600 hover:bg-green-700 text-white',
-                    )}
-                  >
-                    {completedIds.includes(currentLesson.id) ? (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Completed
-                      </>
-                    ) : (
-                      'Mark as Complete'
-                    )}
-                  </Button>
+                  {isEnrolled && (
+                    <Button
+                      size="lg"
+                      onClick={() => {
+                        void completeLessonMutation.mutate(currentLesson.id);
+                      }}
+                      disabled={
+                        completedIds.includes(currentLesson.id) ||
+                        completeLessonMutation.isPending
+                      }
+                      className={cn(
+                        completedIds.includes(currentLesson.id) &&
+                          'bg-green-600 hover:bg-green-700 text-white',
+                      )}
+                    >
+                      {completedIds.includes(currentLesson.id) ? (
+                        <>
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Completed
+                        </>
+                      ) : (
+                        'Mark as Complete'
+                      )}
+                    </Button>
+                  )}
                 </div>
               </>
             ) : (
@@ -228,42 +284,63 @@ export function LessonViewerPage() {
                   {section.lessons.map((lesson) => {
                     const isCompleted = completedIds.includes(lesson.id);
                     const isActive = activeLessonId === lesson.id;
+                    const canAccess = isEnrolled || lesson.isFreePreview;
+                    const isLocked = !canAccess;
 
                     return (
                       <button
                         key={lesson.id}
                         onClick={() => {
+                          if (isLocked) {
+                            toast.error(
+                              'Please enroll in this course to access this lesson',
+                            );
+                            return;
+                          }
                           setSearchParams({ lesson: lesson.id });
                           if (window.innerWidth < 1024) {
                             setIsSidebarOpen(false);
                           }
                         }}
                         className={cn(
-                          'w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-muted/50 transition-colors border-l-2 border-transparent',
+                          'w-full text-left px-4 py-3 flex items-start gap-3 transition-colors border-l-2 border-transparent',
                           isActive && 'bg-primary/5 border-primary',
+                          isLocked
+                            ? 'cursor-not-allowed opacity-60'
+                            : 'hover:bg-muted/50',
                         )}
+                        disabled={isLocked}
                       >
                         <div
                           className={cn(
                             'mt-0.5 shrink-0',
-                            isCompleted
-                              ? 'text-green-600'
-                              : 'text-muted-foreground',
+                            getSidebarIconColor(isLocked, isCompleted),
                           )}
                         >
-                          {getSidebarLessonIcon(isCompleted, lesson.type)}
+                          {isLocked ? (
+                            <Lock className="w-4 h-4" />
+                          ) : (
+                            getSidebarLessonIcon(isCompleted, lesson.type)
+                          )}
                         </div>
                         <span
                           className={cn(
                             'text-sm',
-                            isActive
-                              ? 'font-medium text-primary'
-                              : 'text-muted-foreground',
-                            isCompleted && 'line-through opacity-70',
+                            isLocked && 'text-muted-foreground/50',
+                            !isLocked && isActive && 'font-medium text-primary',
+                            !isLocked && !isActive && 'text-muted-foreground',
+                            isCompleted &&
+                              !isLocked &&
+                              'line-through opacity-70',
                           )}
                         >
                           {lesson.title}
                         </span>
+                        {lesson.isFreePreview && !isEnrolled && (
+                          <span className="ml-auto text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded">
+                            Preview
+                          </span>
+                        )}
                       </button>
                     );
                   })}

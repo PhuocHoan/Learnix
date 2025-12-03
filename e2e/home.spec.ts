@@ -24,18 +24,10 @@ test.describe('Home Page', () => {
   test('should navigate to courses page when clicking Browse Courses', async ({
     page,
   }, testInfo) => {
-    // On mobile, the Browse Courses link is in the sidebar - open it first
+    // On mobile, the Browse Courses link in header is hidden - use the hero button
     if (testInfo.project.name === 'mobile') {
-      // Open mobile menu first
-      const mobileMenuButton = page.locator('button[aria-label="Open menu"]');
-      await mobileMenuButton.click();
-      await page.waitForTimeout(300);
-
-      // Now click Browse Courses in the sidebar
-      const browseButton = page
-        .getByRole('link', { name: /Browse Courses/i })
-        .first();
-      await browseButton.click();
+      // Use the Browse Courses button in hero section
+      await homePage.clickBrowseCourses();
     } else {
       await homePage.clickBrowseCourses();
     }

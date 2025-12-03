@@ -19,17 +19,24 @@ import {
   BookOpen,
   ArrowRight,
   Loader2,
+  GraduationCap,
+  LayoutDashboard,
+  Library,
+  Settings,
+  LogOut,
+  Shield,
+  Wand2,
+  Users,
+  BarChart3,
+  ChevronDown,
+  Home,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/use-auth';
 import { coursesApi, type Course } from '@/features/courses/api/courses-api';
 import { cn } from '@/lib/utils';
-
-interface HeaderProps {
-  onMenuClick: () => void;
-}
 
 // Get initial theme from DOM
 const getInitialTheme = () => {
@@ -81,13 +88,70 @@ const clearRecentSearches = () => {
   localStorage.removeItem(RECENT_SEARCHES_KEY);
 };
 
-export function Header({ onMenuClick }: HeaderProps) {
-  const { user } = useAuth();
+// Navigation items for main nav
+interface NavItem {
+  icon: typeof Home;
+  label: string;
+  href: string;
+  roles?: string[];
+}
+
+const mainNavItems: NavItem[] = [
+  { icon: Home, label: 'Home', href: '/' },
+  { icon: BookOpen, label: 'Courses', href: '/courses' },
+];
+
+const authenticatedNavItems: NavItem[] = [
+  {
+    icon: LayoutDashboard,
+    label: 'Dashboard',
+    href: '/dashboard',
+    roles: ['student', 'instructor', 'admin'],
+  },
+  {
+    icon: Library,
+    label: 'My Learning',
+    href: '/my-learning',
+    roles: ['student', 'instructor', 'admin'],
+  },
+];
+
+const instructorNavItems: NavItem[] = [
+  {
+    icon: Wand2,
+    label: 'AI Quiz Generator',
+    href: '/instructor/quiz-generator',
+    roles: ['instructor', 'admin'],
+  },
+];
+
+const adminNavItems: NavItem[] = [
+  { icon: Shield, label: 'Admin Dashboard', href: '/admin', roles: ['admin'] },
+  {
+    icon: Users,
+    label: 'User Management',
+    href: '/admin/users',
+    roles: ['admin'],
+  },
+  {
+    icon: BarChart3,
+    label: 'System Stats',
+    href: '/admin/stats',
+    roles: ['admin'],
+  },
+];
+
+export function Header() {
+  const { user, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(getInitialTheme);
   const [hasNotifications] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -106,7 +170,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Sync recent searches from localStorage (uses callback pattern to avoid setState in effect body)
+  // Sync recent searches from localStorage
   const syncRecentSearches = () => {
     const stored = getRecentSearches();
     if (JSON.stringify(stored) !== JSON.stringify(recentSearches)) {
@@ -114,7 +178,6 @@ export function Header({ onMenuClick }: HeaderProps) {
     }
   };
 
-  // Use focus handler to refresh recent searches (avoids sync setState in effect)
   const handleSearchFocus = () => {
     syncRecentSearches();
     setIsSearchFocused(true);
@@ -127,17 +190,24 @@ export function Header({ onMenuClick }: HeaderProps) {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
-      // Escape to close
-      if (e.key === 'Escape' && isSearchFocused) {
-        setIsSearchFocused(false);
-        searchInputRef.current?.blur();
+      if (e.key === 'Escape') {
+        if (isSearchFocused) {
+          setIsSearchFocused(false);
+          searchInputRef.current?.blur();
+        }
+        if (isUserMenuOpen) {
+          setIsUserMenuOpen(false);
+        }
+        if (isMobileMenuOpen) {
+          setIsMobileMenuOpen(false);
+        }
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isSearchFocused]);
+  }, [isSearchFocused, isUserMenuOpen, isMobileMenuOpen]);
 
-  // Click outside to close dropdown
+  // Click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -146,10 +216,32 @@ export function Header({ onMenuClick }: HeaderProps) {
       ) {
         setIsSearchFocused(false);
       }
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsUserMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Track pathname changes to close menus on navigation
+  const [currentPath, setCurrentPath] = useState(location.pathname);
+
+  // When pathname changes, close menus (derived state pattern)
+  if (location.pathname !== currentPath) {
+    setCurrentPath(location.pathname);
+    // Only update if menus are actually open to avoid unnecessary renders
+    if (isMobileMenuOpen || isUserMenuOpen) {
+      // Schedule the close for after this render
+      queueMicrotask(() => {
+        setIsMobileMenuOpen(false);
+        setIsUserMenuOpen(false);
+      });
+    }
+  }
 
   // Fetch search suggestions
   const { data: searchResults, isLoading: isSearching } = useQuery({
@@ -174,6 +266,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       setRecentSearches(getRecentSearches());
       setIsSearchFocused(false);
       setSearchQuery('');
+      setIsMobileSearchOpen(false);
       void navigate(`/courses?search=${encodeURIComponent(query)}`);
     },
     [navigate],
@@ -186,6 +279,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       setRecentSearches(getRecentSearches());
       setIsSearchFocused(false);
       setSearchQuery('');
+      setIsMobileSearchOpen(false);
       void navigate(`/courses/${course.id}`);
     },
     [navigate],
@@ -193,7 +287,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   // Handle keyboard navigation
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    const totalItems = suggestions.length + (searchQuery ? 1 : 0); // +1 for "See all results"
+    const totalItems = suggestions.length + (searchQuery ? 1 : 0);
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -204,10 +298,8 @@ export function Header({ onMenuClick }: HeaderProps) {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (selectedIndex === -1 || selectedIndex === suggestions.length) {
-        // Search for the query
         handleSearch(searchQuery);
       } else if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-        // Navigate to course - use safe array access
         const selectedCourse = suggestions.at(selectedIndex);
         if (selectedCourse) {
           handleCourseClick(selectedCourse);
@@ -243,6 +335,12 @@ export function Header({ onMenuClick }: HeaderProps) {
     localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
   };
 
+  const handleLogout = async (): Promise<void> => {
+    await logout();
+    setIsUserMenuOpen(false);
+    void navigate('/');
+  };
+
   const getGreeting = (): string => {
     const hour = new Date().getHours();
     if (hour < 12) {
@@ -254,11 +352,27 @@ export function Header({ onMenuClick }: HeaderProps) {
     return 'Good evening';
   };
 
+  const isActive = (href: string) => {
+    if (href === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(href);
+  };
+
+  // Filter nav items based on user role
+  const getVisibleNavItems = (items: NavItem[]) =>
+    items.filter(
+      (item) =>
+        !item.roles ||
+        item.roles.length === 0 ||
+        (user?.role && item.roles.includes(user.role)),
+    );
+
   return (
-    <header className="h-16 border-b border-border bg-background/60 backdrop-blur-xl supports-backdrop-filter:bg-background/60 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-50">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/60">
       {/* Mobile Search Overlay */}
       {isMobileSearchOpen && (
-        <div className="absolute inset-0 sm:hidden bg-background/95 backdrop-blur-md z-20 flex flex-col px-4 pt-3 gap-2">
+        <div className="absolute inset-0 lg:hidden bg-background z-50 flex flex-col px-4 pt-3 gap-2 h-screen">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -270,11 +384,10 @@ export function Header({ onMenuClick }: HeaderProps) {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && searchQuery.trim()) {
                     handleSearch(searchQuery);
-                    setIsMobileSearchOpen(false);
                   }
                 }}
                 placeholder="Search courses..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-muted/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary focus:bg-background transition-all"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-muted/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary focus:bg-background transition-all"
               />
             </div>
             <button
@@ -282,7 +395,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 setIsMobileSearchOpen(false);
                 setSearchQuery('');
               }}
-              className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
+              className="p-2.5 rounded-xl hover:bg-muted text-muted-foreground"
               aria-label="Close search"
             >
               <X className="w-5 h-5" />
@@ -296,14 +409,11 @@ export function Header({ onMenuClick }: HeaderProps) {
               </div>
             )}
             {!isSearching && suggestions.length > 0 && (
-              <div className="space-y-1">
+              <div className="space-y-1 mt-2">
                 {suggestions.map((course) => (
                   <button
                     key={course.id}
-                    onClick={() => {
-                      handleCourseClick(course);
-                      setIsMobileSearchOpen(false);
-                    }}
+                    onClick={() => handleCourseClick(course)}
                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted text-left"
                   >
                     <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -326,261 +436,560 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
       )}
 
-      {/* Left: Menu & Search */}
-      <div className="flex items-center gap-2 sm:gap-4 flex-1 max-w-xl">
-        <button
-          onClick={onMenuClick}
-          className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-muted text-muted-foreground"
-          aria-label="Open menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+      <div className="container mx-auto">
+        <div className="flex h-16 items-center justify-between px-4">
+          {/* Left: Logo & Navigation */}
+          <div className="flex items-center gap-8">
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-2.5 shrink-0">
+              <div className="p-1.5 gradient-primary rounded-xl">
+                <GraduationCap className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-bold text-foreground hidden sm:block">
+                Learnix
+              </span>
+            </Link>
 
-        {/* Desktop Search with Dropdown */}
-        <div
-          ref={searchContainerRef}
-          className="relative w-full hidden sm:block"
-        >
-          <div className="relative group">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setSelectedIndex(-1);
-              }}
-              onFocus={handleSearchFocus}
-              onKeyDown={handleKeyDown}
-              placeholder="Search courses..."
-              className="w-full pl-10 pr-12 py-2.5 rounded-xl border border-border bg-muted/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary focus:bg-background transition-all"
-            />
-            {isSearching ? (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
-            ) : (
-              <kbd className="hidden md:inline-flex absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs text-muted-foreground bg-background border border-border rounded-md">
-                ⌘K
-              </kbd>
-            )}
+            {/* Desktop Navigation */}
+            <nav
+              className="hidden lg:flex items-center gap-1"
+              aria-label="Main navigation"
+            >
+              {mainNavItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                      isActive(item.href)
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                    )}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+              {user &&
+                getVisibleNavItems(authenticatedNavItems).map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className={cn(
+                        'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                        isActive(item.href)
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+            </nav>
           </div>
 
-          {/* Search Dropdown */}
-          {showDropdown && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-              {/* Recent Searches (when no query) */}
-              {!searchQuery && recentSearches.length > 0 && (
-                <div className="p-2">
-                  <div className="flex items-center justify-between px-3 py-2">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Recent Searches
-                    </span>
-                    <button
-                      onClick={handleClearAllRecent}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Clear all
-                    </button>
-                  </div>
-                  {recentSearches.map((search) => (
-                    <button
-                      key={search}
-                      onClick={() => handleSearch(search)}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted text-left group"
-                    >
-                      <Clock className="w-4 h-4 text-muted-foreground" />
-                      <span className="flex-1 text-sm">{search}</span>
-                      <X
-                        className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground transition-opacity"
-                        onClick={(e) => handleClearRecent(search, e)}
-                      />
-                    </button>
-                  ))}
-                </div>
+          {/* Center: Search (Desktop) */}
+          <div
+            ref={searchContainerRef}
+            className="relative hidden md:block flex-1 max-w-md mx-8"
+          >
+            <div className="relative group">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSelectedIndex(-1);
+                }}
+                onFocus={handleSearchFocus}
+                onKeyDown={handleKeyDown}
+                placeholder="Search courses..."
+                className="w-full pl-10 pr-12 py-2.5 rounded-xl border border-border bg-muted/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary focus:bg-background transition-all"
+              />
+              {isSearching ? (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+              ) : (
+                <kbd className="hidden lg:inline-flex absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs text-muted-foreground bg-background border border-border rounded-md">
+                  ⌘K
+                </kbd>
               )}
+            </div>
 
-              {/* Trending/Popular (when no query and no recent) */}
-              {!searchQuery && recentSearches.length === 0 && (
-                <div className="p-2">
-                  <div className="flex items-center gap-2 px-3 py-2">
-                    <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Popular Searches
-                    </span>
-                  </div>
-                  {['React', 'JavaScript', 'Python', 'Machine Learning'].map(
-                    (term) => (
+            {/* Search Dropdown */}
+            {showDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                {/* Recent Searches */}
+                {!searchQuery && recentSearches.length > 0 && (
+                  <div className="p-2">
+                    <div className="flex items-center justify-between px-3 py-2">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Recent Searches
+                      </span>
                       <button
-                        key={term}
-                        onClick={() => handleSearch(term)}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted text-left"
+                        onClick={handleClearAllRecent}
+                        className="text-xs text-primary hover:underline"
                       >
-                        <Search className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">{term}</span>
+                        Clear all
                       </button>
-                    ),
-                  )}
-                </div>
-              )}
-
-              {/* Search Results */}
-              {searchQuery && suggestions.length > 0 && (
-                <div className="p-2">
-                  <div className="px-3 py-2">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Courses
-                    </span>
+                    </div>
+                    {recentSearches.map((search) => (
+                      <button
+                        key={search}
+                        onClick={() => handleSearch(search)}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted text-left group"
+                      >
+                        <Clock className="w-4 h-4 text-muted-foreground" />
+                        <span className="flex-1 text-sm">{search}</span>
+                        <X
+                          className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground transition-opacity"
+                          onClick={(e) => handleClearRecent(search, e)}
+                        />
+                      </button>
+                    ))}
                   </div>
-                  {suggestions.map((course, index) => (
+                )}
+
+                {/* Trending/Popular */}
+                {!searchQuery && recentSearches.length === 0 && (
+                  <div className="p-2">
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Popular Searches
+                      </span>
+                    </div>
+                    {['React', 'JavaScript', 'Python', 'Machine Learning'].map(
+                      (term) => (
+                        <button
+                          key={term}
+                          onClick={() => handleSearch(term)}
+                          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted text-left"
+                        >
+                          <Search className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm">{term}</span>
+                        </button>
+                      ),
+                    )}
+                  </div>
+                )}
+
+                {/* Search Results */}
+                {searchQuery && suggestions.length > 0 && (
+                  <div className="p-2">
+                    <div className="px-3 py-2">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Courses
+                      </span>
+                    </div>
+                    {suggestions.map((course, index) => (
+                      <button
+                        key={course.id}
+                        onClick={() => handleCourseClick(course)}
+                        className={cn(
+                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors',
+                          selectedIndex === index
+                            ? 'bg-primary/10'
+                            : 'hover:bg-muted',
+                        )}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <BookOpen className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {course.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground capitalize">
+                            {course.level} •{' '}
+                            {course.instructor?.fullName ??
+                              course.instructor?.name}
+                          </p>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    ))}
                     <button
-                      key={course.id}
-                      onClick={() => handleCourseClick(course)}
+                      onClick={() => handleSearch(searchQuery)}
                       className={cn(
-                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors',
-                        selectedIndex === index
+                        'w-full flex items-center justify-center gap-2 px-3 py-3 mt-1 rounded-lg text-sm font-medium text-primary transition-colors',
+                        selectedIndex === suggestions.length
                           ? 'bg-primary/10'
                           : 'hover:bg-muted',
                       )}
                     >
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <BookOpen className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          {course.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground capitalize">
-                          {course.level} •{' '}
-                          {course.instructor?.fullName ??
-                            course.instructor?.name}
-                        </p>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                  ))}
-                  {/* See all results */}
-                  <button
-                    onClick={() => handleSearch(searchQuery)}
-                    className={cn(
-                      'w-full flex items-center justify-center gap-2 px-3 py-3 mt-1 rounded-lg text-sm font-medium text-primary transition-colors',
-                      selectedIndex === suggestions.length
-                        ? 'bg-primary/10'
-                        : 'hover:bg-muted',
-                    )}
-                  >
-                    See all results for "{searchQuery}"
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {/* No results */}
-              {searchQuery &&
-                debouncedQuery === searchQuery &&
-                suggestions.length === 0 &&
-                !isSearching && (
-                  <div className="p-6 text-center">
-                    <Search className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No courses found for "{searchQuery}"
-                    </p>
-                    <button
-                      onClick={() => handleSearch(searchQuery)}
-                      className="mt-2 text-sm text-primary hover:underline"
-                    >
-                      Browse all courses
+                      See all results for "{searchQuery}"
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 )}
-            </div>
-          )}
-        </div>
 
-        {/* Mobile search button */}
-        <button
-          onClick={() => setIsMobileSearchOpen(true)}
-          className="sm:hidden p-2 rounded-lg hover:bg-muted text-muted-foreground"
-          aria-label="Search"
-        >
-          <Search className="w-5 h-5" />
-        </button>
-      </div>
+                {/* No results */}
+                {searchQuery &&
+                  debouncedQuery === searchQuery &&
+                  suggestions.length === 0 &&
+                  !isSearching && (
+                    <div className="p-6 text-center">
+                      <Search className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        No courses found for "{searchQuery}"
+                      </p>
+                      <button
+                        onClick={() => handleSearch(searchQuery)}
+                        className="mt-2 text-sm text-primary hover:underline"
+                      >
+                        Browse all courses
+                      </button>
+                    </div>
+                  )}
+              </div>
+            )}
+          </div>
 
-      {/* Right: Actions & User */}
-      <div className="flex items-center gap-1 sm:gap-2 ml-2 sm:ml-4">
-        {/* Theme Toggle */}
-        <button
-          onClick={toggleTheme}
-          className="p-2 sm:p-2.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-          aria-label="Toggle theme"
-        >
-          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-        </button>
-
-        {user ? (
-          /* Logged In State */
-          <>
+          {/* Right: Actions */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Mobile search button */}
             <button
-              className="relative p-2 sm:p-2.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-              aria-label="Notifications"
+              onClick={() => setIsMobileSearchOpen(true)}
+              className="md:hidden p-2.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
+              aria-label="Search"
             >
-              <Bell className="w-5 h-5" />
-              {hasNotifications && (
-                <span className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse-soft" />
+              <Search className="w-5 h-5" />
+            </button>
+
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
+              aria-label="Toggle theme"
+            >
+              {isDark ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
               )}
             </button>
 
-            <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 ml-1 sm:ml-2 border-l border-border">
-              <div className="text-right hidden md:block">
-                <p className="text-sm font-medium text-foreground">
-                  {getGreeting()},{' '}
-                  {user?.fullName ?? user?.name ?? user?.email.split('@')[0]}
-                </p>
-                <p className="text-xs text-muted-foreground capitalize">
-                  {user?.role ?? 'Student'}
-                </p>
+            {user ? (
+              /* Logged In State */
+              <>
+                {/* Notifications */}
+                <button
+                  className="relative p-2.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
+                  aria-label="Notifications"
+                >
+                  <Bell className="w-5 h-5" />
+                  {hasNotifications && (
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  )}
+                </button>
+
+                {/* User Menu */}
+                <div className="relative ml-2" ref={userMenuRef}>
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-muted transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    aria-label="User menu"
+                    aria-expanded={isUserMenuOpen}
+                    aria-haspopup="true"
+                  >
+                    {(user?.avatarUrl ?? user?.oauthAvatarUrl) ? (
+                      <img
+                        src={user.avatarUrl ?? user.oauthAvatarUrl}
+                        alt={user?.fullName ?? user?.name ?? 'User avatar'}
+                        className="w-8 h-8 rounded-xl object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-semibold gradient-primary">
+                        {user?.fullName?.charAt(0).toUpperCase() ??
+                          user?.name?.charAt(0).toUpperCase() ??
+                          user?.email?.charAt(0).toUpperCase() ??
+                          'U'}
+                      </div>
+                    )}
+                    <ChevronDown
+                      className={cn(
+                        'w-4 h-4 text-muted-foreground transition-transform hidden sm:block',
+                        isUserMenuOpen && 'rotate-180',
+                      )}
+                    />
+                  </button>
+
+                  {/* User Dropdown */}
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      {/* User Info */}
+                      <div className="p-4 border-b border-border bg-muted/30">
+                        <p className="font-medium text-sm">
+                          {getGreeting()},{' '}
+                          {user?.fullName ??
+                            user?.name ??
+                            user?.email.split('@')[0]}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {user?.email}
+                        </p>
+                        <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full capitalize">
+                          {user?.role ?? 'Student'}
+                        </span>
+                      </div>
+
+                      {/* Navigation Items */}
+                      <div className="p-2">
+                        {getVisibleNavItems(authenticatedNavItems).map(
+                          (item) => {
+                            const Icon = item.icon;
+                            return (
+                              <Link
+                                key={item.href}
+                                to={item.href}
+                                className={cn(
+                                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+                                  isActive(item.href)
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                                )}
+                              >
+                                <Icon className="w-4 h-4" />
+                                {item.label}
+                              </Link>
+                            );
+                          },
+                        )}
+
+                        {/* Instructor Items */}
+                        {getVisibleNavItems(instructorNavItems).length > 0 && (
+                          <>
+                            <div className="my-2 border-t border-border" />
+                            <p className="px-3 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                              Instructor Tools
+                            </p>
+                            {getVisibleNavItems(instructorNavItems).map(
+                              (item) => {
+                                const Icon = item.icon;
+                                return (
+                                  <Link
+                                    key={item.href}
+                                    to={item.href}
+                                    className={cn(
+                                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+                                      isActive(item.href)
+                                        ? 'bg-primary/10 text-primary'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                                    )}
+                                  >
+                                    <Icon className="w-4 h-4" />
+                                    {item.label}
+                                  </Link>
+                                );
+                              },
+                            )}
+                          </>
+                        )}
+
+                        {/* Admin Items */}
+                        {getVisibleNavItems(adminNavItems).length > 0 && (
+                          <>
+                            <div className="my-2 border-t border-border" />
+                            <p className="px-3 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                              Administration
+                            </p>
+                            {getVisibleNavItems(adminNavItems).map((item) => {
+                              const Icon = item.icon;
+                              return (
+                                <Link
+                                  key={item.href}
+                                  to={item.href}
+                                  className={cn(
+                                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+                                    isActive(item.href)
+                                      ? 'bg-primary/10 text-primary'
+                                      : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                                  )}
+                                >
+                                  <Icon className="w-4 h-4" />
+                                  {item.label}
+                                </Link>
+                              );
+                            })}
+                          </>
+                        )}
+
+                        <div className="my-2 border-t border-border" />
+
+                        {/* Settings */}
+                        <Link
+                          to="/settings"
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+                            isActive('/settings')
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                          )}
+                        >
+                          <Settings className="w-4 h-4" />
+                          Settings
+                        </Link>
+
+                        {/* Logout */}
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              /* Guest State */
+              <div className="flex items-center gap-2 ml-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/login')}
+                  className="hidden sm:flex"
+                >
+                  Log in
+                </Button>
+                <Button size="sm" onClick={() => navigate('/register')}>
+                  Sign up
+                </Button>
               </div>
-              <button
-                onClick={() => navigate('/settings')}
-                className="focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-xl"
-                aria-label="Go to settings"
-              >
-                {(user?.avatarUrl ?? user?.oauthAvatarUrl) ? (
-                  <img
-                    src={user.avatarUrl ?? user.oauthAvatarUrl}
-                    alt={user?.fullName ?? user?.name ?? 'User avatar'}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-                  />
-                ) : (
-                  <div
+            )}
+
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden p-2.5 rounded-xl hover:bg-muted text-muted-foreground ml-1"
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMobileMenuOpen}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Navigation Menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden border-t border-border animate-in slide-in-from-top-2 duration-200">
+            <nav className="p-4 space-y-1" aria-label="Mobile navigation">
+              {/* Main Navigation */}
+              {mainNavItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
                     className={cn(
-                      'w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white font-semibold cursor-pointer',
-                      'gradient-primary shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 transition-all',
+                      'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all',
+                      isActive(item.href)
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted',
                     )}
                   >
-                    {user?.fullName?.charAt(0).toUpperCase() ??
-                      user?.name?.charAt(0).toUpperCase() ??
-                      user?.email?.charAt(0).toUpperCase() ??
-                      'U'}
-                  </div>
-                )}
-              </button>
-            </div>
-          </>
-        ) : (
-          /* Guest State */
-          <div className="flex items-center gap-2 pl-2 sm:pl-3 ml-1 sm:ml-2 border-l border-border">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/login')}
-              className="hidden sm:flex"
-            >
-              Log in
-            </Button>
-            <Button size="sm" onClick={() => navigate('/register')}>
-              Sign up
-            </Button>
+                    <Icon className="w-5 h-5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+
+              {/* Authenticated Navigation */}
+              {user && (
+                <>
+                  <div className="my-3 border-t border-border" />
+                  {getVisibleNavItems(authenticatedNavItems).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        className={cn(
+                          'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all',
+                          isActive(item.href)
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                        )}
+                      >
+                        <Icon className="w-5 h-5" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+
+                  {/* Instructor Items */}
+                  {getVisibleNavItems(instructorNavItems).length > 0 && (
+                    <>
+                      <div className="my-3 border-t border-border" />
+                      <p className="px-4 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Instructor Tools
+                      </p>
+                      {getVisibleNavItems(instructorNavItems).map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            to={item.href}
+                            className={cn(
+                              'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all',
+                              isActive(item.href)
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                            )}
+                          >
+                            <Icon className="w-5 h-5" />
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* Admin Items */}
+                  {getVisibleNavItems(adminNavItems).length > 0 && (
+                    <>
+                      <div className="my-3 border-t border-border" />
+                      <p className="px-4 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Administration
+                      </p>
+                      {getVisibleNavItems(adminNavItems).map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            to={item.href}
+                            className={cn(
+                              'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all',
+                              isActive(item.href)
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                            )}
+                          >
+                            <Icon className="w-5 h-5" />
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                    </>
+                  )}
+                </>
+              )}
+            </nav>
           </div>
         )}
       </div>

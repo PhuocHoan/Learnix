@@ -48,7 +48,7 @@ export class HomePage {
   }
 
   async clickBrowseCourses() {
-    // Use the button in main content, not the sidebar navigation
+    // Use the button in main content (hero section), not the header navigation
     const mainButton = this.page
       .getByRole('main')
       .getByRole('link', { name: /Browse Courses/i });

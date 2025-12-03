@@ -39,7 +39,12 @@ export function AuthRequiredModal({
       />
 
       {/* Modal Content */}
-      <div className="relative bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden transform transition-all scale-100">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+        className="relative bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden transform transition-all scale-100"
+      >
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -53,7 +58,12 @@ export function AuthRequiredModal({
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
 
-          <h3 className="text-2xl font-bold text-foreground mb-2">{title}</h3>
+          <h3
+            id="auth-modal-title"
+            className="text-2xl font-bold text-foreground mb-2"
+          >
+            {title}
+          </h3>
 
           <p className="text-muted-foreground leading-relaxed mb-8">
             {description}
