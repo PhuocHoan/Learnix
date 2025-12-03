@@ -1,4 +1,3 @@
-// src-frontend/pages/courses/courses-page.tsx
 import { useState, useEffect } from 'react';
 
 import { useInfiniteQuery } from '@tanstack/react-query';
@@ -39,7 +38,13 @@ export function CoursesPage() {
 
   const [selectedLevel, setSelectedLevel] = useState<string>('');
   const [tagInput, setTagInput] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  
+  // FIX: Initialize selectedTags from URL search params
+  const [selectedTags, setSelectedTags] = useState<string[]>(() => {
+    const tagsParam = searchParams.get('tags');
+    return tagsParam ? tagsParam.split(',').filter(Boolean) : [];
+  });
+
   const [sortConfig, setSortConfig] = useState<{
     sort: 'price' | 'date';
     order: 'ASC' | 'DESC';
