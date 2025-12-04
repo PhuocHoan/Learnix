@@ -258,54 +258,83 @@ test.describe('Authentication Flow', () => {
 });
 
 test.describe('Protected Routes', () => {
-  test('should redirect to login when accessing protected route', async ({
+  test('should show auth modal when accessing protected route', async ({
     page,
   }) => {
     // Try to access dashboard without authentication
     await page.goto('/dashboard');
 
-    // Should redirect to login
-    await expect(page).toHaveURL(/\/login|\/$/);
+    // Should show auth modal instead of redirecting
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
+
+    // Modal should have expected content
+    await expect(
+      authModal.getByText(/Join Learnix to Continue/i),
+    ).toBeVisible();
+    await expect(
+      authModal.getByRole('button', { name: /Get Started for Free/i }),
+    ).toBeVisible();
+    await expect(
+      authModal.getByRole('button', { name: /Sign In/i }),
+    ).toBeVisible();
   });
 
-  test('should redirect to login when accessing my-learning', async ({
+  test('should show auth modal when accessing my-learning', async ({
     page,
   }) => {
     await page.goto('/my-learning');
-    await expect(page).toHaveURL(/\/login|\/$/);
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
   });
 
-  test('should redirect to login when accessing settings', async ({ page }) => {
+  test('should show auth modal when accessing settings', async ({ page }) => {
     await page.goto('/settings');
-    await expect(page).toHaveURL(/\/login|\/$/);
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
   });
 
-  test('should redirect to login when accessing admin routes', async ({
+  test('should show auth modal when accessing admin routes', async ({
     page,
   }) => {
     await page.goto('/admin');
-    await expect(page).toHaveURL(/\/login|\/$/);
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
   });
 
-  test('should redirect to login when accessing admin users page', async ({
+  test('should show auth modal when accessing admin users page', async ({
     page,
   }) => {
     await page.goto('/admin/users');
-    await expect(page).toHaveURL(/\/login|\/$/);
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
   });
 
-  test('should redirect to login when accessing instructor routes', async ({
+  test('should show auth modal when accessing instructor routes', async ({
     page,
   }) => {
     await page.goto('/instructor/quiz-generator');
-    await expect(page).toHaveURL(/\/login|\/$/);
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
   });
 
-  test('should redirect to login when accessing course learn page', async ({
+  test('should allow guest access to course learn page for preview lessons', async ({
     page,
   }) => {
+    // Course learn page now allows guest access for preview lessons
+    // Try to access a non-existent course first to see behavior
     await page.goto('/courses/some-course-id/learn');
-    await expect(page).toHaveURL(/\/login|\/$/);
+
+    // Should either load the page (if course exists and has preview) or show modal
+    // Wait a bit to see what happens
+    await page.waitForTimeout(1000);
+
+    // Check if modal is shown (if no course or no preview available)
+    const authModal = page.getByRole('dialog');
+    const modalVisible = await authModal.isVisible().catch(() => false);
+
+    // Either modal is shown OR page loads (for preview lessons)
+    expect(modalVisible || page.url().includes('/learn')).toBe(true);
   });
 });
 

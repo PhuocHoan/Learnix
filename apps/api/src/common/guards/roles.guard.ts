@@ -18,13 +18,11 @@ export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
-      ROLES_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const requiredRoles = this.reflector.getAllAndOverride<
+      UserRole[] | undefined
+    >(ROLES_KEY, [context.getHandler(), context.getClass()]);
 
-    // No roles required for this route - TypeScript may infer as always defined but runtime differs
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    // No roles required for this route
     if (!requiredRoles) {
       return true;
     }

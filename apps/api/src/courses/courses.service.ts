@@ -148,8 +148,6 @@ export class CoursesService {
 
     const uniqueTags = new Set<string>();
     courses.forEach((course) => {
-      // Tags column is nullable in DB - can be null at runtime
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       course.tags?.forEach((tag) => uniqueTags.add(tag));
     });
 
@@ -216,10 +214,7 @@ export class CoursesService {
     }
 
     // Initialize array if null (legacy data safety - DB column is nullable)
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (!enrollment.completedLessonIds) {
-      enrollment.completedLessonIds = [];
-    }
+    enrollment.completedLessonIds ??= [];
 
     // Add lesson ID if not already present
     if (!enrollment.completedLessonIds.includes(lessonId)) {
@@ -295,12 +290,9 @@ export class CoursesService {
     });
 
     const result: EnrolledCourseDto[] = enrollments.map((enrollment) => {
-      /* eslint-disable @typescript-eslint/no-unnecessary-condition -- DB relations may not be loaded */
-      const allLessons =
-        enrollment.course.sections?.flatMap((s) => s.lessons) ?? [];
-      /* eslint-enable @typescript-eslint/no-unnecessary-condition */
+      const allLessons = enrollment.course.sections.flatMap((s) => s.lessons);
       const totalLessons = allLessons.length;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- completedLessonIds is nullable in DB
+
       const completedLessons = enrollment.completedLessonIds?.length ?? 0;
       const progress =
         totalLessons > 0
@@ -316,13 +308,11 @@ export class CoursesService {
         thumbnailUrl: enrollment.course.thumbnailUrl,
         level: enrollment.course.level,
 
-        /* eslint-disable @typescript-eslint/no-unnecessary-condition -- instructor relation may not be loaded */
         instructor: {
           id: enrollment.course.instructor?.id ?? '',
           fullName:
             enrollment.course.instructor?.fullName ?? 'Unknown Instructor',
         },
-        /* eslint-enable @typescript-eslint/no-unnecessary-condition */
         progress,
         totalLessons,
         completedLessons,
@@ -420,7 +410,6 @@ export class CoursesService {
     const enrolledCourseIds = new Set(enrollments.map((e) => e.courseId));
     const userTags = new Set<string>();
     enrollments.forEach((enrollment) => {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- tags is nullable in DB
       enrollment.course.tags?.forEach((tag) => userTags.add(tag.toLowerCase()));
     });
 
@@ -481,7 +470,6 @@ export class CoursesService {
 
     // Step 4: Score courses by number of matching tags
     const scoredCourses = candidateCourses.map((course) => {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- tags is nullable in DB
       const courseTags = course.tags?.map((t) => t.toLowerCase()) ?? [];
       const matchingTags = courseTags.filter((tag) => userTags.has(tag));
       return {

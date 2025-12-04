@@ -8,6 +8,7 @@ import { GuestGuard } from '@/components/auth/guest-guard';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { RoleSelectionGuard } from '@/components/auth/role-selection-guard';
 import { AppShell } from '@/components/layout/app-shell';
+import { ScrollToTop } from '@/components/scroll-to-top';
 import { AuthProvider } from '@/contexts/auth-context';
 
 // Lazy load pages for code splitting
@@ -63,6 +64,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <Toaster
             position="top-right"
             richColors
@@ -133,13 +135,10 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+                {/* Lesson Viewer - accessible to guests for preview lessons */}
                 <Route
                   path="/courses/:id/learn"
-                  element={
-                    <ProtectedRoute>
-                      <LessonViewerPage />
-                    </ProtectedRoute>
-                  }
+                  element={<LessonViewerPage />}
                 />
                 <Route
                   path="/my-learning"

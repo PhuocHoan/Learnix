@@ -114,19 +114,15 @@ export class DashboardService {
     let totalDurationSeconds = 0;
 
     for (const enrollment of enrollments) {
-      /* eslint-disable @typescript-eslint/no-unnecessary-condition -- completedLessonIds is nullable in DB */
-      if (
-        !enrollment.completedLessonIds ||
-        enrollment.completedLessonIds.length === 0
-      ) {
-        /* eslint-enable @typescript-eslint/no-unnecessary-condition */
+      const { completedLessonIds } = enrollment;
+      if (!completedLessonIds || completedLessonIds.length === 0) {
         continue;
       }
 
       const allLessons = enrollment.course.sections.flatMap((s) => s.lessons);
 
       const completedLessons = allLessons.filter((l) =>
-        enrollment.completedLessonIds.includes(l.id),
+        completedLessonIds.includes(l.id),
       );
 
       totalDurationSeconds += completedLessons.reduce(
@@ -152,7 +148,7 @@ export class DashboardService {
     const currentCourses = enrollments.map((enrollment) => {
       const allLessons = enrollment.course.sections.flatMap((s) => s.lessons);
       const totalLessons = allLessons.length;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- completedLessonIds is nullable in DB
+
       const completedCount = enrollment.completedLessonIds?.length ?? 0;
 
       const progress =

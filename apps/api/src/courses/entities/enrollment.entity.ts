@@ -33,7 +33,7 @@ export class Enrollment {
   course: Course;
 
   @Column({ type: 'simple-array', nullable: true })
-  completedLessonIds: string[]; // List of IDs of lessons completed
+  completedLessonIds: string[] | null; // List of IDs of lessons completed
 
   @Column({ nullable: true })
   completedAt: Date; // When they finished the course

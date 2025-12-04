@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-misused-promises -- Jest handles async test functions */
 import {
   ConflictException,
   NotFoundException,
@@ -15,7 +14,14 @@ import { UsersService } from './users.service';
 
 // Mock bcrypt
 jest.mock('bcrypt');
-const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
+const mockedBcrypt = {
+  compare: bcrypt.compare as jest.MockedFunction<
+    (data: string | Buffer, encrypted: string) => Promise<boolean>
+  >,
+  hash: bcrypt.hash as jest.MockedFunction<
+    (data: string | Buffer, saltOrRounds: string | number) => Promise<string>
+  >,
+};
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -91,9 +97,7 @@ describe('UsersService', () => {
       };
 
       repository.findOne.mockResolvedValue(null);
-      mockedBcrypt.hash.mockImplementation(() =>
-        Promise.resolve('hashedPassword'),
-      );
+      mockedBcrypt.hash.mockResolvedValue('hashedPassword');
       repository.create.mockReturnValue({ ...mockUser, ...createUserDto });
       repository.save.mockResolvedValue({ ...mockUser, ...createUserDto });
 
@@ -162,9 +166,7 @@ describe('UsersService', () => {
       };
 
       repository.findOne.mockResolvedValue(null);
-      mockedBcrypt.hash.mockImplementation(() =>
-        Promise.resolve('hashedPassword'),
-      );
+      mockedBcrypt.hash.mockResolvedValue('hashedPassword');
       repository.create.mockReturnValue({
         ...mockUser,
         isEmailVerified: false,
@@ -407,9 +409,7 @@ describe('UsersService', () => {
   describe('resetPassword', () => {
     it('should reset password and clear reset token', async () => {
       repository.findOne.mockResolvedValue(mockUser as User);
-      mockedBcrypt.hash.mockImplementation(() =>
-        Promise.resolve('newHashedPassword'),
-      );
+      mockedBcrypt.hash.mockResolvedValue('newHashedPassword');
       mockQueryBuilder.execute.mockResolvedValue({});
 
       const result = await service.resetPassword('user-1', 'newPassword123');
@@ -437,10 +437,8 @@ describe('UsersService', () => {
   describe('changePassword', () => {
     it('should change password when current password is correct', async () => {
       mockQueryBuilder.getOne.mockResolvedValue(mockUser as User);
-      mockedBcrypt.compare.mockImplementation(() => Promise.resolve(true));
-      mockedBcrypt.hash.mockImplementation(() =>
-        Promise.resolve('newHashedPassword'),
-      );
+      mockedBcrypt.compare.mockResolvedValue(true);
+      mockedBcrypt.hash.mockResolvedValue('newHashedPassword');
       mockQueryBuilder.execute.mockResolvedValue({});
 
       const result = await service.changePassword(
@@ -478,7 +476,7 @@ describe('UsersService', () => {
 
     it('should throw BadRequestException for incorrect current password', async () => {
       mockQueryBuilder.getOne.mockResolvedValue(mockUser as User);
-      mockedBcrypt.compare.mockImplementation(() => Promise.resolve(false));
+      mockedBcrypt.compare.mockResolvedValue(false);
 
       await expect(
         service.changePassword('user-1', 'wrongPassword', 'new'),

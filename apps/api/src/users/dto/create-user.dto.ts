@@ -16,10 +16,8 @@ export class CreateUserDto {
   email: string;
 
   // Allows password to be omitted for OAuth users
-  @ValidateIf(
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- password can be undefined at runtime
-    (o: CreateUserDto) => o.password !== undefined && o.password !== null,
-  )
+  // The condition checks if password property exists and is not null/undefined
+  @ValidateIf((o: { password?: string | null }) => o.password != null)
   @IsString()
   @MinLength(6)
   password?: string;

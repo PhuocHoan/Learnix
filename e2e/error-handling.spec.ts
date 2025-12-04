@@ -178,25 +178,31 @@ test.describe('Error Handling', () => {
   });
 
   test.describe('Authorization Errors', () => {
-    test('should redirect unauthorized access to dashboard', async ({
+    test('should show auth modal for unauthorized access to dashboard', async ({
       page,
     }) => {
       await page.goto('/dashboard');
-      await expect(page).toHaveURL(/\/login|\/$/);
+      const authModal = page.getByRole('dialog');
+      await expect(authModal).toBeVisible();
+      await expect(
+        authModal.getByText(/Join Learnix to Continue/i),
+      ).toBeVisible();
     });
 
-    test('should redirect unauthorized access to admin pages', async ({
+    test('should show auth modal for unauthorized access to admin pages', async ({
       page,
     }) => {
       await page.goto('/admin');
-      await expect(page).toHaveURL(/\/login|\/$/);
+      const authModal = page.getByRole('dialog');
+      await expect(authModal).toBeVisible();
     });
 
-    test('should redirect unauthorized access to instructor pages', async ({
+    test('should show auth modal for unauthorized access to instructor pages', async ({
       page,
     }) => {
       await page.goto('/instructor/quiz-generator');
-      await expect(page).toHaveURL(/\/login|\/$/);
+      const authModal = page.getByRole('dialog');
+      await expect(authModal).toBeVisible();
     });
   });
 

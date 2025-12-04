@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-misused-promises -- Jest handles async test functions */
-/* eslint-disable @typescript-eslint/no-unnecessary-condition -- Test assertions need optional chains */
 import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
@@ -16,7 +14,14 @@ import { UsersService } from '../users/users.service';
 
 // Mock bcrypt
 jest.mock('bcrypt');
-const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
+const mockedBcrypt = {
+  compare: bcrypt.compare as jest.MockedFunction<
+    (data: string | Buffer, encrypted: string) => Promise<boolean>
+  >,
+  hash: bcrypt.hash as jest.MockedFunction<
+    (data: string | Buffer, saltOrRounds: string | number) => Promise<string>
+  >,
+};
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -119,13 +124,13 @@ describe('AuthService', () => {
   describe('validateUser', () => {
     it('should return user without password when credentials are valid', async () => {
       usersService.findByEmail.mockResolvedValue(mockUser as User);
-      mockedBcrypt.compare.mockImplementation(() => Promise.resolve(true));
+      mockedBcrypt.compare.mockResolvedValue(true);
 
       const result = await service.validateUser('test@example.com', 'password');
 
       expect(result).toBeDefined();
       expect(result?.email).toBe('test@example.com');
-      expect((result as Record<string, unknown>)?.password).toBeUndefined();
+      expect((result as Record<string, unknown>).password).toBeUndefined();
     });
 
     it('should return null when user does not exist', async () => {
@@ -152,7 +157,7 @@ describe('AuthService', () => {
 
     it('should return null when password is incorrect', async () => {
       usersService.findByEmail.mockResolvedValue(mockUser as User);
-      mockedBcrypt.compare.mockImplementation(() => Promise.resolve(false));
+      (mockedBcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       const result = await service.validateUser(
         'test@example.com',
@@ -166,7 +171,7 @@ describe('AuthService', () => {
   describe('login', () => {
     it('should return access token and user for valid credentials', async () => {
       usersService.findByEmail.mockResolvedValue(mockUser as User);
-      mockedBcrypt.compare.mockImplementation(() => Promise.resolve(true));
+      mockedBcrypt.compare.mockResolvedValue(true);
 
       const result = await service.login({
         email: 'test@example.com',
@@ -192,7 +197,7 @@ describe('AuthService', () => {
 
     it('should throw UnauthorizedException for unverified email', async () => {
       usersService.findByEmail.mockResolvedValue(mockUnverifiedUser as User);
-      mockedBcrypt.compare.mockImplementation(() => Promise.resolve(true));
+      mockedBcrypt.compare.mockResolvedValue(true);
 
       await expect(
         service.login({
@@ -589,7 +594,7 @@ describe('AuthService', () => {
       usersService.hasPassword.mockResolvedValue(true);
       usersService.findOne.mockResolvedValue(mockUser as User);
       usersService.findByEmail.mockResolvedValue(mockUser as User);
-      mockedBcrypt.compare.mockImplementation(() => Promise.resolve(true));
+      mockedBcrypt.compare.mockResolvedValue(true);
 
       const result = await service.deleteAccount(
         'user-1',
@@ -622,7 +627,7 @@ describe('AuthService', () => {
       usersService.hasPassword.mockResolvedValue(true);
       usersService.findOne.mockResolvedValue(mockUser as User);
       usersService.findByEmail.mockResolvedValue(mockUser as User);
-      mockedBcrypt.compare.mockImplementation(() => Promise.resolve(false));
+      mockedBcrypt.compare.mockResolvedValue(false);
 
       await expect(
         service.deleteAccount('user-1', 'wrongpassword', 'DELETE'),

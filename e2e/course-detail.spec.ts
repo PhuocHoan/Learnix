@@ -84,9 +84,10 @@ test.describe('Course Detail Page', () => {
   test('should show auth modal when guest clicks enroll', async ({ page }) => {
     const hasData = await navigateToFirstCourse(page);
     if (!hasData) {
-      // No courses - verify auth redirect works from protected page
+      // No courses - verify auth modal works from protected page
       await page.goto('/dashboard');
-      await expect(page).toHaveURL(/\/login|\/$/);
+      const authModal = page.getByRole('dialog');
+      await expect(authModal).toBeVisible();
       return;
     }
 

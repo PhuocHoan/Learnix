@@ -319,4 +319,14 @@ export default tseslint.config(
       'no-console': 'off', // Seed scripts use console for CLI output
     },
   },
+
+  // Upload module files - filesystem access with validated paths
+  // The security plugin cannot understand runtime path validation,
+  // but these files implement proper path traversal prevention
+  {
+    files: ['**/upload/*.ts'],
+    rules: {
+      'security/detect-non-literal-fs-filename': 'off',
+    },
+  },
 );

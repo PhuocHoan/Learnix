@@ -62,10 +62,8 @@ export class UploadController {
     }),
   )
   async uploadAvatar(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File | undefined,
   ): Promise<FileUploadResult> {
-    // Runtime safety: file can be undefined if no file is uploaded
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -116,10 +114,8 @@ export class UploadController {
     }),
   )
   async uploadImage(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File | undefined,
   ): Promise<FileUploadResult> {
-    // Runtime safety: file can be undefined if no file is uploaded
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -170,10 +166,8 @@ export class UploadController {
     }),
   )
   async uploadImages(
-    @UploadedFiles() files: Express.Multer.File[],
+    @UploadedFiles() files: Express.Multer.File[] | undefined,
   ): Promise<FileUploadResult[]> {
-    // Runtime safety: files can be undefined/empty if no files uploaded
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!files || files.length === 0) {
       throw new BadRequestException('No files uploaded');
     }
@@ -189,8 +183,10 @@ export class UploadController {
         files.map((file) => this.cloudinaryService.uploadCourseImage(file)),
       );
       return results.map((result, idx) => {
-        // eslint-disable-next-line security/detect-object-injection -- idx is from array iteration, not user input
-        const file = files[idx];
+        const file = files.at(idx);
+        if (!file) {
+          throw new BadRequestException('File index mismatch');
+        }
         return {
           filename: result.publicId,
           originalName: file.originalname,
@@ -214,10 +210,8 @@ export class UploadController {
     }),
   )
   async uploadFile(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File | undefined,
   ): Promise<FileUploadResult> {
-    // Runtime safety: file can be undefined if no file is uploaded
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }

@@ -11,43 +11,59 @@ import { test, expect } from '@playwright/test';
  * with test user credentials and authentication state setup.
  */
 test.describe('Settings Page - Unauthenticated', () => {
-  test('should redirect to login when accessing settings without auth', async ({
+  test('should show auth modal when accessing settings without auth', async ({
     page,
   }) => {
     await page.goto('/settings');
-    await expect(page).toHaveURL(/\/login|\/$/);
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
+    await expect(
+      authModal.getByText(/Join Learnix to Continue/i),
+    ).toBeVisible();
   });
 
-  test('should redirect to login when accessing settings profile tab', async ({
+  test('should show auth modal when accessing settings profile tab', async ({
     page,
   }) => {
     await page.goto('/settings?tab=profile');
-    await expect(page).toHaveURL(/\/login|\/$/);
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
   });
 
-  test('should redirect to login when accessing settings security tab', async ({
+  test('should show auth modal when accessing settings security tab', async ({
     page,
   }) => {
     await page.goto('/settings?tab=security');
-    await expect(page).toHaveURL(/\/login|\/$/);
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
   });
 
-  test('should redirect to login when accessing settings danger zone tab', async ({
+  test('should show auth modal when accessing settings danger zone tab', async ({
     page,
   }) => {
     await page.goto('/settings?tab=danger-zone');
-    await expect(page).toHaveURL(/\/login|\/$/);
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
   });
 });
 
-test.describe('Settings Page - Login Redirect Flow', () => {
-  test('should show login page with proper form after redirect from settings', async ({
+test.describe('Settings Page - Auth Modal Flow', () => {
+  test('should show auth modal with login option when accessing settings', async ({
     page,
   }) => {
     await page.goto('/settings');
 
-    // After redirect, should be on login page
-    await expect(page).toHaveURL(/\/login|\/$/);
+    // Should show auth modal
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
+
+    // Modal should have Sign In button that navigates to login
+    const signInButton = authModal.getByRole('button', { name: /Sign In/i });
+    await expect(signInButton).toBeVisible();
+
+    // Click Sign In button to navigate to login page
+    await signInButton.click();
+    await expect(page).toHaveURL(/\/login/);
 
     // Login form should be visible
     const emailInput = page.getByLabel(/Email/i);
@@ -59,14 +75,21 @@ test.describe('Settings Page - Login Redirect Flow', () => {
     await expect(submitButton).toBeVisible();
   });
 
-  test('should provide OAuth options on login page after settings redirect', async ({
+  test('should provide OAuth options via modal to login page', async ({
     page,
   }) => {
     await page.goto('/settings');
 
-    // After redirect, should show OAuth buttons
-    await expect(page).toHaveURL(/\/login|\/$/);
+    // Show auth modal
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
 
+    // Click Sign In to go to login page
+    const signInButton = authModal.getByRole('button', { name: /Sign In/i });
+    await signInButton.click();
+    await expect(page).toHaveURL(/\/login/);
+
+    // Should show OAuth buttons on login page
     const googleButton = page.getByRole('button', { name: /Google/i });
     const githubButton = page.getByRole('button', { name: /GitHub/i });
 
@@ -74,14 +97,25 @@ test.describe('Settings Page - Login Redirect Flow', () => {
     await expect(githubButton).toBeVisible();
   });
 
-  test('should provide link to register from login page', async ({ page }) => {
+  test('should provide link to register via modal', async ({ page }) => {
     await page.goto('/settings');
 
-    // After redirect to login, should have register link
-    await expect(page).toHaveURL(/\/login|\/$/);
+    // Show auth modal
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
 
+    // Click "Get Started for Free" button to go to register page
+    const getStartedButton = authModal.getByRole('button', {
+      name: /Get Started for Free/i,
+    });
+    await expect(getStartedButton).toBeVisible();
+
+    await getStartedButton.click();
+    await expect(page).toHaveURL(/\/register/);
+
+    // Should have register form
     const registerLink = page.getByRole('link', {
-      name: /Sign up|Create|Register/i,
+      name: /Sign up|Create|Register|Sign in|Login/i,
     });
     await expect(registerLink.first()).toBeVisible();
   });
@@ -91,30 +125,43 @@ test.describe('Settings Page - Login Redirect Flow', () => {
  * Settings Page - Accessibility Tests
  */
 test.describe('Settings Page - Accessibility', () => {
-  test('login page should have proper page structure for screen readers', async ({
+  test('auth modal should have proper structure for screen readers', async ({
     page,
   }) => {
-    // Settings redirects to login, so test login page accessibility
+    // Settings shows auth modal, so test modal accessibility
     await page.goto('/settings');
 
-    // Wait for redirect and page to fully load
-    await expect(page).toHaveURL(/\/login|\/$/i);
+    // Wait for modal to appear
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
     await page.waitForLoadState('networkidle');
 
-    // Verify login page has proper headings
-    const headings = await page.getByRole('heading').count();
-    expect(headings).toBeGreaterThan(0);
+    // Modal should have proper heading
+    const modalHeading = authModal.getByText(/Join Learnix to Continue/i);
+    await expect(modalHeading).toBeVisible();
 
-    // Should have form elements (email and password fields)
-    const emailField = page.getByLabel(/Email/i);
-    const passwordField = page.getByLabel(/Password/i);
-    await expect(emailField).toBeVisible();
-    await expect(passwordField).toBeVisible();
+    // Modal should have accessible buttons
+    const getStartedButton = authModal.getByRole('button', {
+      name: /Get Started for Free/i,
+    });
+    const signInButton = authModal.getByRole('button', { name: /Sign In/i });
+    await expect(getStartedButton).toBeVisible();
+    await expect(signInButton).toBeVisible();
   });
 
-  test('login page should have accessible form labels', async ({ page }) => {
+  test('auth modal should navigate to accessible login page', async ({
+    page,
+  }) => {
     await page.goto('/settings');
-    await expect(page).toHaveURL(/\/login|\/$/);
+
+    // Show auth modal
+    const authModal = page.getByRole('dialog');
+    await expect(authModal).toBeVisible();
+
+    // Click Sign In to go to login page
+    const signInButton = authModal.getByRole('button', { name: /Sign In/i });
+    await signInButton.click();
+    await expect(page).toHaveURL(/\/login/);
 
     // Form fields should have proper labels
     const emailInput = page.getByLabel(/Email/i);

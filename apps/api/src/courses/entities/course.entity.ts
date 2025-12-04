@@ -47,7 +47,7 @@ export class Course {
   isPublished: boolean;
 
   @Column({ type: 'simple-array', nullable: true })
-  tags: string[]; // e.g., ["react", "frontend", "web"]
+  tags: string[] | null; // e.g., ["react", "frontend", "web"]
 
   // Instructor relationship
   @Column({ name: 'instructor_id' })
@@ -55,7 +55,7 @@ export class Course {
 
   @ManyToOne('User')
   @JoinColumn({ name: 'instructor_id' })
-  instructor: User;
+  instructor: User | null;
 
   // Content relationship
   @OneToMany('CourseSection', (section: CourseSection) => section.course, {

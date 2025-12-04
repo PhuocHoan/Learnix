@@ -3,6 +3,7 @@
 Online learning platform built with React, NestJS, and Turborepo.
 
 ## App URL
+
 - Github Repo: https://github.com/PhuocHoan/Learnix
 - Vercel: https://learnix-teal.vercel.app
 
@@ -24,6 +25,7 @@ pnpm dev            # Start dev servers (web:5173, api:3000)
 ```
 
 ## Seed Course Data
+
 ```bash
 cd apps/api && pnpm ts-node src/seed.ts
 ```

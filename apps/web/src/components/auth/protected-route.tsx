@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 
 import { GraduationCap, Loader2, ShieldX } from 'lucide-react';
-import { Navigate, useLocation, Link } from 'react-router-dom';
+import { Navigate, useLocation, Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/contexts/use-auth';
+import { AuthRequiredModal } from '@/features/auth/components/auth-required-modal';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -16,6 +17,7 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -37,7 +39,21 @@ export function ProtectedRoute({
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return (
+      <AuthRequiredModal
+        isOpen={true}
+        onClose={() => {
+          // Navigate back when modal is closed (go to previous page or home)
+          if (window.history.length > 1) {
+            void navigate(-1);
+          } else {
+            void navigate('/');
+          }
+        }}
+        title="Join Learnix to Continue"
+        description="Create a free account to access this page, track your progress, and unlock exclusive content."
+      />
+    );
   }
 
   // Redirect to select-role if user hasn't selected a role yet

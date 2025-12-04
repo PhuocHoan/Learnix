@@ -38,7 +38,7 @@ export function CoursesPage() {
 
   const [selectedLevel, setSelectedLevel] = useState<string>('');
   const [tagInput, setTagInput] = useState('');
-  
+
   // FIX: Initialize selectedTags from URL search params
   const [selectedTags, setSelectedTags] = useState<string[]>(() => {
     const tagsParam = searchParams.get('tags');

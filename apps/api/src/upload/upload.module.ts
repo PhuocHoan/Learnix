@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { existsSync, mkdirSync } from 'fs';
-import { extname, join } from 'path';
+import { extname, join, resolve, normalize } from 'path';
 
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -11,6 +11,56 @@ import { diskStorage, memoryStorage } from 'multer';
 import { CloudinaryService } from './cloudinary.service';
 import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
+
+// Allowed subdirectories for file uploads (whitelist approach)
+const _ALLOWED_SUBDIRS = [
+  'images',
+  'videos',
+  'audio',
+  'documents',
+  'misc',
+] as const;
+type AllowedSubdir = (typeof _ALLOWED_SUBDIRS)[number];
+
+/**
+ * Safely ensure a directory exists within the upload path.
+ * Validates that the path doesn't escape the base directory.
+ */
+function safeEnsureDir(basePath: string, subDir?: AllowedSubdir): string {
+  const resolvedBase = resolve(basePath);
+  const targetPath = subDir ? join(resolvedBase, subDir) : resolvedBase;
+  const normalizedTarget = normalize(targetPath);
+
+  // Ensure target is within base path
+  if (!normalizedTarget.startsWith(resolvedBase)) {
+    throw new Error('Invalid directory path');
+  }
+
+  if (!existsSync(normalizedTarget)) {
+    mkdirSync(normalizedTarget, { recursive: true });
+  }
+
+  return normalizedTarget;
+}
+
+/**
+ * Determine the subdirectory based on file MIME type.
+ */
+function getSubdirForMimetype(mimetype: string): AllowedSubdir {
+  if (mimetype.startsWith('image/')) {
+    return 'images';
+  }
+  if (mimetype.startsWith('video/')) {
+    return 'videos';
+  }
+  if (mimetype.startsWith('audio/')) {
+    return 'audio';
+  }
+  if (mimetype === 'application/pdf' || mimetype.includes('document')) {
+    return 'documents';
+  }
+  return 'misc';
+}
 
 @Module({
   imports: [
@@ -41,39 +91,17 @@ import { UploadService } from './upload.service';
         const uploadPath =
           configService.get<string>('UPLOAD_PATH') ?? './uploads';
 
-        // Ensure upload directory exists (only for local development)
-        // Path is from validated config, not user input
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        if (!existsSync(uploadPath)) {
-          // eslint-disable-next-line security/detect-non-literal-fs-filename
-          mkdirSync(uploadPath, { recursive: true });
-        }
+        // Ensure upload directory exists using safe helper
+        safeEnsureDir(uploadPath);
 
         return {
           storage: diskStorage({
             destination: (req, file, cb) => {
               // Determine subdirectory based on file type
-              let subDir = 'misc';
-              if (file.mimetype.startsWith('image/')) {
-                subDir = 'images';
-              } else if (file.mimetype.startsWith('video/')) {
-                subDir = 'videos';
-              } else if (file.mimetype.startsWith('audio/')) {
-                subDir = 'audio';
-              } else if (
-                file.mimetype === 'application/pdf' ||
-                file.mimetype.includes('document')
-              ) {
-                subDir = 'documents';
-              }
+              const subDir = getSubdirForMimetype(file.mimetype);
 
-              const fullPath = join(uploadPath, subDir);
-              // Path is from validated config + controlled subdir, not user input
-              // eslint-disable-next-line security/detect-non-literal-fs-filename
-              if (!existsSync(fullPath)) {
-                // eslint-disable-next-line security/detect-non-literal-fs-filename
-                mkdirSync(fullPath, { recursive: true });
-              }
+              // Ensure subdirectory exists using safe helper
+              const fullPath = safeEnsureDir(uploadPath, subDir);
 
               cb(null, fullPath);
             },

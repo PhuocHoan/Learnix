@@ -1,6 +1,5 @@
 import { type ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-/* eslint-disable @typescript-eslint/no-unnecessary-condition -- Runtime safety in tests */
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
@@ -59,9 +58,7 @@ describe('Auth unit tests (mocked DB)', () => {
   });
 
   afterAll(async () => {
-    if (module) {
-      await module.close();
-    }
+    await module.close();
   });
 
   it('validateUser returns user when password matches (mocked)', async () => {

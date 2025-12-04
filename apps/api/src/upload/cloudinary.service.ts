@@ -120,10 +120,10 @@ export class CloudinaryService {
     } = {},
   ): Promise<CloudinaryUploadResult> {
     // For memory storage, file.buffer is available
-    // For disk storage, we'd need to read the file
-    const { buffer } = file;
+    // For disk storage, buffer is undefined (we'd need to read the file)
+    // Extract buffer with proper type to allow null check
+    const buffer = file.buffer as Buffer | undefined;
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- buffer can be undefined with disk storage
     if (!buffer) {
       throw new BadRequestException(
         'File buffer not available. Ensure memory storage is used.',

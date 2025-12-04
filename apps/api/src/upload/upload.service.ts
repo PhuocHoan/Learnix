@@ -1,5 +1,5 @@
 import { existsSync, unlinkSync, statSync } from 'fs';
-import { join, extname } from 'path';
+import { extname, resolve, normalize } from 'path';
 
 import {
   Injectable,
@@ -16,9 +16,20 @@ export interface FileUploadResult {
   url: string;
 }
 
+// Allowed subdirectories for file operations (whitelist approach)
+const ALLOWED_SUBDIRS = [
+  'images',
+  'videos',
+  'audio',
+  'documents',
+  'misc',
+] as const;
+type AllowedSubdir = (typeof ALLOWED_SUBDIRS)[number];
+
 @Injectable()
 export class UploadService {
   private readonly uploadPath: string;
+  private readonly resolvedUploadPath: string;
   private readonly baseUrl: string;
 
   // Allowed image MIME types
@@ -52,8 +63,71 @@ export class UploadService {
   constructor(private readonly configService: ConfigService) {
     this.uploadPath =
       this.configService.get<string>('UPLOAD_PATH') ?? './uploads';
+    this.resolvedUploadPath = resolve(this.uploadPath);
     this.baseUrl =
       this.configService.get<string>('BACKEND_URL') ?? 'http://localhost:3000';
+  }
+
+  /**
+   * Safely resolve a file path within the upload directory.
+   * Prevents directory traversal attacks by ensuring the resolved path
+   * is within the allowed upload directory.
+   */
+  private safeResolvePath(subdir: AllowedSubdir, filename: string): string {
+    // Sanitize filename: remove any path separators and normalize
+    const sanitizedFilename = normalize(filename).replace(
+      /^(\.\.(\/|\\|$))+/,
+      '',
+    );
+    const fullPath = resolve(
+      this.resolvedUploadPath,
+      subdir,
+      sanitizedFilename,
+    );
+
+    // Ensure the resolved path is within the upload directory
+    if (!fullPath.startsWith(this.resolvedUploadPath)) {
+      throw new BadRequestException('Invalid file path');
+    }
+
+    return fullPath;
+  }
+
+  /**
+   * Check if a path exists safely within upload directory
+   */
+  private safeExistsSync(path: string): boolean {
+    // Verify path is within upload directory before checking
+    if (!path.startsWith(this.resolvedUploadPath)) {
+      return false;
+    }
+    return existsSync(path);
+  }
+
+  /**
+   * Safely delete a file within upload directory
+   */
+  private safeUnlinkSync(path: string): void {
+    // Verify path is within upload directory before deleting
+    if (!path.startsWith(this.resolvedUploadPath)) {
+      throw new BadRequestException('Invalid file path');
+    }
+    unlinkSync(path);
+  }
+
+  /**
+   * Safely get file stats within upload directory
+   * Returns stats with size as number (converted from bigint if needed)
+   */
+  private safeStatSync(path: string): { size: number } | undefined {
+    // Verify path is within upload directory before reading stats
+    if (!path.startsWith(this.resolvedUploadPath)) {
+      return undefined;
+    }
+    const stats = statSync(path);
+    return {
+      size: typeof stats.size === 'bigint' ? Number(stats.size) : stats.size,
+    };
   }
 
   /**
@@ -119,34 +193,37 @@ export class UploadService {
     let filePath: string | undefined;
 
     if (filenameOrUrl.startsWith('http')) {
-      // Extract path from URL
+      // Extract path from URL and resolve safely
       const urlPath = new URL(filenameOrUrl).pathname;
-      filePath = join(this.uploadPath, urlPath.replace('/uploads/', ''));
+      const pathWithoutUploads = urlPath.replace('/uploads/', '');
+      const parts = pathWithoutUploads.split('/');
+      const subDir = parts[0] as AllowedSubdir;
+      const filename = parts.slice(1).join('/');
+
+      if (ALLOWED_SUBDIRS.includes(subDir)) {
+        filePath = this.safeResolvePath(subDir, filename);
+      }
     } else {
-      // It's just a filename, we need to search for it
-      const possiblePaths = ['images', 'videos', 'audio', 'documents', 'misc'];
-      for (const subDir of possiblePaths) {
-        const testPath = join(this.uploadPath, subDir, filenameOrUrl);
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from validated config + controlled subdir
-        if (existsSync(testPath)) {
+      // It's just a filename, search in allowed subdirectories
+      for (const subDir of ALLOWED_SUBDIRS) {
+        const testPath = this.safeResolvePath(subDir, filenameOrUrl);
+        if (this.safeExistsSync(testPath)) {
           filePath = testPath;
           break;
         }
       }
-
-      if (!filePath) {
-        throw new NotFoundException('File not found');
-      }
     }
 
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from validated config + controlled subdir
-    if (!existsSync(filePath)) {
+    if (!filePath) {
+      throw new NotFoundException('File not found');
+    }
+
+    if (!this.safeExistsSync(filePath)) {
       throw new NotFoundException('File not found');
     }
 
     try {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from validated config + controlled subdir
-      unlinkSync(filePath);
+      this.safeUnlinkSync(filePath);
       return true;
     } catch {
       throw new BadRequestException('Failed to delete file');
@@ -162,19 +239,17 @@ export class UploadService {
     size?: number;
     path?: string;
   } {
-    const possiblePaths = ['images', 'videos', 'audio', 'documents', 'misc'];
-
-    for (const subDir of possiblePaths) {
-      const testPath = join(this.uploadPath, subDir, filename);
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from validated config + controlled subdir
-      if (existsSync(testPath)) {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from validated config + controlled subdir
-        const stats = statSync(testPath);
-        return {
-          exists: true,
-          size: stats.size,
-          path: testPath,
-        };
+    for (const subDir of ALLOWED_SUBDIRS) {
+      const testPath = this.safeResolvePath(subDir, filename);
+      if (this.safeExistsSync(testPath)) {
+        const stats = this.safeStatSync(testPath);
+        if (stats) {
+          return {
+            exists: true,
+            size: stats.size,
+            path: testPath,
+          };
+        }
       }
     }
 
