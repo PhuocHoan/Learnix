@@ -6,6 +6,8 @@ import {
   Param,
   UseGuards,
   Query,
+  Body,
+  Delete,
 } from '@nestjs/common';
 
 import {
@@ -14,12 +16,21 @@ import {
   CoursesListResult,
   CourseRecommendation,
 } from './courses.service';
+import { CreateCourseDto } from './dto/create-course.dto';
+import { CreateLessonDto } from './dto/create-lesson.dto';
+import { CreateSectionDto } from './dto/create-section.dto';
+import { UpdateCourseDto } from './dto/update-course.dto';
+import { UpdateLessonDto } from './dto/update-lesson.dto';
+import { CourseSection } from './entities/course-section.entity';
 import { CourseLevel, Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { Lesson } from './entities/lesson.entity';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
 import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
 
 @Controller('courses')
 export class CoursesController {
@@ -161,5 +172,95 @@ export class CoursesController {
   ): Promise<{ success: boolean; message: string }> {
     await this.coursesService.unarchiveCourse(user.id, id);
     return { success: true, message: 'Course unarchived successfully' };
+  }
+
+  @Get('instructor/my-courses')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  getMyCourses(@CurrentUser() user: User): Promise<Course[]> {
+    return this.coursesService.findInstructorCourses(user.id);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  create(
+    @Body() createCourseDto: CreateCourseDto,
+    @CurrentUser() user: User,
+  ): Promise<Course> {
+    return this.coursesService.create(createCourseDto, user.id);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  update(
+    @Param('id') id: string,
+    @Body() updateCourseDto: UpdateCourseDto,
+    @CurrentUser() user: User,
+  ): Promise<Course> {
+    return this.coursesService.update(id, updateCourseDto, user.id);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  remove(@Param('id') id: string, @CurrentUser() user: User): Promise<void> {
+    return this.coursesService.remove(id, user.id);
+  }
+
+  // --- Sections & Lessons ---
+
+  @Post(':id/sections')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  createSection(
+    @Param('id') courseId: string,
+    @Body() dto: CreateSectionDto,
+    @CurrentUser() user: User,
+  ): Promise<CourseSection> {
+    return this.coursesService.createSection(courseId, dto, user.id);
+  }
+
+  @Delete('sections/:sectionId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  deleteSection(
+    @Param('sectionId') sectionId: string,
+    @CurrentUser() user: User,
+  ): Promise<void> {
+    return this.coursesService.removeSection(sectionId, user.id);
+  }
+
+  @Post('sections/:sectionId/lessons')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  createLesson(
+    @Param('sectionId') sectionId: string,
+    @Body() dto: CreateLessonDto,
+    @CurrentUser() user: User,
+  ): Promise<Lesson> {
+    return this.coursesService.createLesson(sectionId, dto, user.id);
+  }
+
+  @Patch('lessons/:lessonId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  updateLesson(
+    @Param('lessonId') lessonId: string,
+    @Body() dto: UpdateLessonDto,
+    @CurrentUser() user: User,
+  ): Promise<Lesson> {
+    return this.coursesService.updateLesson(lessonId, dto, user.id);
+  }
+
+  @Delete('lessons/:lessonId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  deleteLesson(
+    @Param('lessonId') lessonId: string,
+    @CurrentUser() user: User,
+  ): Promise<void> {
+    return this.coursesService.removeLesson(lessonId, user.id);
   }
 }

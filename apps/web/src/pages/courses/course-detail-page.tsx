@@ -240,6 +240,11 @@ export function CourseDetailPage() {
                       const isCompleted = completedIds.includes(lesson.id);
                       const isLocked = !isEnrolled && !lesson.isFreePreview;
 
+                      const hasVideo = lesson.content?.some(
+                        (b) => b.type === 'video',
+                      );
+                      const derivedType = hasVideo ? 'video' : 'text';
+
                       return (
                         <div
                           key={lesson.id}
@@ -274,7 +279,7 @@ export function CourseDetailPage() {
                                 : 'bg-primary/5 text-primary',
                             )}
                           >
-                            {getLessonIcon(isCompleted, lesson.type)}
+                            {getLessonIcon(isCompleted, derivedType)}
                           </div>
                           <div className="flex-1 text-sm font-medium">
                             {lesson.title}

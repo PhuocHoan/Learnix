@@ -48,6 +48,13 @@ const TermsPage = lazy(() => import('@/pages/legal/terms-page'));
 const NotFoundPage = lazy(() => import('@/pages/not-found-page'));
 const SettingsPage = lazy(() => import('@/pages/settings/settings-page'));
 
+const InstructorCoursesPage = lazy(
+  () => import('@/pages/instructor/instructor-courses-page'),
+);
+const CourseEditorPage = lazy(
+  () => import('@/pages/instructor/course-editor-page'),
+);
+
 // Loading fallback component
 function PageLoader() {
   return (
@@ -189,6 +196,30 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={['instructor', 'admin']}>
                       <QuizGeneratorPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/instructor/courses"
+                  element={
+                    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+                      <InstructorCoursesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/instructor/courses/new"
+                  element={
+                    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+                      <CourseEditorPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/instructor/courses/:courseId/edit"
+                  element={
+                    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+                      <CourseEditorPage />
                     </ProtectedRoute>
                   }
                 />

@@ -20,10 +20,17 @@
   "dependencies": {
     "@nestjs/common": "^11.1.9",
     "@nestjs/core": "^11.1.9",
+    "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/platform-express": "^11.1.9",
+    "@tiptap/extension-link": "^3.13.0",
+    "@tiptap/react": "^3.13.0",
+    "@tiptap/starter-kit": "^3.13.0",
     "cookie-parser": "^1.4.7",
+    "react-markdown": "^10.1.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "remark-gfm": "^4.0.1",
+    "rxjs": "^7.8.2",
+    "tiptap-markdown": "^0.9.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

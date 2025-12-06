@@ -30,6 +30,7 @@ import {
   BarChart3,
   ChevronDown,
   Home,
+  Plus,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -112,11 +113,17 @@ const authenticatedNavItems: NavItem[] = [
     icon: Library,
     label: 'My Learning',
     href: '/my-learning',
-    roles: ['student', 'instructor', 'admin'],
+    roles: ['student', 'admin'],
   },
 ];
 
 const instructorNavItems: NavItem[] = [
+  {
+    icon: BookOpen,
+    label: 'My Courses',
+    href: '/instructor/courses',
+    roles: ['instructor', 'admin'],
+  },
   {
     icon: Wand2,
     label: 'AI Quiz Generator',
@@ -368,6 +375,14 @@ export function Header() {
         (user?.role && item.roles.includes(user.role)),
     );
 
+  const getVisibleMainNavItems = () =>
+    mainNavItems.filter((item) => {
+      if (user?.role === 'instructor' && item.label === 'Courses') {
+        return false;
+      }
+      return true;
+    });
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/60">
       {/* Mobile Search Overlay */}
@@ -455,7 +470,8 @@ export function Header() {
               className="hidden lg:flex items-center gap-1"
               aria-label="Main navigation"
             >
-              {mainNavItems.map((item) => {
+              {/* Public Items (Home, Courses - filtered for instructors) */}
+              {getVisibleMainNavItems().map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link
@@ -473,6 +489,7 @@ export function Header() {
                   </Link>
                 );
               })}
+              {/* Authenticated Items (Dashboard, My Learning - filtered for instructors) */}
               {user &&
                 getVisibleNavItems(authenticatedNavItems).map((item) => {
                   const Icon = item.icon;
@@ -492,6 +509,39 @@ export function Header() {
                     </Link>
                   );
                 })}
+
+              {/* ADDED: Instructor Items (My Courses, Quiz Gen) */}
+              {user &&
+                getVisibleNavItems(instructorNavItems).map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className={cn(
+                        'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                        isActive(item.href)
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              {user &&
+                (user.role === 'instructor' || user.role === 'admin') && (
+                  <Link
+                    to="/instructor/courses/new"
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all text-muted-foreground hover:text-primary hover:bg-primary/5',
+                    )}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create Course
+                  </Link>
+                )}
             </nav>
           </div>
 
@@ -890,7 +940,7 @@ export function Header() {
           <div className="lg:hidden border-t border-border animate-in slide-in-from-top-2 duration-200">
             <nav className="p-4 space-y-1" aria-label="Mobile navigation">
               {/* Main Navigation */}
-              {mainNavItems.map((item) => {
+              {getVisibleMainNavItems().map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link
@@ -957,6 +1007,14 @@ export function Header() {
                           </Link>
                         );
                       })}
+                      {/* ADDED: Create Course Button for Mobile */}
+                      <Link
+                        to="/instructor/courses/new"
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-muted-foreground hover:text-primary hover:bg-primary/5"
+                      >
+                        <Plus className="w-5 h-5" />
+                        Create Course
+                      </Link>
                     </>
                   )}
 

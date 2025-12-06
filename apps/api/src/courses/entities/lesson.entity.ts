@@ -8,11 +8,24 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-import type { CourseSection } from './course-section.entity';
+import { CourseSection } from './course-section.entity';
 
-export enum LessonType {
-  VIDEO = 'video',
-  TEXT = 'text',
+// Define the types of blocks we support
+export type BlockType = 'text' | 'video' | 'image' | 'code' | 'file';
+
+// Define the structure of a single block
+export interface LessonBlock {
+  id: string; // Unique ID for React keys and drag-and-drop operations
+  type: BlockType;
+  content: string; // The actual text, URL, or file path
+  metadata?: {
+    // Flexible field for extra data
+    language?: string; // For code blocks (e.g., 'javascript', 'python')
+    filename?: string; // For file attachments
+    size?: number; // File size
+    caption?: string; // For images
+  };
+  orderIndex: number; // To maintain sequence
 }
 
 @Entity('lessons')
@@ -23,20 +36,17 @@ export class Lesson {
   @Column()
   title: string;
 
-  @Column({ type: 'enum', enum: LessonType, default: LessonType.TEXT })
-  type: LessonType;
+  // REMOVED: type (LessonType) - The lesson itself is now a container
+  // REMOVED: videoUrl - Video is now just a block type
 
-  @Column({ type: 'text', nullable: true })
-  content: string; // Markdown text or HTML
-
-  @Column({ nullable: true })
-  videoUrl: string; // URL for video lessons
+  @Column({ type: 'json', nullable: true })
+  content: LessonBlock[]; // Stores the array of blocks
 
   @Column({ default: 0 })
-  durationSeconds: number; // Estimated time to complete
+  durationSeconds: number;
 
   @Column({ default: false })
-  isFreePreview: boolean; // Can guests watch this?
+  isFreePreview: boolean;
 
   @Column({ default: 0 })
   orderIndex: number;

@@ -4,12 +4,10 @@ import { api } from '@/lib/api';
 export interface Lesson {
   id: string;
   title: string;
-  type: 'video' | 'text';
+  content: LessonBlock[]; // Now an array of blocks
   durationSeconds: number;
   isFreePreview: boolean;
   orderIndex: number;
-  videoUrl?: string;
-  content?: string;
 }
 
 export interface CourseSection {
@@ -94,6 +92,38 @@ export interface RecommendedCourse {
   course: Course;
   matchingTags: string[];
   score: number;
+}
+
+export interface CreateCourseData {
+  title: string;
+  description: string;
+  level: string;
+  price: number;
+  tags?: string[];
+  thumbnailUrl?: string;
+}
+
+export interface CreateLessonData {
+  title: string;
+  content: LessonBlock[];
+  durationSeconds: number;
+  isFreePreview: boolean;
+  orderIndex: number;
+}
+
+export type BlockType = 'text' | 'video' | 'image' | 'code' | 'file';
+
+export interface LessonBlock {
+  id: string;
+  type: BlockType;
+  content: string;
+  metadata?: {
+    language?: string;
+    filename?: string;
+    size?: number;
+    caption?: string;
+  };
+  orderIndex: number;
 }
 
 export const coursesApi = {
@@ -191,5 +221,69 @@ export const coursesApi = {
       },
     );
     return response.data;
+  },
+
+  getInstructorCourses: async (): Promise<Course[]> => {
+    const response = await api.get<Course[]>('/courses/instructor/my-courses');
+    return response.data;
+  },
+
+  createCourse: async (data: CreateCourseData): Promise<Course> => {
+    const response = await api.post<Course>('/courses', data);
+    return response.data;
+  },
+
+  updateCourse: async (
+    id: string,
+    data: Partial<CreateCourseData> & { isPublished?: boolean },
+  ): Promise<Course> => {
+    const response = await api.patch<Course>(`/courses/${id}`, data);
+    return response.data;
+  },
+
+  deleteCourse: async (id: string): Promise<void> => {
+    await api.delete(`/courses/${id}`);
+  },
+
+  createSection: async (
+    courseId: string,
+    title: string,
+    orderIndex: number,
+  ): Promise<CourseSection> => {
+    const response = await api.post<CourseSection>(
+      `/courses/${courseId}/sections`,
+      { title, orderIndex },
+    );
+    return response.data;
+  },
+
+  deleteSection: async (sectionId: string): Promise<void> => {
+    await api.delete(`/courses/sections/${sectionId}`);
+  },
+
+  createLesson: async (
+    sectionId: string,
+    data: CreateLessonData,
+  ): Promise<Lesson> => {
+    const response = await api.post<Lesson>(
+      `/courses/sections/${sectionId}/lessons`,
+      data,
+    );
+    return response.data;
+  },
+
+  updateLesson: async (
+    lessonId: string,
+    data: Partial<CreateLessonData>,
+  ): Promise<Lesson> => {
+    const response = await api.patch<Lesson>(
+      `/courses/lessons/${lessonId}`,
+      data,
+    );
+    return response.data;
+  },
+
+  deleteLesson: async (lessonId: string) => {
+    await api.delete(`/courses/lessons/${lessonId}`);
   },
 };

@@ -8,7 +8,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import { Repository, Brackets } from 'typeorm';
 
+import { CreateCourseDto } from './dto/create-course.dto';
+import { CreateLessonDto } from './dto/create-lesson.dto';
+import { CreateSectionDto } from './dto/create-section.dto';
 import { CourseFilterOptions } from './dto/filter-course.dto';
+import { UpdateCourseDto } from './dto/update-course.dto';
+import { UpdateLessonDto } from './dto/update-lesson.dto';
+import { CourseSection } from './entities/course-section.entity';
 import { Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { Lesson } from './entities/lesson.entity';
@@ -62,6 +68,8 @@ export class CoursesService {
     private enrollmentRepository: Repository<Enrollment>,
     @InjectRepository(Lesson)
     private lessonRepository: Repository<Lesson>,
+    @InjectRepository(CourseSection)
+    private sectionRepository: Repository<CourseSection>,
   ) {}
 
   async findAllPublished(
@@ -483,5 +491,154 @@ export class CoursesService {
     scoredCourses.sort((a, b) => b.score - a.score);
 
     return scoredCourses.slice(0, limit);
+  }
+
+  // --- Instructor: Course Management ---
+
+  async create(
+    createCourseDto: CreateCourseDto,
+    instructorId: string,
+  ): Promise<Course> {
+    const course = this.coursesRepository.create({
+      ...createCourseDto,
+      instructorId,
+      isPublished: false,
+    });
+    return this.coursesRepository.save(course);
+  }
+
+  async update(
+    id: string,
+    updateCourseDto: UpdateCourseDto,
+    instructorId: string,
+  ): Promise<Course> {
+    const course = await this.findOne(id);
+    if (course.instructorId !== instructorId) {
+      throw new ForbiddenException('You can only update your own courses');
+    }
+    Object.assign(course, updateCourseDto);
+    return this.coursesRepository.save(course);
+  }
+
+  async remove(id: string, instructorId: string): Promise<void> {
+    const course = await this.findOne(id);
+    if (course.instructorId !== instructorId) {
+      throw new ForbiddenException('You can only delete your own courses');
+    }
+    await this.coursesRepository.remove(course);
+  }
+
+  async findInstructorCourses(instructorId: string): Promise<Course[]> {
+    return this.coursesRepository.find({
+      where: { instructorId },
+      order: { createdAt: 'DESC' },
+      relations: ['sections', 'sections.lessons'], // Load structure
+    });
+  }
+
+  // --- Instructor: Section Management ---
+
+  async createSection(
+    courseId: string,
+    dto: CreateSectionDto,
+    instructorId: string,
+  ): Promise<CourseSection> {
+    const course = await this.findOne(courseId);
+    if (course.instructorId !== instructorId) {
+      throw new ForbiddenException(
+        'You can only add sections to your own courses',
+      );
+    }
+
+    // We need to inject CourseSection repository or use dataSource in constructor
+    // Assuming you inject it as @InjectRepository(CourseSection) private sectionRepo: Repository<CourseSection>
+    // For now, using query runner or assuming it's injected (add to constructor if missing)
+
+    // Quick fix: Add CourseSection to constructor injection if not present:
+    // @InjectRepository(CourseSection) private sectionRepository: Repository<CourseSection>
+
+    // Temporary implementation using createQueryBuilder if repo not available directly in snippet context
+    // Ideally, update constructor to include sectionRepository
+
+    return this.sectionRepository.save(
+      this.sectionRepository.create({ ...dto, courseId }),
+    );
+  }
+
+  async removeSection(sectionId: string, instructorId: string): Promise<void> {
+    const section = await this.sectionRepository.findOne({
+      where: { id: sectionId },
+      relations: ['course'],
+    });
+
+    if (!section) {
+      throw new NotFoundException('Section not found');
+    }
+    if (section.course.instructorId !== instructorId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    await this.sectionRepository.remove(section);
+  }
+
+  // --- Instructor: Lesson Management ---
+
+  async createLesson(
+    sectionId: string,
+    dto: CreateLessonDto,
+    instructorId: string,
+  ): Promise<Lesson> {
+    const section = await this.sectionRepository.findOne({
+      where: { id: sectionId },
+      relations: ['course'],
+    });
+
+    if (!section) {
+      throw new NotFoundException('Section not found');
+    }
+    if (section.course.instructorId !== instructorId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    return this.lessonRepository.save(
+      this.lessonRepository.create({ ...dto, sectionId }),
+    );
+  }
+
+  async updateLesson(
+    lessonId: string,
+    dto: UpdateLessonDto,
+    instructorId: string,
+  ): Promise<Lesson> {
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: lessonId },
+      relations: ['section', 'section.course'],
+    });
+
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+    if (lesson.section.course.instructorId !== instructorId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    Object.assign(lesson, dto);
+    return this.lessonRepository.save(lesson);
+  }
+
+  async removeLesson(lessonId: string, instructorId: string): Promise<void> {
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: lessonId },
+      relations: ['section', 'section.course'],
+    });
+
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+    if (lesson.section.course.instructorId !== instructorId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    await this.lessonRepository.remove(lesson);
   }
 }
