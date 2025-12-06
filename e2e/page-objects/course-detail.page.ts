@@ -43,7 +43,8 @@ export class CourseDetailPage {
       '[class*="border-border"][class*="rounded-xl"]',
     );
     this.lessons = page.locator('[class*="divide-y"] > div');
-    this.lockedLessons = page.locator('[data-testid="locked-lesson"]');
+    // Updated selector to match valid lock icon class from Lucide
+    this.lockedLessons = page.locator('.lucide-lock');
     this.previewableLessons = page.getByRole('button', { name: /Preview/i });
     this.authModal = page.getByRole('dialog');
   }
@@ -92,7 +93,7 @@ export class CourseDetailPage {
 
   async clickLockedLesson() {
     const lockedLesson = this.page
-      .locator('button:has([class*="Lock"])')
+      .locator('button:has(.lucide-lock)')
       .first();
     await lockedLesson.click();
   }
