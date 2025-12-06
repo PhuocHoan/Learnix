@@ -92,9 +92,7 @@ export class CourseDetailPage {
   }
 
   async clickLockedLesson() {
-    const lockedLesson = this.page
-      .locator('button:has(.lucide-lock)')
-      .first();
+    const lockedLesson = this.page.locator('button:has(.lucide-lock)').first();
     await lockedLesson.click();
   }
 
