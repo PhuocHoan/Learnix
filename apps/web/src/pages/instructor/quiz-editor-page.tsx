@@ -109,6 +109,14 @@ export default function QuizEditorPage() {
     },
   });
 
+  const { mutate: createQuiz, isPending: isCreatingQuiz, isSuccess: isQuizCreated } = createQuizMutation;
+
+  useEffect(() => {
+    if (!isLoading && quiz === null && !isCreatingQuiz && !isQuizCreated && lessonId) {
+      createQuiz({ title: 'Untitled Quiz', lessonId });
+    }
+  }, [isLoading, quiz, isCreatingQuiz, isQuizCreated, lessonId, createQuiz]);
+
   useEffect(() => {
     if (quiz?.questions) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -194,15 +202,15 @@ export default function QuizEditorPage() {
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">Questions</h2>
-          <Button onClick={() => setEditingQuestionId('new')}>
+          <Button onClick={() => setEditingQuestionId('new')} disabled={!quiz}>
             <Plus className="w-4 h-4 mr-2" />
             Add Question
           </Button>
         </div>
 
-        {editingQuestionId === 'new' && (
+        {editingQuestionId === 'new' && quiz && (
           <QuestionEditor
-            quizId={quiz?.id ?? ''}
+            quizId={quiz.id}
             onCancel={() => setEditingQuestionId(null)}
             onSave={() => {
               setEditingQuestionId(null);
@@ -214,35 +222,37 @@ export default function QuizEditorPage() {
         )}
 
         <div className="space-y-4">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={orderedQuestions}
-              strategy={verticalListSortingStrategy}
+          {quiz && (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
             >
-              {orderedQuestions.map((question, index) => (
-                <SortableQuestionItem
-                  key={question.id}
-                  question={question}
-                  index={index}
-                  isEditing={editingQuestionId === question.id}
-                  onEdit={() => setEditingQuestionId(question.id)}
-                  onDelete={() => {}}
-                  onCancel={() => setEditingQuestionId(null)}
-                  onSave={() => {
-                    setEditingQuestionId(null);
-                    void queryClient.invalidateQueries({
-                      queryKey: ['quiz', 'lesson', lessonId],
-                    });
-                  }}
-                  quizId={quiz?.id ?? ''}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
+              <SortableContext
+                items={orderedQuestions}
+                strategy={verticalListSortingStrategy}
+              >
+                {orderedQuestions.map((question, index) => (
+                  <SortableQuestionItem
+                    key={question.id}
+                    question={question}
+                    index={index}
+                    isEditing={editingQuestionId === question.id}
+                    onEdit={() => setEditingQuestionId(question.id)}
+                    onDelete={() => { }}
+                    onCancel={() => setEditingQuestionId(null)}
+                    onSave={() => {
+                      setEditingQuestionId(null);
+                      void queryClient.invalidateQueries({
+                        queryKey: ['quiz', 'lesson', lessonId],
+                      });
+                    }}
+                    quizId={quiz.id}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+          )}
           {quiz?.questions?.length === 0 && !editingQuestionId && (
             <div className="text-center py-12 border-2 border-dashed rounded-lg bg-muted/50">
               <p className="text-muted-foreground mb-4">No questions yet</p>
@@ -392,6 +402,9 @@ function QuestionEditor({
   const mutation = useMutation({
     mutationFn: (data: QuestionFormData) => {
       if (isNew) {
+        if (!quizId) {
+          throw new Error('Quiz ID is missing. Please try refreshing the page.');
+        }
         return quizzesApi.createQuestion(quizId, data);
       }
       if (!question) {
