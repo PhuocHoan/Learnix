@@ -7,8 +7,11 @@ import {
   Body,
   Param,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 
+import { CreateQuestionDto } from './dto/create-question.dto';
+import { CreateQuizDto } from './dto/create-quiz.dto';
 import { GenerateQuizDto } from './dto/generate-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Question } from './entities/question.entity';
@@ -25,6 +28,43 @@ import { UserRole } from '../users/enums/user-role.enum';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class QuizzesController {
   constructor(private readonly quizzesService: QuizzesService) {}
+
+  @Patch(':id/reorder-questions')
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  async reorderQuestions(
+    @Param('id') id: string,
+    @Body() body: { questionIds: string[] },
+  ): Promise<{ message: string }> {
+    await this.quizzesService.reorderQuestions(id, body.questionIds);
+    return { message: 'Questions reordered successfully' };
+  }
+
+  @Post()
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  async createQuiz(
+    @Body() createDto: CreateQuizDto,
+    @CurrentUser() user: User,
+  ): Promise<Quiz> {
+    return this.quizzesService.create(createDto, user.id);
+  }
+
+  @Post(':id/questions')
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  async createQuestion(
+    @Param('id') quizId: string,
+    @Body() createDto: CreateQuestionDto,
+  ): Promise<Question> {
+    return this.quizzesService.createQuestion(quizId, createDto);
+  }
+
+  @Get('by-lesson/:lessonId')
+  async getQuizByLesson(@Param('lessonId') lessonId: string): Promise<Quiz> {
+    const quiz = await this.quizzesService.findByLesson(lessonId);
+    if (!quiz) {
+      throw new NotFoundException('Quiz not found for this lesson');
+    }
+    return quiz;
+  }
 
   @Post('generate')
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)

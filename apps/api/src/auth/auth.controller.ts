@@ -29,6 +29,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UpdateProfileDto } from '../users/dto/update-profile.dto';
 import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
 
 import type {
   OAuthProfile,
@@ -275,5 +276,24 @@ export class AuthController {
   ): Promise<{ hasPassword: boolean }> {
     const hasPassword = await this.authService.hasPassword(user.id);
     return { hasPassword };
+  }
+
+  // TODO: Remove this dev endpoint in production
+  @Get('dev/promote')
+  @UseGuards(JwtAuthGuard)
+  async promoteToInstructor(
+    @CurrentUser() user: User,
+  ): Promise<{ message: string; user: SafeUser }> {
+    const updatedUser = await this.authService.updateUserRole(
+      user.id,
+      UserRole.INSTRUCTOR,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, activationToken, passwordResetToken, ...safeUser } =
+      updatedUser;
+    return {
+      message: 'Successfully promoted to Instructor. Please return to the app.',
+      user: safeUser,
+    };
   }
 }

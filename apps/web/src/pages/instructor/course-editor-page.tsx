@@ -11,6 +11,8 @@ import {
   GripVertical,
   Pencil,
   LayoutList,
+  FileQuestion,
+  BrainCircuit,
 } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -564,7 +566,7 @@ function CurriculumEditor({ course }: { course: Course }) {
                 <Input
                   {...sectionForm.register('title')}
                   placeholder="Section Title (e.g., Introduction)"
-                  // Removed autoFocus for A11y warning
+                // Removed autoFocus for A11y warning
                 />
               </div>
               <Button
@@ -666,8 +668,12 @@ function CurriculumEditor({ course }: { course: Course }) {
                     </div>
                   ))}
                 </div>
-                <div className="p-4 bg-muted/10">
+                <div className="p-4 bg-muted/10 flex gap-2">
                   <AddLessonDialog
+                    sectionId={section.id}
+                    courseId={course.id}
+                  />
+                  <AddQuizDialog
                     sectionId={section.id}
                     courseId={course.id}
                   />
@@ -692,6 +698,7 @@ function LessonItem({
   sectionId: string;
 }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const deleteLessonMutation = useMutation({
     mutationFn: coursesApi.deleteLesson,
@@ -706,12 +713,22 @@ function LessonItem({
       <div className="flex items-center gap-3">
         <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
         <div className="p-2 rounded-lg bg-primary/10 text-primary">
-          <LayoutList className="w-4 h-4" />
+          {lesson.type === 'quiz' ? (
+            <BrainCircuit className="w-4 h-4" />
+          ) : (
+            <LayoutList className="w-4 h-4" />
+          )}
         </div>
         <div>
           <p className="font-medium text-sm">{lesson.title}</p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{Math.round((lesson.durationSeconds ?? 0) / 60)} min</span>
+            {lesson.type === 'quiz' ? (
+              <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                Quiz
+              </Badge>
+            ) : (
+              <span>{Math.round((lesson.durationSeconds ?? 0) / 60)} min</span>
+            )}
             {lesson.isFreePreview && (
               <Badge variant="secondary" className="text-[10px] h-4 px-1">
                 Preview
@@ -722,16 +739,26 @@ function LessonItem({
       </div>
 
       <div className="flex items-center gap-1">
-        <AddLessonDialog
-          sectionId={sectionId}
-          courseId={courseId}
-          existingLesson={lesson}
-          trigger={
-            <Button variant="ghost" size="sm">
-              <Pencil className="w-4 h-4" />
-            </Button>
-          }
-        />
+        {lesson.type === 'quiz' ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/instructor/courses/${courseId}/quizzes/${lesson.id}/edit`)} // Using lesson ID to find quiz later
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
+        ) : (
+          <AddLessonDialog
+            sectionId={sectionId}
+            courseId={courseId}
+            existingLesson={lesson}
+            trigger={
+              <Button variant="ghost" size="sm">
+                <Pencil className="w-4 h-4" />
+              </Button>
+            }
+          />
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -876,7 +903,7 @@ function AddLessonDialog({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Content Builder</label>
+              <span className="text-sm font-medium">Content Builder</span>
               <span className="text-xs text-muted-foreground">
                 Drag to reorder blocks
               </span>
@@ -920,6 +947,98 @@ function AddLessonDialog({
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
               Save Lesson
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddQuizDialog({
+  sectionId,
+  courseId,
+  trigger,
+}: {
+  sectionId: string;
+  courseId: string;
+  trigger?: React.ReactNode;
+}) {
+  const queryClient = useQueryClient();
+
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) { return; }
+
+    setIsSubmitting(true);
+    try {
+      await coursesApi.createLesson(sectionId, {
+        title: title.trim(),
+        type: 'quiz',
+        content: [],
+        durationSeconds: 0,
+        isFreePreview: false,
+        orderIndex: 0,
+      });
+
+      toast.success('Quiz added');
+      setOpen(false);
+      setTitle('');
+      void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to create quiz');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger ?? (
+          <Button variant="outline" size="sm" className="w-full border-dashed">
+            <FileQuestion className="w-4 h-4 mr-2" /> Add Quiz
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add New Quiz</DialogTitle>
+          <DialogDescription>
+            Create a manual quiz for this section.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="quiz-title" className="text-sm font-medium">
+              Quiz Title
+            </label>
+            <Input
+              id="quiz-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Chapter 1 Quiz"
+              // eslint-disable-next-line jsx-a11y/no-autofocus
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting || !title.trim()}>
+              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Create Quiz
             </Button>
           </DialogFooter>
         </form>

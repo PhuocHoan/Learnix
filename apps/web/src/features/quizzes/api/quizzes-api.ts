@@ -7,6 +7,7 @@ export interface Question {
   correctAnswer: string;
   explanation?: string;
   points: number;
+  position: number;
 }
 
 export interface Quiz {
@@ -25,7 +26,43 @@ export interface GenerateQuizRequest {
   title: string;
 }
 
+export interface CreateQuizData {
+  title: string;
+  description?: string;
+  lessonId: string;
+  courseId?: string;
+}
+
+export interface CreateQuestionData {
+  questionText: string;
+  options: string[];
+  correctAnswer: string;
+  explanation?: string;
+  points?: number;
+}
+
 export const quizzesApi = {
+  createQuiz: async (data: CreateQuizData): Promise<Quiz> => {
+    const response = await api.post<Quiz>('/quizzes', data);
+    return response.data;
+  },
+
+  createQuestion: async (
+    quizId: string,
+    data: CreateQuestionData,
+  ): Promise<Question> => {
+    const response = await api.post<Question>(
+      `/quizzes/${quizId}/questions`,
+      data,
+    );
+    return response.data;
+  },
+
+  getQuizByLessonId: async (lessonId: string): Promise<Quiz> => {
+    const response = await api.get<Quiz>(`/quizzes/by-lesson/${lessonId}`);
+    return response.data;
+  },
+
   generateQuiz: async (data: GenerateQuizRequest): Promise<Quiz> => {
     const response = await api.post<Quiz>('/quizzes/generate', data);
     return response.data;
@@ -59,5 +96,12 @@ export const quizzesApi = {
 
   deleteQuestion: async (questionId: string): Promise<void> => {
     await api.delete(`/quizzes/questions/${questionId}`);
+  },
+
+  reorderQuestions: async (
+    quizId: string,
+    questionIds: string[],
+  ): Promise<void> => {
+    await api.patch(`/quizzes/${quizId}/reorder-questions`, { questionIds });
   },
 };

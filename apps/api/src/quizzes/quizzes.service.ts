@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
 
+import { CreateQuestionDto } from './dto/create-question.dto';
+import { CreateQuizDto } from './dto/create-quiz.dto';
 import { GenerateQuizDto } from './dto/generate-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Question } from './entities/question.entity';
@@ -21,6 +23,50 @@ export class QuizzesService {
     private questionsRepository: Repository<Question>,
     private aiQuizGenerator: AiQuizGeneratorService,
   ) {}
+
+  async create(createDto: CreateQuizDto, instructorId: string): Promise<Quiz> {
+    const quiz = this.quizzesRepository.create({
+      ...createDto,
+      status: QuizStatus.DRAFT,
+      createdBy: instructorId,
+      aiGenerated: false,
+    });
+    return this.quizzesRepository.save(quiz);
+  }
+
+  async createQuestion(
+    quizId: string,
+    createDto: CreateQuestionDto,
+  ): Promise<Question> {
+    await this.findOne(quizId);
+
+    const question = this.questionsRepository.create({
+      quizId,
+      ...createDto,
+    });
+
+    // Get max position to append to end
+    const lastQuestion = await this.questionsRepository.findOne({
+      where: { quizId },
+      order: { position: 'DESC' },
+    });
+    question.position = (lastQuestion?.position ?? 0) + 1;
+
+    return this.questionsRepository.save(question);
+  }
+
+  async findByLesson(lessonId: string): Promise<Quiz | null> {
+    return this.quizzesRepository.findOne({
+      where: { lessonId },
+      relations: ['questions'],
+      order: {
+        createdAt: 'DESC', // For the quiz itself
+        questions: {
+          position: 'ASC',
+        },
+      },
+    });
+  }
 
   async generateQuizWithAI(
     generateDto: GenerateQuizDto,
@@ -64,6 +110,11 @@ export class QuizzesService {
     const quiz = await this.quizzesRepository.findOne({
       where: { id },
       relations: ['questions'],
+      order: {
+        questions: {
+          position: 'ASC',
+        },
+      },
     });
 
     if (!quiz) {
@@ -107,6 +158,26 @@ export class QuizzesService {
       where: { createdBy: instructorId },
       relations: ['questions'],
       order: { createdAt: 'DESC' },
+    });
+  }
+
+  async reorderQuestions(quizId: string, questionIds: string[]): Promise<void> {
+    const quiz = await this.findOne(quizId);
+
+    // Validate all questions belong to this quiz
+    const quizQuestionIds = quiz.questions.map((q) => q.id);
+    const validIds = questionIds.every((id) => quizQuestionIds.includes(id));
+
+    if (!validIds) {
+      throw new NotFoundException('Some questions do not belong to this quiz');
+    }
+
+    // Update positions
+    // Update positions
+    await this.questionsRepository.manager.transaction(async (manager) => {
+      for (const [index, questionId] of questionIds.entries()) {
+        await manager.update(Question, questionId, { position: index });
+      }
     });
   }
 }

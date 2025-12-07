@@ -86,6 +86,11 @@ describe('QuizzesService', () => {
       expect(quizzesRepository.findOne).toHaveBeenCalledWith({
         where: { id: 'quiz-1' },
         relations: ['questions'],
+        order: {
+          questions: {
+            position: 'ASC',
+          },
+        },
       });
       expect(result).toEqual(mockQuiz);
     });
@@ -181,6 +186,38 @@ describe('QuizzesService', () => {
       const result = await service.findByInstructor('user-1');
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('reorderQuestions', () => {
+    it('should reorder questions successfully', async () => {
+      const questions = [
+        { id: 'q1', position: 0 },
+        { id: 'q2', position: 1 },
+      ] as Question[];
+      const quizWithQuestions = { ...mockQuiz, questions };
+      quizzesRepository.findOne.mockResolvedValue(quizWithQuestions as Quiz);
+      (questionsRepository as any).manager = {
+        transaction: jest.fn().mockImplementation((cb) =>
+          cb({
+            update: jest.fn(),
+          }),
+        ),
+      };
+
+      await expect(
+        service.reorderQuestions('quiz-1', ['q2', 'q1']),
+      ).resolves.not.toThrow();
+    });
+
+    it('should throw if question does not belong to quiz', async () => {
+      const questions = [{ id: 'q1', position: 0 }] as Question[];
+      const quizWithQuestions = { ...mockQuiz, questions };
+      quizzesRepository.findOne.mockResolvedValue(quizWithQuestions as Quiz);
+
+      await expect(service.reorderQuestions('quiz-1', ['q2'])).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

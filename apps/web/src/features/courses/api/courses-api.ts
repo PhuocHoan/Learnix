@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 export interface Lesson {
   id: string;
   title: string;
+  type: 'standard' | 'quiz';
   content: LessonBlock[]; // Now an array of blocks
   durationSeconds: number;
   isFreePreview: boolean;
@@ -105,6 +106,7 @@ export interface CreateCourseData {
 
 export interface CreateLessonData {
   title: string;
+  type?: 'standard' | 'quiz';
   content: LessonBlock[];
   durationSeconds: number;
   isFreePreview: boolean;

@@ -36,6 +36,9 @@ export class Question {
   @Column({ default: 1 })
   points: number;
 
+  @Column({ default: 0 })
+  position: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

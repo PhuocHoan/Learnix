@@ -36,8 +36,12 @@ export class Lesson {
   @Column()
   title: string;
 
-  // REMOVED: type (LessonType) - The lesson itself is now a container
-  // REMOVED: videoUrl - Video is now just a block type
+  @Column({
+    type: 'enum',
+    enum: ['standard', 'quiz'],
+    default: 'standard',
+  })
+  type: 'standard' | 'quiz';
 
   @Column({ type: 'json', nullable: true })
   content: LessonBlock[]; // Stores the array of blocks

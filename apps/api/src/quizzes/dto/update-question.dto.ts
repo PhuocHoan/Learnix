@@ -16,4 +16,10 @@ export class UpdateQuestionDto {
   @IsString()
   @IsOptional()
   explanation?: string;
+
+  @IsOptional()
+  points?: number;
+
+  @IsOptional()
+  position?: number;
 }

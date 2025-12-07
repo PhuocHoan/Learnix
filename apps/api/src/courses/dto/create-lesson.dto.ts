@@ -14,6 +14,10 @@ export class CreateLessonDto {
   @IsNotEmpty()
   title: string;
 
+  @IsString()
+  @IsOptional()
+  type?: 'standard' | 'quiz';
+
   @IsArray()
   @IsOptional()
   // In a real app, you might create a specific DTO for LessonBlock validation here

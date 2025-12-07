@@ -54,6 +54,9 @@ const InstructorCoursesPage = lazy(
 const CourseEditorPage = lazy(
   () => import('@/pages/instructor/course-editor-page'),
 );
+const QuizEditorPage = lazy(
+  () => import('@/pages/instructor/quiz-editor-page'),
+);
 
 // Loading fallback component
 function PageLoader() {
@@ -220,6 +223,14 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={['instructor', 'admin']}>
                       <CourseEditorPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/instructor/courses/:courseId/quizzes/:lessonId/edit"
+                  element={
+                    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+                      <QuizEditorPage />
                     </ProtectedRoute>
                   }
                 />
