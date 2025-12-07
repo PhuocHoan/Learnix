@@ -566,7 +566,7 @@ function CurriculumEditor({ course }: { course: Course }) {
                 <Input
                   {...sectionForm.register('title')}
                   placeholder="Section Title (e.g., Introduction)"
-                // Removed autoFocus for A11y warning
+                  // Removed autoFocus for A11y warning
                 />
               </div>
               <Button
@@ -673,10 +673,7 @@ function CurriculumEditor({ course }: { course: Course }) {
                     sectionId={section.id}
                     courseId={course.id}
                   />
-                  <AddQuizDialog
-                    sectionId={section.id}
-                    courseId={course.id}
-                  />
+                  <AddQuizDialog sectionId={section.id} courseId={course.id} />
                 </div>
               </CardContent>
             </Card>
@@ -743,7 +740,11 @@ function LessonItem({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/instructor/courses/${courseId}/quizzes/${lesson.id}/edit`)} // Using lesson ID to find quiz later
+            onClick={() =>
+              navigate(
+                `/instructor/courses/${courseId}/quizzes/${lesson.id}/edit`,
+              )
+            } // Using lesson ID to find quiz later
           >
             <Pencil className="w-4 h-4" />
           </Button>
@@ -972,7 +973,9 @@ function AddQuizDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) { return; }
+    if (!title.trim()) {
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -989,7 +992,6 @@ function AddQuizDialog({
       setOpen(false);
       setTitle('');
       void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
-
     } catch (error) {
       console.error(error);
       toast.error('Failed to create quiz');
@@ -1037,7 +1039,9 @@ function AddQuizDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting || !title.trim()}>
-              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isSubmitting && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
               Create Quiz
             </Button>
           </DialogFooter>
