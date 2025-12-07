@@ -28,6 +28,7 @@ import { Lesson } from './entities/lesson.entity';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
@@ -97,8 +98,12 @@ export class CoursesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Promise<Course> {
-    return this.coursesService.findOne(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() user?: User,
+  ): Promise<Course> {
+    return this.coursesService.findOne(id, user);
   }
 
   @Post(':id/enroll')

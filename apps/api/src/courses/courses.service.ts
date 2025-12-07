@@ -18,6 +18,8 @@ import { CourseSection } from './entities/course-section.entity';
 import { Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { Lesson } from './entities/lesson.entity';
+import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
 
 export interface EnrolledCourseDto {
   id: string;
@@ -162,7 +164,7 @@ export class CoursesService {
     return Array.from(uniqueTags);
   }
 
-  async findOne(id: string): Promise<Course> {
+  async findOne(id: string, user?: Partial<User>): Promise<Course> {
     const course = await this.coursesRepository
       .createQueryBuilder('course')
       .leftJoinAndSelect('course.instructor', 'instructor')
@@ -177,12 +179,25 @@ export class CoursesService {
     if (!course) {
       throw new NotFoundException('Course not found');
     }
+
+    // Access Control:
+    // If course is NOT published, only the Instructor or Admin can view it.
+    if (!course.isPublished) {
+      const isInstructor = user?.id === course.instructor?.id;
+      const isAdmin = user?.role === UserRole.ADMIN;
+
+      if (!isInstructor && !isAdmin) {
+        throw new NotFoundException('Course not found');
+      }
+    }
+
     return course;
   }
 
   async enroll(userId: string, courseId: string): Promise<Enrollment> {
-    // Check if course exists (Fix: Removed unused variable assignment)
-    await this.findOne(courseId);
+    // Check if course exists and is accessible
+    // Passing generic user object to allow enrollment only if visible
+    await this.findOne(courseId, { id: userId } as User);
 
     // Check if already enrolled
     const existing = await this.enrollmentRepository.findOne({
@@ -512,7 +527,10 @@ export class CoursesService {
     updateCourseDto: UpdateCourseDto,
     instructorId: string,
   ): Promise<Course> {
-    const course = await this.findOne(id);
+    const course = await this.findOne(id, {
+      id: instructorId,
+      role: UserRole.INSTRUCTOR,
+    } as User);
     if (course.instructorId !== instructorId) {
       throw new ForbiddenException('You can only update your own courses');
     }
@@ -521,7 +539,10 @@ export class CoursesService {
   }
 
   async remove(id: string, instructorId: string): Promise<void> {
-    const course = await this.findOne(id);
+    const course = await this.findOne(id, {
+      id: instructorId,
+      role: UserRole.INSTRUCTOR,
+    } as User);
     if (course.instructorId !== instructorId) {
       throw new ForbiddenException('You can only delete your own courses');
     }
@@ -543,7 +564,10 @@ export class CoursesService {
     dto: CreateSectionDto,
     instructorId: string,
   ): Promise<CourseSection> {
-    const course = await this.findOne(courseId);
+    const course = await this.findOne(courseId, {
+      id: instructorId,
+      role: UserRole.INSTRUCTOR,
+    } as User);
     if (course.instructorId !== instructorId) {
       throw new ForbiddenException(
         'You can only add sections to your own courses',

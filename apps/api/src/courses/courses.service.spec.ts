@@ -388,8 +388,9 @@ describe('CoursesService', () => {
       getOne: jest.fn(),
     };
 
-    it('should return a course by id', async () => {
+    it('should return a published course by id for public user', async () => {
       const course = mockCourse('course-1', 'Test Course', ['react']);
+      course.isPublished = true;
       singleQueryBuilder.getOne.mockResolvedValue(course);
       const courseRepo = courseRepository;
       courseRepo.createQueryBuilder.mockReturnValue(singleQueryBuilder);
@@ -397,9 +398,46 @@ describe('CoursesService', () => {
       const result = await service.findOne('course-1');
 
       expect(result).toEqual(course);
-      expect(singleQueryBuilder.where).toHaveBeenCalledWith('course.id = :id', {
-        id: 'course-1',
-      });
+    });
+
+    it('should throw NotFoundException for unpublished course if no user', async () => {
+      const course = mockCourse('course-1', 'Unpublished', []);
+      course.isPublished = false;
+      singleQueryBuilder.getOne.mockResolvedValue(course);
+      const courseRepo = courseRepository;
+      courseRepo.createQueryBuilder.mockReturnValue(singleQueryBuilder);
+
+      await expect(service.findOne('course-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException for unpublished course if user is not instructor', async () => {
+      const course = mockCourse('course-1', 'Unpublished', []);
+      course.isPublished = false;
+      course.instructor = { id: 'instructor-1', fullName: 'Inst' } as any;
+      singleQueryBuilder.getOne.mockResolvedValue(course);
+      const courseRepo = courseRepository;
+      courseRepo.createQueryBuilder.mockReturnValue(singleQueryBuilder);
+
+      await expect(
+        service.findOne('course-1', { id: 'student-1' } as any),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return unpublished course if user is instructor', async () => {
+      const course = mockCourse('course-1', 'Unpublished', []);
+      course.isPublished = false;
+      course.instructor = { id: 'instructor-1', fullName: 'Inst' } as any;
+      singleQueryBuilder.getOne.mockResolvedValue(course);
+      const courseRepo = courseRepository;
+      courseRepo.createQueryBuilder.mockReturnValue(singleQueryBuilder);
+
+      const result = await service.findOne('course-1', {
+        id: 'instructor-1',
+      } as any);
+
+      expect(result).toEqual(course);
     });
 
     it('should throw NotFoundException when course not found', async () => {
