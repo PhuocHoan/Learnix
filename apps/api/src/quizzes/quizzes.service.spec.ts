@@ -3,6 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { Question } from './entities/question.entity';
+import { QuizSubmission } from './entities/quiz-submission.entity';
 import { Quiz, QuizStatus } from './entities/quiz.entity';
 import { QuizzesService } from './quizzes.service';
 import { AiQuizGeneratorService } from './services/ai-quiz-generator.service';
@@ -13,6 +14,7 @@ describe('QuizzesService', () => {
   let service: QuizzesService;
   let quizzesRepository: jest.Mocked<Repository<Quiz>>;
   let questionsRepository: jest.Mocked<Repository<Question>>;
+  let submissionRepository: jest.Mocked<Repository<QuizSubmission>>;
 
   const mockQuiz: Partial<Quiz> = {
     id: 'quiz-1',
@@ -36,37 +38,57 @@ describe('QuizzesService', () => {
     createdAt: new Date(),
   };
 
+  const QUERY_BUILDER_MOCK = {
+    where: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    getMany: jest.fn().mockResolvedValue([]),
+  };
+
   beforeEach(async () => {
-    const mockQuizzesRepo = {
-      create: jest.fn(),
-      save: jest.fn(),
-      findOne: jest.fn(),
-      find: jest.fn(),
-    };
-
-    const mockQuestionsRepo = {
-      create: jest.fn(),
-      save: jest.fn(),
-      findOne: jest.fn(),
-      delete: jest.fn(),
-    };
-
-    const mockAiGenerator = {
-      generateQuizFromText: jest.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QuizzesService,
-        { provide: getRepositoryToken(Quiz), useValue: mockQuizzesRepo },
-        { provide: getRepositoryToken(Question), useValue: mockQuestionsRepo },
-        { provide: AiQuizGeneratorService, useValue: mockAiGenerator },
+        {
+          provide: getRepositoryToken(Quiz),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            findOne: jest.fn(),
+            find: jest.fn(),
+            createQueryBuilder: jest.fn(() => QUERY_BUILDER_MOCK),
+          },
+        },
+        {
+          provide: getRepositoryToken(Question),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            findOne: jest.fn(),
+            delete: jest.fn(),
+            createQueryBuilder: jest.fn(() => QUERY_BUILDER_MOCK),
+          },
+        },
+        {
+          provide: getRepositoryToken(QuizSubmission),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: AiQuizGeneratorService,
+          useValue: {
+            generateQuizFromText: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<QuizzesService>(QuizzesService);
     quizzesRepository = module.get(getRepositoryToken(Quiz));
     questionsRepository = module.get(getRepositoryToken(Question));
+    submissionRepository = module.get(getRepositoryToken(QuizSubmission));
   });
 
   afterEach(() => {
@@ -190,24 +212,26 @@ describe('QuizzesService', () => {
   });
 
   describe('reorderQuestions', () => {
-    it('should reorder questions successfully', async () => {
+    it('should reorder questions', async () => {
+      const quizId = 'quiz-1';
+      const questionIds = ['q1', 'q2'];
       const questions = [
-        { id: 'q1', position: 0 },
-        { id: 'q2', position: 1 },
-      ] as Question[];
-      const quizWithQuestions = { ...mockQuiz, questions };
-      quizzesRepository.findOne.mockResolvedValue(quizWithQuestions as Quiz);
+        { id: 'q1', position: 1 },
+        { id: 'q2', position: 0 },
+      ];
+
+      jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: quizId,
+        questions: questions as any[],
+      } as Quiz);
+
       (questionsRepository as any).manager = {
-        transaction: jest.fn().mockImplementation((cb) =>
-          cb({
-            update: jest.fn(),
-          }),
-        ),
+        transaction: jest.fn((cb) => cb({ update: jest.fn() })),
       };
 
-      await expect(
-        service.reorderQuestions('quiz-1', ['q2', 'q1']),
-      ).resolves.not.toThrow();
+      await service.reorderQuestions(quizId, questionIds);
+
+      expect(service.findOne).toHaveBeenCalledWith(quizId);
     });
 
     it('should throw if question does not belong to quiz', async () => {
@@ -217,6 +241,73 @@ describe('QuizzesService', () => {
 
       await expect(service.reorderQuestions('quiz-1', ['q2'])).rejects.toThrow(
         NotFoundException,
+      );
+    });
+  });
+
+  describe('submitQuiz', () => {
+    it('should calculate score correctly (all correct)', async () => {
+      const quizId = 'quiz-1';
+      const userId = 'user-1';
+      const questions = [
+        { id: 'q1', correctAnswer: 'A', points: 2 },
+        { id: 'q2', correctAnswer: 'B', points: 3 },
+      ];
+      const answers = { q1: 'A', q2: 'B' };
+
+      jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: quizId,
+        questions: questions as any[],
+      } as Quiz);
+
+      const saveSpy = (
+        submissionRepository.save as jest.Mock
+      ).mockResolvedValue({} as any);
+      const createSpy = (
+        submissionRepository.create as jest.Mock
+      ).mockReturnValue({} as any);
+
+      await service.submitQuiz(userId, quizId, { answers });
+
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          score: 5,
+          totalPoints: 5,
+          percentage: 100,
+          userId,
+          quizId,
+        }),
+      );
+      expect(saveSpy).toHaveBeenCalled();
+    });
+
+    it('should calculate score correctly (partial correct)', async () => {
+      const quizId = 'quiz-1';
+      const userId = 'user-1';
+      const questions = [
+        { id: 'q1', correctAnswer: 'A', points: 2 },
+        { id: 'q2', correctAnswer: 'B', points: 3 },
+      ];
+      const answers = { q1: 'A', q2: 'C' }; // q2 wrong
+
+      jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: quizId,
+        questions: questions as any[],
+      } as Quiz);
+
+      const createSpy = (
+        submissionRepository.create as jest.Mock
+      ).mockReturnValue({} as any);
+      (submissionRepository.save as jest.Mock).mockResolvedValue({} as any);
+
+      await service.submitQuiz(userId, quizId, { answers });
+
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          score: 2,
+          totalPoints: 5,
+          percentage: 40,
+        }),
       );
     });
   });

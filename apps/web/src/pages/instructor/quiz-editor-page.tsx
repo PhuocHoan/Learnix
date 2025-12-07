@@ -109,10 +109,20 @@ export default function QuizEditorPage() {
     },
   });
 
-  const { mutate: createQuiz, isPending: isCreatingQuiz, isSuccess: isQuizCreated } = createQuizMutation;
+  const {
+    mutate: createQuiz,
+    isPending: isCreatingQuiz,
+    isSuccess: isQuizCreated,
+  } = createQuizMutation;
 
   useEffect(() => {
-    if (!isLoading && quiz === null && !isCreatingQuiz && !isQuizCreated && lessonId) {
+    if (
+      !isLoading &&
+      quiz === null &&
+      !isCreatingQuiz &&
+      !isQuizCreated &&
+      lessonId
+    ) {
       createQuiz({ title: 'Untitled Quiz', lessonId });
     }
   }, [isLoading, quiz, isCreatingQuiz, isQuizCreated, lessonId, createQuiz]);
@@ -239,7 +249,7 @@ export default function QuizEditorPage() {
                     index={index}
                     isEditing={editingQuestionId === question.id}
                     onEdit={() => setEditingQuestionId(question.id)}
-                    onDelete={() => { }}
+                    onDelete={() => {}}
                     onCancel={() => setEditingQuestionId(null)}
                     onSave={() => {
                       setEditingQuestionId(null);
@@ -403,7 +413,9 @@ function QuestionEditor({
     mutationFn: (data: QuestionFormData) => {
       if (isNew) {
         if (!quizId) {
-          throw new Error('Quiz ID is missing. Please try refreshing the page.');
+          throw new Error(
+            'Quiz ID is missing. Please try refreshing the page.',
+          );
         }
         return quizzesApi.createQuestion(quizId, data);
       }

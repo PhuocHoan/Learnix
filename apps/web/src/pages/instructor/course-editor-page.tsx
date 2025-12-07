@@ -242,7 +242,8 @@ function CourseDetailsForm({
     // Explicitly construct the payload to match API types and avoid 'any'
     const cleanData = {
       ...data,
-      thumbnailUrl: data.thumbnailUrl ?? DEFAULT_THUMBNAIL_URL,
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+      thumbnailUrl: data.thumbnailUrl || DEFAULT_THUMBNAIL_URL,
       tags,
     };
 
@@ -566,7 +567,7 @@ function CurriculumEditor({ course }: { course: Course }) {
                 <Input
                   {...sectionForm.register('title')}
                   placeholder="Section Title (e.g., Introduction)"
-                  // Removed autoFocus for A11y warning
+                // Removed autoFocus for A11y warning
                 />
               </div>
               <Button

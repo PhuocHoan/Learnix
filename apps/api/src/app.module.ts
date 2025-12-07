@@ -12,6 +12,7 @@ import { Enrollment } from './courses/entities/enrollment.entity';
 import { Lesson } from './courses/entities/lesson.entity';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { Question } from './quizzes/entities/question.entity';
+import { QuizSubmission } from './quizzes/entities/quiz-submission.entity';
 import { Quiz } from './quizzes/entities/quiz.entity';
 import { QuizzesModule } from './quizzes/quizzes.module';
 import { UploadModule } from './upload/upload.module';
@@ -49,6 +50,7 @@ import { UsersModule } from './users/users.module';
               Course,
               CourseSection,
               Lesson,
+              QuizSubmission,
             ],
             synchronize: !isProduction,
             ssl: caCert
@@ -91,6 +93,7 @@ import { UsersModule } from './users/users.module';
             Course,
             CourseSection,
             Lesson,
+            QuizSubmission,
           ],
           synchronize: !isProduction,
           ssl:

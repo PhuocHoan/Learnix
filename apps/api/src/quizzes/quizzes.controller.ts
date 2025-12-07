@@ -13,8 +13,10 @@ import {
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { GenerateQuizDto } from './dto/generate-quiz.dto';
+import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Question } from './entities/question.entity';
+import { QuizSubmission } from './entities/quiz-submission.entity';
 import { Quiz } from './entities/quiz.entity';
 import { QuizzesService } from './quizzes.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -108,5 +110,37 @@ export class QuizzesController {
   ): Promise<{ message: string }> {
     await this.quizzesService.deleteQuestion(questionId);
     return { message: 'Question deleted successfully' };
+  }
+
+  @Post(':id/save-progress')
+  async saveProgress(
+    @Param('id') id: string,
+    @Body() submitDto: SubmitQuizDto,
+    @CurrentUser() user: User,
+  ): Promise<QuizSubmission> {
+    return this.quizzesService.saveProgress(user.id, id, submitDto.answers);
+  }
+  @Post(':id/submit')
+  async submitQuiz(
+    @Param('id') id: string,
+    @Body() submitDto: SubmitQuizDto,
+    @CurrentUser() user: User,
+  ): Promise<QuizSubmission> {
+    return this.quizzesService.submitQuiz(user.id, id, submitDto);
+  }
+
+  @Get(':id/submission')
+  async getSubmission(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ): Promise<QuizSubmission | null> {
+    const submission = await this.quizzesService.getSubmission(user.id, id);
+    if (!submission) {
+      // It's not an error to not have a submission, just return empty/null-like structure or null
+      // But for API consistency, let's allow 200 OK with null content or 404
+      // Let's return null to signify no attempt yet.
+      return null;
+    }
+    return submission;
   }
 }

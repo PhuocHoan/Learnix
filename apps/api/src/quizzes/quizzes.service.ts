@@ -1,13 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { GenerateQuizDto } from './dto/generate-quiz.dto';
+import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Question } from './entities/question.entity';
+import { QuizSubmission } from './entities/quiz-submission.entity';
 import { Quiz, QuizStatus } from './entities/quiz.entity';
 import {
   AiQuizGeneratorService,
@@ -21,6 +23,8 @@ export class QuizzesService {
     private quizzesRepository: Repository<Quiz>,
     @InjectRepository(Question)
     private questionsRepository: Repository<Question>,
+    @InjectRepository(QuizSubmission)
+    private submissionRepository: Repository<QuizSubmission>,
     private aiQuizGenerator: AiQuizGeneratorService,
   ) {}
 
@@ -173,11 +177,95 @@ export class QuizzesService {
     }
 
     // Update positions
-    // Update positions
     await this.questionsRepository.manager.transaction(async (manager) => {
       for (const [index, questionId] of questionIds.entries()) {
         await manager.update(Question, questionId, { position: index });
       }
+    });
+  }
+
+  async saveProgress(
+    userId: string,
+    quizId: string,
+    answers: Record<string, string>,
+  ): Promise<QuizSubmission> {
+    // Find latest incomplete submission or create new
+    let submission = await this.submissionRepository.findOne({
+      where: { userId, quizId, completedAt: IsNull() },
+      order: { completedAt: 'DESC' },
+    });
+
+    if (!submission) {
+      submission = this.submissionRepository.create({
+        userId,
+        quizId,
+        responses: answers,
+      });
+    } else {
+      submission.responses = { ...submission.responses, ...answers };
+    }
+
+    return this.submissionRepository.save(submission);
+  }
+
+  async submitQuiz(
+    userId: string,
+    quizId: string,
+    submitDto: SubmitQuizDto,
+  ): Promise<QuizSubmission> {
+    const quiz = await this.findOne(quizId);
+
+    let score = 0;
+    let totalPoints = 0;
+
+    quiz.questions.forEach((question) => {
+      const studentAnswer = submitDto.answers[question.id];
+      const isCorrect = studentAnswer === question.correctAnswer;
+      const points = question.points || 1; // Default to 1 point if null
+
+      totalPoints += points;
+      if (isCorrect) {
+        score += points;
+      }
+    });
+
+    const percentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
+
+    // Check for existing pending submission to update
+    let submission = await this.submissionRepository.findOne({
+      where: { userId, quizId, completedAt: IsNull() },
+    });
+
+    if (submission) {
+      submission.score = score;
+      submission.totalPoints = totalPoints;
+      submission.percentage = percentage;
+      submission.responses = submitDto.answers;
+      submission.completedAt = new Date();
+    } else {
+      submission = this.submissionRepository.create({
+        quizId,
+        userId,
+        score,
+        totalPoints,
+        percentage,
+        responses: submitDto.answers,
+        completedAt: new Date(),
+      });
+    }
+
+    return this.submissionRepository.save(submission);
+  }
+
+  async getSubmission(
+    userId: string,
+    quizId: string,
+  ): Promise<QuizSubmission | null> {
+    // Return the latest submission, regardless of completion status.
+    // Frontend handles distinguishing incomplete/complete.
+    return this.submissionRepository.findOne({
+      where: { userId, quizId },
+      order: { completedAt: 'DESC' },
     });
   }
 }
