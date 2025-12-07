@@ -567,7 +567,7 @@ function CurriculumEditor({ course }: { course: Course }) {
                 <Input
                   {...sectionForm.register('title')}
                   placeholder="Section Title (e.g., Introduction)"
-                // Removed autoFocus for A11y warning
+                  // Removed autoFocus for A11y warning
                 />
               </div>
               <Button

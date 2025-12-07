@@ -124,9 +124,12 @@ export const quizzesApi = {
     quizId: string,
     answers: Record<string, string>,
   ): Promise<QuizSubmission> => {
-    const response = await api.post<QuizSubmission>(`/quizzes/${quizId}/submit`, {
-      answers,
-    });
+    const response = await api.post<QuizSubmission>(
+      `/quizzes/${quizId}/submit`,
+      {
+        answers,
+      },
+    );
     return response.data;
   },
 

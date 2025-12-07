@@ -313,7 +313,15 @@ function LessonContent({ blocks }: { blocks: LessonBlock[] }) {
 
 // --- Quiz Component ---
 
-function QuizSection({ lessonId, isEnrolled, onComplete }: { lessonId: string, isEnrolled: boolean, onComplete: () => void }) {
+function QuizSection({
+  lessonId,
+  isEnrolled,
+  onComplete,
+}: {
+  lessonId: string;
+  isEnrolled: boolean;
+  onComplete: () => void;
+}) {
   const { data: quiz, isLoading } = useQuery({
     queryKey: ['quiz', 'lesson', lessonId],
     queryFn: async () => {
@@ -510,7 +518,7 @@ export function LessonViewerPage() {
                           }
                           className={cn(
                             completedIds.includes(currentLesson.id) &&
-                            'text-green-600 border-green-200 bg-green-50',
+                              'text-green-600 border-green-200 bg-green-50',
                           )}
                         >
                           {completedIds.includes(currentLesson.id) ? (
@@ -565,7 +573,7 @@ export function LessonViewerPage() {
                       (acc, s) => acc + s.lessons.length,
                       0,
                     ) ?? 1)) *
-                  100,
+                    100,
                 )}
                 % complete
               </span>
@@ -627,7 +635,7 @@ export function LessonViewerPage() {
                               ? 'bg-primary/5 border-primary'
                               : 'border-transparent hover:bg-muted/50',
                             isLocked &&
-                            'opacity-60 cursor-not-allowed bg-muted/10',
+                              'opacity-60 cursor-not-allowed bg-muted/10',
                           )}
                         >
                           <div
