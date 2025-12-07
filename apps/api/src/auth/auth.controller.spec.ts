@@ -239,11 +239,17 @@ describe('AuthController', () => {
   });
 
   describe('selectRole', () => {
-    it('should update user role', async () => {
+    it('should update user role and return new token', async () => {
       const updatedUser = { ...mockUser, role: UserRole.INSTRUCTOR };
-      authService.updateUserRole.mockResolvedValue(updatedUser as User);
+      const mockToken = 'new-jwt-token-with-instructor-role';
+      const mockResponse = {
+        cookie: jest.fn(),
+      } as any;
 
-      const result = await controller.selectRole(mockUser, {
+      authService.updateUserRole.mockResolvedValue(updatedUser as User);
+      authService.signToken = jest.fn().mockReturnValue(mockToken);
+
+      const result = await controller.selectRole(mockResponse, mockUser, {
         role: UserRole.INSTRUCTOR,
       });
 
@@ -251,8 +257,22 @@ describe('AuthController', () => {
         'user-1',
         UserRole.INSTRUCTOR,
       );
+      expect(authService.signToken).toHaveBeenCalledWith({
+        sub: updatedUser.id,
+        email: updatedUser.email,
+        role: UserRole.INSTRUCTOR,
+      });
+      expect(mockResponse.cookie).toHaveBeenCalledWith(
+        'access_token',
+        mockToken,
+        expect.objectContaining({
+          httpOnly: true,
+          sameSite: 'lax',
+        }),
+      );
       expect(result.user.role).toBe(UserRole.INSTRUCTOR);
-      expect(result.message).toBe('Role selected successfully');
+      expect(result.accessToken).toBe(mockToken);
+      expect(result.message).toContain('Role selected successfully');
     });
   });
 

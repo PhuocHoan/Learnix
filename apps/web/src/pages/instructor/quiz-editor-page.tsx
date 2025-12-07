@@ -148,7 +148,7 @@ export default function QuizEditorPage() {
         if (quiz) {
           const ids = newItems.map((q: Question) => q.id);
           void quizzesApi.reorderQuestions(quiz.id, ids).catch(() => {
-            toast.error('Failed to save order');
+            toast.error('Unable to save question order. Please try again.');
             void queryClient.invalidateQueries({
               queryKey: ['quiz', 'lesson', lessonId],
             });

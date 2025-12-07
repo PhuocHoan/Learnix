@@ -177,13 +177,31 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async selectRole(
+    @Res({ passthrough: true }) res: Response,
     @CurrentUser() user: User,
     @Body() selectRoleDto: SelectRoleDto,
-  ): Promise<{ user: SafeUser; message: string }> {
+  ): Promise<{ user: SafeUser; accessToken: string; message: string }> {
     const updatedUser = await this.authService.updateUserRole(
       user.id,
       selectRoleDto.role,
     );
+
+    // Generate new JWT token with updated role
+    const payload = {
+      sub: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role ?? 'guest',
+    };
+    const accessToken = this.authService.signToken(payload);
+
+    // Set new token in HTTP-only cookie
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
     const {
       password: _p,
       activationToken: _at,
@@ -194,9 +212,12 @@ export class AuthController {
       activationToken?: string | null;
       passwordResetToken?: string | null;
     };
+
     return {
       user: userWithoutSensitiveData,
-      message: 'Role selected successfully',
+      accessToken,
+      message:
+        'Role selected successfully. You can now access instructor features.',
     };
   }
 

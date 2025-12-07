@@ -417,7 +417,7 @@ export function LessonViewerPage() {
       !hasAccess &&
       isAuthenticated
     ) {
-      toast.error('You must enroll in this course to access this lesson');
+      toast.error('Please enroll in this course to access lessons');
       void navigate(`/courses/${id}`, { replace: true });
     }
   }, [
@@ -619,7 +619,9 @@ export function LessonViewerPage() {
                               if (!isAuthenticated) {
                                 setShowAuthModal(true);
                               } else {
-                                toast.error('Enroll to unlock');
+                                toast.error(
+                                  'Please enroll in this course to unlock this lesson',
+                                );
                               }
                               return;
                             }

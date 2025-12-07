@@ -73,7 +73,9 @@ export function QuizGeneratorPage() {
 
   const handleGenerate = () => {
     if (!title || !lessonText) {
-      toast.error('Please provide both title and lesson text');
+      toast.error(
+        'Please provide both a quiz title and lesson content to generate questions',
+      );
       return;
     }
     generateMutation.mutate({ title, lessonText, numberOfQuestions });

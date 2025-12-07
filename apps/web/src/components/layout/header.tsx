@@ -35,6 +35,7 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/contexts/use-auth';
 import { coursesApi, type Course } from '@/features/courses/api/courses-api';
 import { cn } from '@/lib/utils';
@@ -766,20 +767,14 @@ export function Header() {
                     aria-expanded={isUserMenuOpen}
                     aria-haspopup="true"
                   >
-                    {(user?.avatarUrl ?? user?.oauthAvatarUrl) ? (
-                      <img
-                        src={user.avatarUrl ?? user.oauthAvatarUrl}
-                        alt={user?.fullName ?? user?.name ?? 'User avatar'}
-                        className="w-8 h-8 rounded-xl object-cover"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-semibold gradient-primary">
-                        {user?.fullName?.charAt(0).toUpperCase() ??
-                          user?.name?.charAt(0).toUpperCase() ??
-                          user?.email?.charAt(0).toUpperCase() ??
-                          'U'}
-                      </div>
-                    )}
+                    <UserAvatar
+                      avatarUrl={user?.avatarUrl}
+                      oauthAvatarUrl={user?.oauthAvatarUrl}
+                      fullName={user?.fullName ?? user?.name}
+                      email={user?.email}
+                      alt={`${user?.fullName ?? user?.name ?? 'User'} avatar`}
+                      size="sm"
+                    />
                     <ChevronDown
                       className={cn(
                         'w-4 h-4 text-muted-foreground transition-transform hidden sm:block',

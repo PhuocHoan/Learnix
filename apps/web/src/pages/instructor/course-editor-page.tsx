@@ -13,6 +13,8 @@ import {
   LayoutList,
   FileQuestion,
   BrainCircuit,
+  X,
+  Check,
 } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -162,6 +164,7 @@ export default function CourseEditorPage() {
           <CourseDetailsForm
             course={course}
             isNew={isNew}
+            navigate={navigate}
             onSuccess={(newId) => {
               if (isNew && newId) {
                 void navigate(`/instructor/courses/${newId}/edit`, {
@@ -184,15 +187,33 @@ export default function CourseEditorPage() {
 function CourseDetailsForm({
   course,
   isNew,
+  navigate,
   onSuccess,
 }: {
   course?: Course;
   isNew: boolean;
+  navigate: ReturnType<typeof useNavigate>;
   onSuccess: (id?: string) => void;
 }) {
   const queryClient = useQueryClient();
   const [tags, setTags] = useState<string[]>(course?.tags ?? []);
   const [tagInput, setTagInput] = useState('');
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+
+  // Fetch available tags from API
+  const { data: availableTags = [] } = useQuery({
+    queryKey: ['course-tags'],
+    queryFn: coursesApi.getTags,
+  });
+
+  // Filter tag suggestions based on input
+  const tagSuggestions = availableTags
+    .filter(
+      (tag) =>
+        tag.toLowerCase().includes(tagInput.toLowerCase()) &&
+        !tags.includes(tag),
+    )
+    .slice(0, 8);
 
   const form = useForm<CourseFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
@@ -221,7 +242,9 @@ function CourseDetailsForm({
     },
     onError: (error) => {
       console.error(error);
-      toast.error('Failed to create course. Check console for details.');
+      toast.error(
+        'Unable to create course. Please check your information and try again.',
+      );
     },
   });
 
@@ -234,7 +257,7 @@ function CourseDetailsForm({
     },
     onError: (error) => {
       console.error(error);
-      toast.error('Failed to update course');
+      toast.error('Unable to save changes. Please try again.');
     },
   });
 
@@ -256,13 +279,25 @@ function CourseDetailsForm({
     }
   };
 
-  const handleAddTag = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      if (!tags.includes(tagInput.trim())) {
-        setTags([...tags, tagInput.trim()]);
-      }
+  const handleAddTag = (tagToAdd?: string) => {
+    const newTag = (tagToAdd ?? tagInput).trim();
+    if (newTag && !tags.includes(newTag)) {
+      setTags([...tags, newTag]);
       setTagInput('');
+      setShowTagSuggestions(false);
+    }
+  };
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (tagSuggestions.length > 0) {
+        handleAddTag(tagSuggestions[0]);
+      } else {
+        handleAddTag();
+      }
+    } else if (e.key === 'Escape') {
+      setShowTagSuggestions(false);
     }
   };
 
@@ -355,57 +390,160 @@ function CourseDetailsForm({
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Course Thumbnail</CardTitle>
+              <CardTitle>Course Image</CardTitle>
+              <CardDescription>
+                Upload a course thumbnail (16:9 ratio recommended)
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <ImageUpload
                 value={watchedThumbnailUrl}
                 onChange={(url) => form.setValue('thumbnailUrl', url ?? '')}
-                className="w-full aspect-video"
+                type="image"
+                previewSize={280}
+                placeholder="Upload course thumbnail"
               />
-              <p className="text-xs text-muted-foreground mt-2">
-                Optional. A default image will be used if left empty.
-              </p>
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p className="flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-primary" />
+                  Recommended: 1280x720px or 16:9 ratio
+                </p>
+                <p className="flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-primary" />
+                  File types: JPG, PNG, WebP (max 10MB)
+                </p>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Tags</CardTitle>
-              <CardDescription>Press Enter to add tags</CardDescription>
+              <CardTitle>Course Tags</CardTitle>
+              <CardDescription>
+                Add tags to help students find your course
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <label htmlFor="course-tags" className="sr-only">
-                Tags
-              </label>
-              <Input
-                id="course-tags"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleAddTag}
-                placeholder="e.g. react, javascript"
-              />
-              <div className="flex flex-wrap gap-2 mt-3">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="gap-1">
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="ml-1 hover:text-destructive"
-                      aria-label={`Remove tag ${tag}`}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </Badge>
-                ))}
+            <CardContent className="space-y-4">
+              <div className="relative">
+                <label htmlFor="course-tags" className="sr-only">
+                  Tags
+                </label>
+                <Input
+                  id="course-tags"
+                  value={tagInput}
+                  onChange={(e) => {
+                    setTagInput(e.target.value);
+                    setShowTagSuggestions(true);
+                  }}
+                  onKeyDown={handleTagInputKeyDown}
+                  onFocus={() => setShowTagSuggestions(true)}
+                  onBlur={() => {
+                    setTimeout(() => setShowTagSuggestions(false), 200);
+                  }}
+                  placeholder="Type to search or create tags..."
+                  className="pr-20"
+                />
+                {tagInput && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7"
+                    onClick={() => handleAddTag()}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Add
+                  </Button>
+                )}
+
+                {showTagSuggestions &&
+                  tagInput &&
+                  (tagSuggestions.length > 0 || tagInput.trim()) && (
+                    <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg overflow-hidden max-h-64 overflow-y-auto">
+                      {tagSuggestions.length > 0 && (
+                        <>
+                          <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted sticky top-0">
+                            Existing tags
+                          </div>
+                          {tagSuggestions.map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => handleAddTag(tag)}
+                              className="w-full px-3 py-2 text-left hover:bg-accent transition-colors flex items-center justify-between group"
+                            >
+                              <span className="text-sm">{tag}</span>
+                              <Plus className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
+                            </button>
+                          ))}
+                        </>
+                      )}
+                      {tagInput.trim() &&
+                        !availableTags.includes(tagInput.trim()) && (
+                          <>
+                            {tagSuggestions.length > 0 && (
+                              <div className="h-px bg-border" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleAddTag()}
+                              className="w-full px-3 py-2 text-left hover:bg-accent transition-colors flex items-center justify-between group"
+                            >
+                              <span className="text-sm">
+                                Create{' '}
+                                <span className="font-medium">
+                                  &quot;{tagInput.trim()}&quot;
+                                </span>
+                              </span>
+                              <Plus className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
+                            </button>
+                          </>
+                        )}
+                    </div>
+                  )}
               </div>
+
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="gap-1.5 pl-2.5 pr-1.5 py-1.5 hover:bg-secondary/80 transition-colors"
+                    >
+                      <span className="text-sm">{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="ml-0.5 hover:text-destructive hover:bg-destructive/10 rounded-sm p-0.5 transition-colors"
+                        aria-label={`Remove tag ${tag}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {tags.length === 0 && (
+                <p className="text-sm text-muted-foreground italic">
+                  No tags added yet. Tags help students discover your course.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={() => navigate('/instructor/courses')}
+        >
+          Cancel
+        </Button>
         <Button type="submit" size="lg" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           <Save className="w-4 h-4 mr-2" />
@@ -995,7 +1133,7 @@ function AddQuizDialog({
       void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
     } catch (error) {
       console.error(error);
-      toast.error('Failed to create quiz');
+      toast.error('Unable to create quiz. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

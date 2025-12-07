@@ -171,8 +171,11 @@ function ProfileSection({ user, onUpdate }: ProfileSectionProps) {
         error instanceof Error && 'response' in error
           ? (error as { response?: { data?: { message?: string } } }).response
               ?.data?.message
-          : 'Failed to update profile';
-      toast.error(errorMessage ?? 'Failed to update profile');
+          : undefined;
+      toast.error(
+        errorMessage ??
+          'Unable to update your profile. Please check your information and try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -330,8 +333,11 @@ function SecuritySection({ hasPassword }: SecuritySectionProps) {
         error instanceof Error && 'response' in error
           ? (error as { response?: { data?: { message?: string } } }).response
               ?.data?.message
-          : 'Failed to change password';
-      toast.error(errorMessage ?? 'Failed to change password');
+          : undefined;
+      toast.error(
+        errorMessage ??
+          'Unable to change your password. Please verify your current password and try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -544,8 +550,11 @@ function DangerZoneSection({ hasPassword, onDelete }: DangerZoneSectionProps) {
         error instanceof Error && 'response' in error
           ? (error as { response?: { data?: { message?: string } } }).response
               ?.data?.message
-          : 'Failed to delete account';
-      toast.error(errorMessage ?? 'Failed to delete account');
+          : undefined;
+      toast.error(
+        errorMessage ??
+          'Unable to delete your account. Please try again or contact support if the problem persists.',
+      );
     } finally {
       setIsSubmitting(false);
     }

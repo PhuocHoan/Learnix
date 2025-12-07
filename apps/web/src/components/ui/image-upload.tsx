@@ -52,6 +52,7 @@ export function ImageUpload({
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Determine max size based on type
@@ -67,6 +68,12 @@ export function ImageUpload({
     },
     [previewUrl],
   );
+
+  // Reset image error when display URL changes
+  const displayUrl = previewUrl ?? value ?? fallbackUrl;
+  useEffect(() => {
+    setImageError(false);
+  }, [displayUrl]);
 
   const handleFileSelect = useCallback(
     async (file: File) => {
@@ -167,8 +174,6 @@ export function ImageUpload({
     }
   };
 
-  // Display priority: preview (during upload) > value (custom avatar) > fallback (OAuth avatar)
-  const displayUrl = previewUrl ?? value ?? fallbackUrl;
   // Whether the current display is the fallback (OAuth avatar)
   const isShowingFallback = !previewUrl && !value && Boolean(fallbackUrl);
 
@@ -221,7 +226,7 @@ export function ImageUpload({
         )}
 
         {/* Image preview */}
-        {displayUrl ? (
+        {displayUrl && !imageError ? (
           <>
             <img
               src={displayUrl}
@@ -231,6 +236,9 @@ export function ImageUpload({
                 circular ? 'rounded-full' : 'rounded-xl',
                 isShowingFallback && 'opacity-80', // Slightly dim fallback image
               )}
+              onError={() => {
+                setImageError(true);
+              }}
             />
             {/* Remove button - only show if there's a custom value (not fallback) */}
             {!disabled && !isUploading && value && !isShowingFallback && (

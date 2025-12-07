@@ -38,11 +38,11 @@
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@types/cookie-parser": "^1.4.10",
-    "@vercel/node": "^5.5.14",
+    "@vercel/node": "^5.5.15",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
-    "turbo": "^2.6.2",
+    "turbo": "^2.6.3",
     "typescript": "5.9.3"
   },
   "lint-staged": {

@@ -436,4 +436,11 @@ export class AuthService {
   async hasPassword(userId: string): Promise<boolean> {
     return await this.usersService.hasPassword(userId);
   }
+
+  /**
+   * Generate a JWT access token with the given payload
+   */
+  signToken(payload: { sub: string; email: string; role: string }): string {
+    return this.jwtService.sign(payload);
+  }
 }

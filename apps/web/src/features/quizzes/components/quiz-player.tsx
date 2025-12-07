@@ -73,7 +73,9 @@ export function QuizPlayer({ quiz, onComplete }: QuizPlayerProps) {
       }
     },
     onError: () => {
-      toast.error('Failed to submit quiz');
+      toast.error(
+        'Unable to submit your quiz. Please check your connection and try again.',
+      );
     },
   });
 

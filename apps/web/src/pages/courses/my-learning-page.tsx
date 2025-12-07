@@ -97,7 +97,7 @@ export function MyLearningPage() {
         ['enrolled-courses', { archived: true }],
         context?.previousArchived,
       );
-      toast.error('Failed to archive course');
+      toast.error('Unable to archive course. Please try again.');
     },
     onSuccess: () => {
       toast.success('Course archived successfully');
@@ -150,7 +150,7 @@ export function MyLearningPage() {
         ['enrolled-courses', { archived: true }],
         context?.previousArchived,
       );
-      toast.error('Failed to unarchive course');
+      toast.error('Unable to restore course. Please try again.');
     },
     onSuccess: () => {
       toast.success('Course restored to My Learning');
