@@ -73,7 +73,7 @@ export class CoursesService {
     private lessonRepository: Repository<Lesson>,
     @InjectRepository(CourseSection)
     private sectionRepository: Repository<CourseSection>,
-  ) { }
+  ) {}
 
   async findAllPublished(
     options: CourseFilterOptions,
