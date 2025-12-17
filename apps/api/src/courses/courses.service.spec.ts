@@ -500,6 +500,18 @@ describe('CoursesService', () => {
         ConflictException,
       );
     });
+
+    it('should throw ConflictException when instructor attempts to enroll in own course', async () => {
+      const course = mockCourse('course-1', 'Test Course', ['react']);
+      course.instructor = { id: 'instructor-1', fullName: 'Test Instructor' } as any;
+      singleQueryBuilder.getOne.mockResolvedValue(course);
+      const courseRepo = courseRepository;
+      courseRepo.createQueryBuilder.mockReturnValue(singleQueryBuilder);
+
+      await expect(
+        service.enroll('instructor-1', 'course-1'),
+      ).rejects.toThrow(ConflictException);
+    });
   });
 
   describe('checkEnrollment', () => {

@@ -73,7 +73,7 @@ export class CoursesService {
     private lessonRepository: Repository<Lesson>,
     @InjectRepository(CourseSection)
     private sectionRepository: Repository<CourseSection>,
-  ) {}
+  ) { }
 
   async findAllPublished(
     options: CourseFilterOptions,
@@ -198,7 +198,11 @@ export class CoursesService {
   async enroll(userId: string, courseId: string): Promise<Enrollment> {
     // Check if course exists and is accessible
     // Passing generic user object to allow enrollment only if visible
-    await this.findOne(courseId, { id: userId } as User);
+    const course = await this.findOne(courseId, { id: userId } as User);
+
+    if (course.instructor?.id === userId) {
+      throw new ConflictException('Cannot enroll in your own course');
+    }
 
     // Check if already enrolled
     const existing = await this.enrollmentRepository.findOne({

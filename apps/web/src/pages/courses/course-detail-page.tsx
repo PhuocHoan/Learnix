@@ -42,7 +42,7 @@ function getLessonIcon(isCompleted: boolean, lessonType: string) {
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
 
   // Modal State
@@ -65,6 +65,14 @@ export function CourseDetailPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['enrollment', id] });
       void navigate(`/courses/${id}/learn`);
+    },
+    onError: (error: any) => {
+      // Check for ConflictException (409) which acts as our self-enrollment guard
+      if (error.response?.status === 409) {
+        toast.error('You cannot enroll in your own course');
+      } else {
+        toast.error('Failed to enroll in course. Please try again.');
+      }
     },
   });
 
@@ -192,27 +200,35 @@ export function CourseDetailPage() {
                 <div className="text-3xl font-bold text-primary">
                   {course.price === 0 ? 'Free' : `$${course.price}`}
                 </div>
-                <Button
-                  size="lg"
-                  className="w-full font-semibold"
-                  onClick={handleEnroll}
-                  disabled={
-                    enrollMutation.isPending ||
-                    (isAuthenticated && isLoadingEnrollment)
-                  }
-                >
-                  {enrollMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />{' '}
-                      Enrolling...
-                    </>
-                  ) : (
-                    'Enroll Now'
-                  )}
-                </Button>
-                <p className="text-xs text-center text-muted-foreground">
-                  Get full lifetime access
-                </p>
+                {isAuthenticated && course.instructor?.id === user?.id ? (
+                  <div className="p-4 bg-muted rounded-lg text-center text-sm text-muted-foreground border border-border">
+                    You are the instructor of this course.
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      size="lg"
+                      className="w-full font-semibold"
+                      onClick={handleEnroll}
+                      disabled={
+                        enrollMutation.isPending ||
+                        (isAuthenticated && isLoadingEnrollment)
+                      }
+                    >
+                      {enrollMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />{' '}
+                          Enrolling...
+                        </>
+                      ) : (
+                        'Enroll Now'
+                      )}
+                    </Button>
+                    <p className="text-xs text-center text-muted-foreground">
+                      Get full lifetime access
+                    </p>
+                  </>
+                )}
               </>
             )}
           </div>

@@ -156,24 +156,24 @@ export default function CourseEditorPage() {
             {(course.status === 'draft' ||
               course.status === 'rejected' ||
               !course.status) && (
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    if (
-                      // eslint-disable-next-line no-alert
-                      window.confirm('Submit this course for admin approval?')
-                    ) {
-                      submitMutation.mutate();
-                    }
-                  }}
-                  disabled={submitMutation.isPending}
-                >
-                  {submitMutation.isPending && (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  )}
-                  Submit for Approval
-                </Button>
-              )}
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (
+                    // eslint-disable-next-line no-alert
+                    window.confirm('Submit this course for admin approval?')
+                  ) {
+                    submitMutation.mutate();
+                  }
+                }}
+                disabled={submitMutation.isPending}
+              >
+                {submitMutation.isPending && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                Submit for Approval
+              </Button>
+            )}
 
             {course.status === 'pending' && (
               <Button variant="outline" disabled>
@@ -737,7 +737,7 @@ function CurriculumEditor({ course }: { course: Course }) {
                 <Input
                   {...sectionForm.register('title')}
                   placeholder="Section Title (e.g., Introduction)"
-                // Removed autoFocus for A11y warning
+                  // Removed autoFocus for A11y warning
                 />
               </div>
               <Button
