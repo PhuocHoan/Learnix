@@ -15,6 +15,7 @@ import { AuthProvider } from '@/contexts/auth-context';
 const AdminDashboardPage = lazy(
   () => import('@/pages/admin/admin-dashboard-page'),
 );
+const AdminCoursesPage = lazy(() => import('@/pages/admin/admin-courses-page'));
 const SystemStatsPage = lazy(() => import('@/pages/admin/system-stats-page'));
 const UserManagementPage = lazy(
   () => import('@/pages/admin/user-management-page'),
@@ -181,6 +182,14 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={['admin']}>
                       <UserManagementPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/courses"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <AdminCoursesPage />
                     </ProtectedRoute>
                   }
                 />

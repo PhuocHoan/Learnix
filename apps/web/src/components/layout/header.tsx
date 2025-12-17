@@ -505,8 +505,34 @@ export function Header() {
                   </Link>
                 );
               })}
-              {/* Authenticated Items (Dashboard, My Learning - filtered for instructors) */}
+
+              {/* Admin Navigation Items */}
+              {user?.role === 'admin' && (
+                <>
+                  {adminNavItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        className={cn(
+                          'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                          isActive(item.href)
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                        )}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </>
+              )}
+
+              {/* Authenticated Items (Dashboard, My Learning) - Hide for Admin */}
               {user &&
+                user.role !== 'admin' &&
                 getVisibleNavItems(authenticatedNavItems).map((item) => {
                   const Icon = item.icon;
                   return (
@@ -526,8 +552,9 @@ export function Header() {
                   );
                 })}
 
-              {/* ADDED: Instructor Items (My Courses, Quiz Gen) */}
+              {/* Instructor Items - Hide for Admin unless they want to see it, but user requested replacement */}
               {user &&
+                user.role !== 'admin' &&
                 getVisibleNavItems(instructorNavItems).map((item) => {
                   const Icon = item.icon;
                   return (

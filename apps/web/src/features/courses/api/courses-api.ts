@@ -25,6 +25,7 @@ export interface Course {
   thumbnailUrl?: string;
   price: number;
   level: 'beginner' | 'intermediate' | 'advanced';
+  status: 'draft' | 'pending' | 'published' | 'rejected';
   isPublished: boolean;
   tags?: string[];
   instructor: User;
@@ -287,5 +288,10 @@ export const coursesApi = {
 
   deleteLesson: async (lessonId: string) => {
     await api.delete(`/courses/lessons/${lessonId}`);
+  },
+
+  submitForApproval: async (id: string): Promise<Course> => {
+    const response = await api.patch<Course>(`/courses/${id}/submit`);
+    return response.data;
   },
 };

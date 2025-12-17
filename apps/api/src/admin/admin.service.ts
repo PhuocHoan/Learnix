@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
+import { CoursesService } from '../courses/courses.service';
 import { UsersService } from '../users/users.service';
 
 export interface SystemStats {
@@ -10,15 +11,20 @@ export interface SystemStats {
 
 @Injectable()
 export class AdminService {
-  constructor(private usersService: UsersService) {}
+  constructor(
+    private usersService: UsersService,
+    private coursesService: CoursesService,
+  ) {}
 
   async getSystemStats(): Promise<SystemStats> {
     const totalUsers = await this.usersService.count();
+    const totalCourses = await this.coursesService.count();
+    const totalEnrollments = await this.coursesService.countEnrollments();
 
     return {
       totalUsers,
-      totalCourses: 0, // Will be implemented when courses module is created
-      totalEnrollments: 0, // Will be implemented when enrollments module is created
+      totalCourses,
+      totalEnrollments,
     };
   }
 }

@@ -18,6 +18,7 @@ import { CourseSection } from './entities/course-section.entity';
 import { Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { Lesson } from './entities/lesson.entity';
+import { CourseStatus } from './enums/course-status.enum';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
 
@@ -97,7 +98,7 @@ export class CoursesService {
 
     // 1. UPDATED: Multi-field Search (Title, Description, Tags)
     if (search) {
-      const searchLower = `%${search.toLowerCase()}%`;
+      const searchLower = `% ${search.toLowerCase()}% `;
       queryBuilder.andWhere(
         new Brackets((qb) => {
           qb.where('LOWER(course.title) LIKE :search', { search: searchLower })
@@ -121,9 +122,9 @@ export class CoursesService {
       queryBuilder.andWhere(
         new Brackets((qb) => {
           tags.forEach((tag, index) => {
-            const paramName = `tag_${index}`;
-            qb.orWhere(`course.tags LIKE :${paramName}`, {
-              [paramName]: `%${tag}%`,
+            const paramName = `tag_${index} `;
+            qb.orWhere(`course.tags LIKE:${paramName} `, {
+              [paramName]: `% ${tag}% `,
             });
           });
         }),
@@ -442,7 +443,7 @@ export class CoursesService {
         .createQueryBuilder('course')
         .leftJoinAndSelect('course.instructor', 'instructor')
         .loadRelationCountAndMap('course.studentCount', 'course.enrollments')
-        .where('course.isPublished = :isPublished', { isPublished: true })
+        .where('course.status = :status', { status: CourseStatus.PUBLISHED })
         .andWhere('course.id NOT IN (:...enrolledIds)', {
           enrolledIds: Array.from(enrolledCourseIds),
         })
@@ -462,26 +463,26 @@ export class CoursesService {
       .createQueryBuilder('course')
       .leftJoinAndSelect('course.instructor', 'instructor')
       .loadRelationCountAndMap('course.studentCount', 'course.enrollments')
-      .where('course.isPublished = :isPublished', { isPublished: true })
+      .where('course.status = :status', { status: CourseStatus.PUBLISHED })
       .andWhere('course.id NOT IN (:...enrolledIds)', {
         enrolledIds: Array.from(enrolledCourseIds),
       });
 
     // Add tag matching conditions (OR for any tag match)
     const tagConditions = Array.from(userTags).map(
-      (_, index) => `LOWER(course.tags) LIKE :tag_${index}`,
+      (_, index) => `LOWER(course.tags) LIKE:tag_${index} `,
     );
     if (tagConditions.length > 0) {
       queryBuilder.andWhere(
         new Brackets((qb) => {
           Array.from(userTags).forEach((tag, index) => {
             if (index === 0) {
-              qb.where(`LOWER(course.tags) LIKE :tag_${index}`, {
-                [`tag_${index}`]: `%${tag}%`,
+              qb.where(`LOWER(course.tags) LIKE:tag_${index} `, {
+                [`tag_${index} `]: ` % ${tag}% `,
               });
             } else {
-              qb.orWhere(`LOWER(course.tags) LIKE :tag_${index}`, {
-                [`tag_${index}`]: `%${tag}%`,
+              qb.orWhere(`LOWER(course.tags) LIKE:tag_${index} `, {
+                [`tag_${index} `]: ` % ${tag}% `,
               });
             }
           });
@@ -516,8 +517,9 @@ export class CoursesService {
   ): Promise<Course> {
     const course = this.coursesRepository.create({
       ...createCourseDto,
-      instructorId,
-      isPublished: false,
+      instructor: { id: instructorId },
+      status: CourseStatus.DRAFT, // Default to draft
+      isPublished: false, // Legacy field
     });
     return this.coursesRepository.save(course);
   }
@@ -664,5 +666,50 @@ export class CoursesService {
     }
 
     await this.lessonRepository.remove(lesson);
+  }
+
+  // --- Statistics ---
+
+  async count(): Promise<number> {
+    return this.coursesRepository.count();
+  }
+
+  async countEnrollments(): Promise<number> {
+    return this.enrollmentRepository.count();
+  }
+
+  // --- Moderation ---
+
+  async submitForApproval(id: string, userId: string): Promise<Course> {
+    const course = await this.findOne(id, { id: userId });
+    if (course.instructorId !== userId) {
+      throw new ForbiddenException(
+        'Only the instructor can submit this course',
+      );
+    }
+    course.status = CourseStatus.PENDING;
+    return this.coursesRepository.save(course);
+  }
+
+  async approveCourse(id: string): Promise<Course> {
+    const course = await this.findOne(id, { role: UserRole.ADMIN });
+    course.status = CourseStatus.PUBLISHED;
+    course.isPublished = true;
+    return this.coursesRepository.save(course);
+  }
+
+  async rejectCourse(id: string): Promise<Course> {
+    const course = await this.findOne(id, { role: UserRole.ADMIN });
+    course.status = CourseStatus.REJECTED;
+    course.isPublished = false;
+    return this.coursesRepository.save(course);
+  }
+
+  async findAllPending(): Promise<Course[]> {
+    return this.coursesRepository.find({
+      where: { status: CourseStatus.PENDING },
+      relations: ['instructor'],
+      order: { createdAt: 'DESC' },
+    });
   }
 }

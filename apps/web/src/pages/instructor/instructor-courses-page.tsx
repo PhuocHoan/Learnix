@@ -40,11 +40,43 @@ export function InstructorCoursesPage() {
     }
   };
 
+  const submitMutation = useMutation({
+    mutationFn: coursesApi.submitForApproval,
+    onSuccess: () => {
+      toast.success('Course submitted for approval');
+      void queryClient.invalidateQueries({ queryKey: ['instructor-courses'] });
+    },
+    onError: () => {
+      toast.error('Failed to submit course');
+    },
+  });
+
+  const handleSubmit = (id: string) => {
+    // eslint-disable-next-line no-alert
+    if (window.confirm('Submit this course for admin approval?')) {
+      submitMutation.mutate(id);
+    }
+  };
+
+  const getStatusBadge = (status: string, isPublished: boolean) => {
+    if (isPublished) {
+      return <Badge variant="success">Published</Badge>;
+    }
+    if (status === 'pending') {
+      return <Badge variant="warning">Pending Approval</Badge>;
+    }
+    if (status === 'rejected') {
+      return <Badge variant="danger">Rejected</Badge>;
+    }
+    return <Badge variant="secondary">Draft</Badge>;
+  };
+
   // Handle 403 Forbidden error - user doesn't have instructor role
   const errorResponse =
     error && 'response' in error
       ? (error as { response?: { status?: number } })
       : null;
+
   if (errorResponse?.response?.status === 403) {
     return (
       <PageContainer>
@@ -80,8 +112,11 @@ export function InstructorCoursesPage() {
     );
   }
 
+  // ... (existing code)
+
   return (
     <PageContainer>
+      {/* ... (existing header) */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold">My Courses</h1>
@@ -94,10 +129,11 @@ export function InstructorCoursesPage() {
       </div>
 
       <div className="grid gap-6">
+        {/* ... (existing loading skeletons) */}
         {isLoading &&
-          // Skeleton loading state matching course card structure
           Array.from({ length: 3 }).map((_, i) => (
             <Card key={i} className="overflow-hidden">
+              {/* ... skeleton content */}
               <CardContent className="p-0 flex items-center">
                 <Skeleton className="w-56 h-32 shrink-0 rounded-none" />
                 <div className="p-6 flex-1 space-y-3">
@@ -146,17 +182,25 @@ export function InstructorCoursesPage() {
                         {course.title}
                       </h3>
                       <div className="flex gap-2 mt-2">
-                        <Badge
-                          variant={course.isPublished ? 'success' : 'secondary'}
-                        >
-                          {course.isPublished ? 'Published' : 'Draft'}
-                        </Badge>
+                        {getStatusBadge(course.status, course.isPublished)}
                         <Badge variant="secondary" className="capitalize">
                           {course.level}
                         </Badge>
                       </div>
                     </div>
                     <div className="flex gap-2 ml-4">
+                      {/* Submit Button for Drafts */}
+                      {course.status === 'draft' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleSubmit(course.id)}
+                          title="Submit for Approval"
+                        >
+                          <span className="text-xs">Submit</span>
+                        </Button>
+                      )}
+
                       <Link to={`/courses/${course.id}`} target="_blank">
                         <Button variant="ghost" size="sm">
                           <Eye className="w-4 h-4" />

@@ -268,4 +268,31 @@ export class CoursesController {
   ): Promise<void> {
     return this.coursesService.removeLesson(lessonId, user.id);
   }
+  @Patch(':id/submit')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR)
+  submit(@Param('id') id: string, @CurrentUser() user: User): Promise<Course> {
+    return this.coursesService.submitForApproval(id, user.id);
+  }
+
+  @Patch(':id/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  approve(@Param('id') id: string): Promise<Course> {
+    return this.coursesService.approveCourse(id);
+  }
+
+  @Patch(':id/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  reject(@Param('id') id: string): Promise<Course> {
+    return this.coursesService.rejectCourse(id);
+  }
+
+  @Get('admin/pending')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  findPending(): Promise<Course[]> {
+    return this.coursesService.findAllPending();
+  }
 }

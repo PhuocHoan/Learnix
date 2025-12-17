@@ -1,3 +1,4 @@
+import type { Course } from '@/features/courses/api/courses-api';
 import { api } from '@/lib/api';
 
 export interface User {
@@ -44,5 +45,18 @@ export const adminApi = {
   getSystemStats: async (): Promise<SystemStats> => {
     const response = await api.get<SystemStats>('/admin/stats');
     return response.data;
+  },
+
+  getPendingCourses: async (): Promise<Course[]> => {
+    const response = await api.get<Course[]>('/courses/admin/pending');
+    return response.data;
+  },
+
+  approveCourse: async (id: string): Promise<void> => {
+    await api.patch(`/courses/${id}/approve`);
+  },
+
+  rejectCourse: async (id: string): Promise<void> => {
+    await api.patch(`/courses/${id}/reject`);
   },
 };

@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import {
   Users,
   BarChart3,
@@ -16,6 +17,7 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
+import { adminApi } from '@/features/admin/api/admin-api';
 import { cn } from '@/lib/utils';
 
 export function AdminDashboardPage() {
@@ -46,9 +48,16 @@ export function AdminDashboardPage() {
       href: '/admin/courses',
       iconBg: 'bg-purple-500/10',
       iconColor: 'text-purple-500',
-      available: false,
+      available: true,
     },
   ];
+
+  /* Fetch system stats */
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: adminApi.getSystemStats,
+    staleTime: 60000, // 1 minute
+  });
 
   return (
     <PageContainer>
@@ -79,7 +88,15 @@ export function AdminDashboardPage() {
                 <Users className="w-6 h-6 text-blue-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">—</p>
+                {isLoading ? (
+                  <p className="text-2xl font-bold text-foreground animate-pulse">
+                    ...
+                  </p>
+                ) : (
+                  <p className="text-2xl font-bold text-foreground">
+                    {stats?.totalUsers ?? '—'}
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground">Total Users</p>
               </div>
             </CardContent>
@@ -90,7 +107,15 @@ export function AdminDashboardPage() {
                 <BookOpen className="w-6 h-6 text-purple-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">—</p>
+                {isLoading ? (
+                  <p className="text-2xl font-bold text-foreground animate-pulse">
+                    ...
+                  </p>
+                ) : (
+                  <p className="text-2xl font-bold text-foreground">
+                    {stats?.totalCourses ?? '—'}
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground">Total Courses</p>
               </div>
             </CardContent>

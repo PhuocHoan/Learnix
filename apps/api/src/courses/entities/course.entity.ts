@@ -9,6 +9,8 @@ import {
   JoinColumn,
 } from 'typeorm';
 
+import { CourseStatus } from '../enums/course-status.enum';
+
 import type { CourseSection } from './course-section.entity';
 import type { Enrollment } from './enrollment.entity';
 import type { User } from '../../users/entities/user.entity';
@@ -42,6 +44,13 @@ export class Course {
     default: CourseLevel.BEGINNER,
   })
   level: CourseLevel;
+
+  @Column({
+    type: 'enum',
+    enum: CourseStatus,
+    default: CourseStatus.DRAFT,
+  })
+  status: CourseStatus;
 
   @Column({ default: false })
   isPublished: boolean;

@@ -93,12 +93,14 @@ export default function CourseEditorPage() {
     enabled: !isNew,
   });
 
-  const publishMutation = useMutation({
-    mutationFn: (isPublished: boolean) =>
-      coursesApi.updateCourse(courseId ?? '', { isPublished }),
-    onSuccess: (_, isPublished) => {
-      toast.success(`Course ${isPublished ? 'published' : 'unpublished'}`);
+  const submitMutation = useMutation({
+    mutationFn: () => coursesApi.submitForApproval(courseId ?? ''),
+    onSuccess: () => {
+      toast.success('Course submitted for approval');
       void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+    },
+    onError: () => {
+      toast.error('Failed to submit course');
     },
   });
 
@@ -137,17 +139,47 @@ export default function CourseEditorPage() {
         {!isNew && course && (
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 mr-2">
-              <Badge variant={course.isPublished ? 'success' : 'secondary'}>
-                {course.isPublished ? 'Published' : 'Draft'}
-              </Badge>
+              {course.status === 'published' && (
+                <Badge variant="success">Published</Badge>
+              )}
+              {course.status === 'pending' && (
+                <Badge variant="warning">Pending Approval</Badge>
+              )}
+              {course.status === 'rejected' && (
+                <Badge variant="danger">Rejected</Badge>
+              )}
+              {(course.status === 'draft' || !course.status) && (
+                <Badge variant="secondary">Draft</Badge>
+              )}
             </div>
-            <Button
-              variant={course.isPublished ? 'outline' : 'primary'}
-              onClick={() => publishMutation.mutate(!course.isPublished)}
-              disabled={publishMutation.isPending}
-            >
-              {course.isPublished ? 'Unpublish' : 'Publish Course'}
-            </Button>
+
+            {(course.status === 'draft' ||
+              course.status === 'rejected' ||
+              !course.status) && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    if (
+                      // eslint-disable-next-line no-alert
+                      window.confirm('Submit this course for admin approval?')
+                    ) {
+                      submitMutation.mutate();
+                    }
+                  }}
+                  disabled={submitMutation.isPending}
+                >
+                  {submitMutation.isPending && (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  )}
+                  Submit for Approval
+                </Button>
+              )}
+
+            {course.status === 'pending' && (
+              <Button variant="outline" disabled>
+                Awaiting Review
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -705,7 +737,7 @@ function CurriculumEditor({ course }: { course: Course }) {
                 <Input
                   {...sectionForm.register('title')}
                   placeholder="Section Title (e.g., Introduction)"
-                  // Removed autoFocus for A11y warning
+                // Removed autoFocus for A11y warning
                 />
               </div>
               <Button
