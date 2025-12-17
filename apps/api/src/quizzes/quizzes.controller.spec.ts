@@ -52,7 +52,6 @@ describe('QuizzesController', () => {
 
   beforeEach(async () => {
     const mockQuizzesService: Partial<jest.Mocked<QuizzesService>> = {
-      generateQuizWithAI: jest.fn(),
       findByInstructor: jest.fn(),
       findOne: jest.fn(),
       approveQuiz: jest.fn(),
@@ -77,25 +76,6 @@ describe('QuizzesController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('generateQuiz', () => {
-    it('should generate a quiz using AI', async () => {
-      quizzesService.generateQuizWithAI.mockResolvedValue(mockQuiz as Quiz);
-
-      const generateDto = {
-        title: 'Test Quiz',
-        lessonText: 'Some lesson content',
-        numberOfQuestions: 5,
-      };
-
-      const result = await controller.generateQuiz(generateDto, mockUser);
-
-      expect(quizzesService.generateQuizWithAI).toHaveBeenCalledWith(
-        generateDto,
-        mockUser.id,
-      );
-      expect(result).toEqual(mockQuiz);
-    });
-  });
 
   describe('getMyQuizzes', () => {
     it('should return quizzes for the current instructor', async () => {

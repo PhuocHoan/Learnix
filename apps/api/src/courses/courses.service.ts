@@ -12,6 +12,7 @@ import { CreateCourseDto } from './dto/create-course.dto';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { CourseFilterOptions } from './dto/filter-course.dto';
+import { GenerateQuizPreviewDto } from './dto/generate-quiz-preview.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { CourseSection } from './entities/course-section.entity';
@@ -19,6 +20,10 @@ import { Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { Lesson } from './entities/lesson.entity';
 import { CourseStatus } from './enums/course-status.enum';
+import {
+  AiQuizGeneratorService,
+  GeneratedQuestion,
+} from '../quizzes/services/ai-quiz-generator.service';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
 
@@ -73,6 +78,7 @@ export class CoursesService {
     private lessonRepository: Repository<Lesson>,
     @InjectRepository(CourseSection)
     private sectionRepository: Repository<CourseSection>,
+    private aiQuizService: AiQuizGeneratorService,
   ) {}
 
   async findAllPublished(
@@ -715,5 +721,48 @@ export class CoursesService {
       relations: ['instructor'],
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async generateQuizPreview(
+    dto: GenerateQuizPreviewDto,
+  ): Promise<{ title: string; questions: GeneratedQuestion[] }> {
+    const { lessonIds, count = 5, topic } = dto;
+
+    if (lessonIds.length === 0) {
+      throw new ConflictException('No lessons selected');
+    }
+
+    // Fetch lessons with content
+    const lessons = await this.lessonRepository.find({
+      where: lessonIds.map((id) => ({ id })),
+    });
+
+    if (lessons.length === 0) {
+      throw new NotFoundException('Selected lessons not found');
+    }
+
+    let combinedText = '';
+
+    for (const lesson of lessons) {
+      for (const block of lesson.content) {
+        if (block.type === 'text') {
+          combinedText += `${block.content}\n\n`;
+        }
+      }
+    }
+
+    if (!combinedText.trim()) {
+      throw new ConflictException(
+        'Selected lessons contain no text content to generate quiz from.',
+      );
+    }
+
+    // If topic provided, prepend it to text
+    if (topic) {
+      combinedText = `TOPIC/FOCUS: ${topic}\n\nLESSON CONTENT:\n${combinedText}`;
+    }
+
+    // Call AI service
+    return this.aiQuizService.generateQuizFromText(combinedText, count);
   }
 }

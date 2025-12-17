@@ -24,32 +24,37 @@ export class AiQuizGeneratorService {
   async generateQuizFromText(
     lessonText: string,
     numberOfQuestions: number = 5,
-  ): Promise<GeneratedQuestion[]> {
+  ): Promise<{ title: string; questions: GeneratedQuestion[] }> {
     if (!this.genAI) {
       throw new Error('Gemini API key not configured');
     }
 
-    const prompt = `You are an expert educator. Based on the following lesson content, generate ${numberOfQuestions} multiple-choice questions (MCQs) to test student understanding.
+    const prompt = `You are an expert educator. Based on the following lesson content, generate a suitable quiz title and exactly ${numberOfQuestions} multiple-choice questions (MCQs) to test student understanding.
 
 Lesson Content:
 ${lessonText}
 
 Requirements:
-1. Each question should have 4 options (A, B, C, D)
-2. Only one option should be correct
-3. Include an explanation for the correct answer
-4. Questions should test understanding, not just memorization
-5. Vary difficulty levels
+1. Generate exactly ${numberOfQuestions} questions. Do not generate more or fewer.
+2. Each question should have 4 options (A, B, C, D)
+3. Only one option should be correct
+4. Include an explanation for the correct answer
+5. Questions should test understanding, not just memorization
+6. Vary difficulty levels
+7. Provide a catchy, relevant title for the quiz.
 
-Return ONLY a valid JSON array with this exact structure, no markdown formatting:
-[
-  {
-    "questionText": "What is...",
-    "options": ["A: First option", "B: Second option", "C: Third option", "D: Fourth option"],
-    "correctAnswer": "A",
-    "explanation": "The correct answer is A because..."
-  }
-]`;
+Return ONLY a valid JSON object with this exact structure, no markdown formatting:
+{
+  "title": "Quiz Title Here",
+  "questions": [
+    {
+      "questionText": "What is...",
+      "options": ["A: ...", "B: ...", "C: ...", "D: ..."],
+      "correctAnswer": "A",
+      "explanation": "..."
+    }
+  ]
+}`;
 
     try {
       const response = await this.genAI.models.generateContent({
@@ -70,16 +75,60 @@ Return ONLY a valid JSON array with this exact structure, no markdown formatting
         .trim();
 
       // Parse the JSON response
-      const questions: unknown = JSON.parse(content);
+      const result: unknown = JSON.parse(content);
 
       // Validate the response structure
-      if (!Array.isArray(questions) || questions.length === 0) {
-        throw new Error('Invalid response format from Gemini');
+      // It might be an array (old format) or object (new format).
+      // We explicitly asked for object, but let's handle safety.
+
+      let title = 'AI Generated Quiz';
+      let questions: GeneratedQuestion[] = [];
+
+      interface QuizResponse {
+        title?: string;
+        questions?: GeneratedQuestion[];
       }
 
-      return questions as GeneratedQuestion[];
-    } catch (error) {
+      if (Array.isArray(result)) {
+        // Fallback if AI ignores new structure
+        questions = result as GeneratedQuestion[];
+      } else if (
+        typeof result === 'object' &&
+        result !== null &&
+        !Array.isArray(result)
+      ) {
+        const { title: resTitle, questions: resQuestions } =
+          result as QuizResponse;
+        if (resTitle) {
+          title = resTitle;
+        }
+        if (Array.isArray(resQuestions)) {
+          questions = resQuestions;
+        }
+      }
+
+      if (questions.length === 0) {
+        throw new Error('Invalid response format: No questions found');
+      }
+
+      // Enforce count limit strictly incase AI hallucinated more
+      if (questions.length > numberOfQuestions) {
+        questions = questions.slice(0, numberOfQuestions);
+      }
+
+      return { title, questions };
+    } catch (error: unknown) {
       console.error('Error generating quiz:', error);
+
+      const status =
+        typeof error === 'object' && error !== null && 'status' in error
+          ? (error as { status: unknown }).status
+          : undefined;
+
+      if (status === 429) {
+        throw new Error('AI service quota exceeded. Please try again later.');
+      }
+
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`Failed to generate quiz: ${errorMessage}`);

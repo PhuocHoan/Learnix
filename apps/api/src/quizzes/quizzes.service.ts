@@ -5,16 +5,12 @@ import { Repository, IsNull } from 'typeorm';
 
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { CreateQuizDto } from './dto/create-quiz.dto';
-import { GenerateQuizDto } from './dto/generate-quiz.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Question } from './entities/question.entity';
 import { QuizSubmission } from './entities/quiz-submission.entity';
 import { Quiz, QuizStatus } from './entities/quiz.entity';
-import {
-  AiQuizGeneratorService,
-  GeneratedQuestion,
-} from './services/ai-quiz-generator.service';
+import { AiQuizGeneratorService } from './services/ai-quiz-generator.service';
 
 @Injectable()
 export class QuizzesService {
@@ -29,13 +25,34 @@ export class QuizzesService {
   ) {}
 
   async create(createDto: CreateQuizDto, instructorId: string): Promise<Quiz> {
+    const { questions, ...quizData } = createDto;
     const quiz = this.quizzesRepository.create({
-      ...createDto,
+      ...quizData,
       status: QuizStatus.DRAFT,
       createdBy: instructorId,
       aiGenerated: false,
     });
-    return this.quizzesRepository.save(quiz);
+
+    // If questions are provided, we can handle them here or after save.
+    // However, questions need quizId, so we must save quiz first.
+    const savedQuiz = await this.quizzesRepository.save(quiz);
+
+    if (questions && questions.length > 0) {
+      const questionEntities = questions.map((q, index) =>
+        this.questionsRepository.create({
+          quizId: savedQuiz.id,
+          questionText: q.questionText,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+          position: index,
+          points: 1,
+        }),
+      );
+      await this.questionsRepository.save(questionEntities);
+    }
+
+    return this.findOne(savedQuiz.id);
   }
 
   async createQuestion(
@@ -70,44 +87,6 @@ export class QuizzesService {
         },
       },
     });
-  }
-
-  async generateQuizWithAI(
-    generateDto: GenerateQuizDto,
-    instructorId: string,
-  ): Promise<Quiz> {
-    // Generate questions using AI
-    const generatedQuestions = await this.aiQuizGenerator.generateQuizFromText(
-      generateDto.lessonText,
-      generateDto.numberOfQuestions,
-    );
-
-    // Create quiz entity
-    const quiz = this.quizzesRepository.create({
-      title: generateDto.title,
-      description: 'AI-generated quiz',
-      status: QuizStatus.AI_GENERATED,
-      createdBy: instructorId,
-      aiGenerated: true,
-    });
-
-    const savedQuiz = await this.quizzesRepository.save(quiz);
-
-    // Create question entities
-    const questions = generatedQuestions.map((q: GeneratedQuestion) =>
-      this.questionsRepository.create({
-        quizId: savedQuiz.id,
-        questionText: q.questionText,
-        options: q.options,
-        correctAnswer: q.correctAnswer,
-        explanation: q.explanation,
-      }),
-    );
-
-    await this.questionsRepository.save(questions);
-
-    // Return quiz with questions
-    return this.findOne(savedQuiz.id);
   }
 
   async findOne(id: string): Promise<Quiz> {

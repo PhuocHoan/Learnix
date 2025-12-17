@@ -1,6 +1,7 @@
 import { useState } from 'react'; // Added useState
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import {
   BookOpen,
   PlayCircle,
@@ -66,9 +67,9 @@ export function CourseDetailPage() {
       void queryClient.invalidateQueries({ queryKey: ['enrollment', id] });
       void navigate(`/courses/${id}/learn`);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       // Check for ConflictException (409) which acts as our self-enrollment guard
-      if (error.response?.status === 409) {
+      if (isAxiosError(error) && error.response?.status === 409) {
         toast.error('You cannot enroll in your own course');
       } else {
         toast.error('Failed to enroll in course. Please try again.');

@@ -1,4 +1,13 @@
-import { IsString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  ValidateNested,
+} from 'class-validator';
+
+import { CreateQuestionDto } from './create-question.dto';
 
 export class CreateQuizDto {
   @IsString()
@@ -16,4 +25,9 @@ export class CreateQuizDto {
   @IsUUID()
   @IsOptional()
   courseId?: string;
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => CreateQuestionDto)
+  questions?: CreateQuestionDto[];
 }

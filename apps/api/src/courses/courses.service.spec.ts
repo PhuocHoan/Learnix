@@ -7,6 +7,7 @@ import { CourseSection } from './entities/course-section.entity';
 import { Course, CourseLevel } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { Lesson } from './entities/lesson.entity';
+import { AiQuizGeneratorService } from '../quizzes/services/ai-quiz-generator.service';
 
 interface MockEnrollmentRepository {
   find: jest.Mock;
@@ -137,6 +138,12 @@ describe('CoursesService', () => {
         {
           provide: getRepositoryToken(CourseSection),
           useValue: mockCourseSectionRepositoryValue,
+        },
+        {
+          provide: AiQuizGeneratorService,
+          useValue: {
+            generateQuizFromText: jest.fn(),
+          },
         },
       ],
     }).compile();

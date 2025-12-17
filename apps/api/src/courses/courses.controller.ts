@@ -19,6 +19,7 @@ import {
 import { CreateCourseDto } from './dto/create-course.dto';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { CreateSectionDto } from './dto/create-section.dto';
+import { GenerateQuizPreviewDto } from './dto/generate-quiz-preview.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { CourseSection } from './entities/course-section.entity';
@@ -30,6 +31,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { GeneratedQuestion } from '../quizzes/services/ai-quiz-generator.service';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
 
@@ -280,6 +282,15 @@ export class CoursesController {
   @Roles(UserRole.ADMIN)
   approve(@Param('id') id: string): Promise<Course> {
     return this.coursesService.approveCourse(id);
+  }
+
+  @Post(':id/sections/:sectionId/generate-quiz-preview')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  async generateQuiz(
+    @Body() dto: GenerateQuizPreviewDto,
+  ): Promise<{ title: string; questions: GeneratedQuestion[] }> {
+    return this.coursesService.generateQuizPreview(dto);
   }
 
   @Patch(':id/reject')

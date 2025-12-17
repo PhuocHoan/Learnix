@@ -12,7 +12,6 @@ import {
 
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { CreateQuizDto } from './dto/create-quiz.dto';
-import { GenerateQuizDto } from './dto/generate-quiz.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Question } from './entities/question.entity';
@@ -66,15 +65,6 @@ export class QuizzesController {
       throw new NotFoundException('Quiz not found for this lesson');
     }
     return quiz;
-  }
-
-  @Post('generate')
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
-  async generateQuiz(
-    @Body() generateDto: GenerateQuizDto,
-    @CurrentUser() user: User,
-  ): Promise<Quiz> {
-    return this.quizzesService.generateQuizWithAI(generateDto, user.id);
   }
 
   @Get('my-quizzes')

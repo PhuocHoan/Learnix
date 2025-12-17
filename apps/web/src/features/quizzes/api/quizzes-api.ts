@@ -31,6 +31,7 @@ export interface CreateQuizData {
   description?: string;
   lessonId: string;
   courseId?: string;
+  questions?: unknown[];
 }
 
 export interface CreateQuestionData {

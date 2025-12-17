@@ -12,6 +12,6 @@ import { AiQuizGeneratorService } from './services/ai-quiz-generator.service';
   imports: [TypeOrmModule.forFeature([Quiz, Question, QuizSubmission])],
   controllers: [QuizzesController],
   providers: [QuizzesService, AiQuizGeneratorService],
-  exports: [QuizzesService],
+  exports: [QuizzesService, AiQuizGeneratorService],
 })
 export class QuizzesModule {}
