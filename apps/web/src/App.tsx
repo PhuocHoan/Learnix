@@ -41,9 +41,6 @@ const LessonViewerPage = lazy(
 const MyLearningPage = lazy(() => import('@/pages/courses/my-learning-page'));
 const DashboardPage = lazy(() => import('@/pages/dashboard/dashboard-page'));
 const HomePage = lazy(() => import('@/pages/home/home-page'));
-const QuizGeneratorPage = lazy(
-  () => import('@/pages/instructor/quiz-generator-page'),
-);
 const PrivacyPage = lazy(() => import('@/pages/legal/privacy-page'));
 const TermsPage = lazy(() => import('@/pages/legal/terms-page'));
 const NotFoundPage = lazy(() => import('@/pages/not-found-page'));
@@ -203,14 +200,6 @@ function App() {
                 />
 
                 {/* Instructor Protected Routes */}
-                <Route
-                  path="/instructor/quiz-generator"
-                  element={
-                    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
-                      <QuizGeneratorPage />
-                    </ProtectedRoute>
-                  }
-                />
                 <Route
                   path="/instructor/courses"
                   element={

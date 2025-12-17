@@ -54,7 +54,6 @@ import {
 import { QuizGenerationModal } from '@/features/quizzes/components/quiz-generation-modal';
 import { cn } from '@/lib/utils';
 
-
 const DEFAULT_THUMBNAIL_URL =
   'https://placehold.co/600x400?text=Course+Thumbnail';
 
@@ -158,24 +157,24 @@ export default function CourseEditorPage() {
             {(course.status === 'draft' ||
               course.status === 'rejected' ||
               !course.status) && (
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    if (
-                      // eslint-disable-next-line no-alert
-                      window.confirm('Submit this course for admin approval?')
-                    ) {
-                      submitMutation.mutate();
-                    }
-                  }}
-                  disabled={submitMutation.isPending}
-                >
-                  {submitMutation.isPending && (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  )}
-                  Submit for Approval
-                </Button>
-              )}
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (
+                    // eslint-disable-next-line no-alert
+                    window.confirm('Submit this course for admin approval?')
+                  ) {
+                    submitMutation.mutate();
+                  }
+                }}
+                disabled={submitMutation.isPending}
+              >
+                {submitMutation.isPending && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                Submit for Approval
+              </Button>
+            )}
 
             {course.status === 'pending' && (
               <Button variant="outline" disabled>
@@ -739,7 +738,7 @@ function CurriculumEditor({ course }: { course: Course }) {
                 <Input
                   {...sectionForm.register('title')}
                   placeholder="Section Title (e.g., Introduction)"
-                // Removed autoFocus for A11y warning
+                  // Removed autoFocus for A11y warning
                 />
               </div>
               <Button
@@ -850,7 +849,7 @@ function CurriculumEditor({ course }: { course: Course }) {
                   <AddAiQuizDialog
                     sectionId={section.id}
                     courseId={course.id}
-                    lessons={course.sections?.flatMap(s => s.lessons) ?? []}
+                    lessons={course.sections?.flatMap((s) => s.lessons) ?? []}
                   />
                 </div>
               </CardContent>
@@ -1264,7 +1263,8 @@ function AddAiQuizDialog({
         lessons={lessons}
         onSave={async ({ questions, title }) => {
           try {
-            const quizTitle = title || `AI Quiz ${new Date().toISOString().slice(0, 10)}`;
+            const quizTitle =
+              title || `AI Quiz ${new Date().toISOString().slice(0, 10)}`;
 
             // 1. Create Lesson
             const lesson = await coursesApi.createLesson(sectionId, {
@@ -1273,26 +1273,29 @@ function AddAiQuizDialog({
               content: [],
               durationSeconds: 0,
               isFreePreview: false,
-              orderIndex: 0
+              orderIndex: 0,
             });
 
             // 2. Create Quiz with questions
             // Use dynamic import for now to avoid dealing with top-level imports that might be tricky if I can't see them all
             // Or assume quizzesApi is available - but it's not.
-            const { quizzesApi } = await import('@/features/quizzes/api/quizzes-api');
+            const { quizzesApi } =
+              await import('@/features/quizzes/api/quizzes-api');
 
             await quizzesApi.createQuiz({
               title: quizTitle,
               lessonId: lesson.id,
               courseId,
-              questions
+              questions,
             });
 
-            toast.success("AI Quiz Created!");
-            void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+            toast.success('AI Quiz Created!');
+            void queryClient.invalidateQueries({
+              queryKey: ['course', courseId],
+            });
           } catch (e) {
             console.error(e);
-            toast.error("Failed to save quiz");
+            toast.error('Failed to save quiz');
           }
         }}
       />

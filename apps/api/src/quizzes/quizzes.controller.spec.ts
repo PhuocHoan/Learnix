@@ -76,7 +76,6 @@ describe('QuizzesController', () => {
     expect(controller).toBeDefined();
   });
 
-
   describe('getMyQuizzes', () => {
     it('should return quizzes for the current instructor', async () => {
       const quizzes = [mockQuiz as Quiz];

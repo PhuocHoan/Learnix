@@ -25,7 +25,6 @@ import {
   Settings,
   LogOut,
   Shield,
-  Wand2,
   Users,
   BarChart3,
   ChevronDown,
@@ -138,12 +137,6 @@ const instructorNavItems: NavItem[] = [
     icon: BookOpen,
     label: 'My Courses',
     href: '/instructor/courses',
-    roles: ['instructor', 'admin'],
-  },
-  {
-    icon: Wand2,
-    label: 'AI Quiz Generator',
-    href: '/instructor/quiz-generator',
     roles: ['instructor', 'admin'],
   },
 ];
