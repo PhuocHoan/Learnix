@@ -313,7 +313,7 @@ test.describe('Protected Routes', () => {
   test('should show auth modal when accessing instructor routes', async ({
     page,
   }) => {
-    await page.goto('/instructor/quiz-generator');
+    await page.goto('/instructor/courses');
     const authModal = page.getByRole('dialog');
     await expect(authModal).toBeVisible();
   });

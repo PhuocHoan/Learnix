@@ -115,6 +115,30 @@ export const uploadApi = {
   },
 
   /**
+   * Upload a video (max 100MB)
+   */
+  uploadVideo: async (file: File): Promise<UploadResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${config.apiUrl}/upload/video`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .then((data: unknown) => data as ErrorResponse)
+        .catch((): ErrorResponse => ({}));
+      throw new Error(error.message ?? 'Failed to upload video');
+    }
+
+    return response.json() as Promise<UploadResult>;
+  },
+
+  /**
    * Delete a file by filename
    */
   deleteFile: async (filename: string): Promise<void> => {
@@ -146,6 +170,38 @@ export function validateImageFile(
   const {
     maxSize = 10 * 1024 * 1024, // 10MB default
     allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  } = options;
+
+  if (!allowedTypes.includes(file.type)) {
+    return {
+      valid: false,
+      error: `Invalid file type. Allowed: ${allowedTypes.map((t) => t.split('/')[1]).join(', ')}`,
+    };
+  }
+
+  if (file.size > maxSize) {
+    return {
+      valid: false,
+      error: `File too large. Maximum size: ${Math.round(maxSize / (1024 * 1024))}MB`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Helper function to validate video file before upload
+ */
+export function validateVideoFile(
+  file: File,
+  options: {
+    maxSize?: number; // in bytes
+    allowedTypes?: string[];
+  } = {},
+): { valid: boolean; error?: string } {
+  const {
+    maxSize = 100 * 1024 * 1024, // 100MB default
+    allowedTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
   } = options;
 
   if (!allowedTypes.includes(file.type)) {

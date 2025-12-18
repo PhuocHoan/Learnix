@@ -114,11 +114,32 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
+  }
+
+  button,
+  [role='button'],
+  a,
+  select,
+  summary,
+  input[type='checkbox'],
+  input[type='radio'] {
+    @apply cursor-pointer;
+  }
+
+  label {
+    @apply cursor-pointer;
+  }
+
+  input:disabled,
+  button:disabled,
+  [aria-disabled='true'] {
+    @apply !cursor-not-allowed;
   }
 }
 
@@ -128,6 +149,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -139,6 +161,7 @@
     opacity: 0;
     transform: translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -150,6 +173,7 @@
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.7;
   }
@@ -159,6 +183,7 @@
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
@@ -188,37 +213,158 @@
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
-/* Gradient backgrounds */
+/* Gradient backgrounds - More vivid & multi-stop */
 .gradient-primary {
   background: linear-gradient(
     135deg,
-    oklch(0.546 0.245 262.881) 0%,
-    oklch(0.623 0.214 280) 100%
+    oklch(0.55 0.25 260) 0%,
+    oklch(0.65 0.2 290) 50%,
+    oklch(0.7 0.15 320) 100%
+  );
+  background-size: 200% 200%;
+  animation: gradient-shift 5s ease infinite;
+}
+
+.gradient-vivid {
+  background: linear-gradient(
+    135deg,
+    oklch(0.6 0.3 330) 0%,
+    oklch(0.5 0.3 260) 100%
   );
 }
 
 .gradient-hero {
   background:
     radial-gradient(
-      ellipse at top,
-      oklch(0.546 0.245 262.881 / 0.15) 0%,
+      circle at 20% 30%,
+      oklch(0.55 0.25 260 / 0.15) 0%,
       transparent 50%
     ),
     radial-gradient(
-      ellipse at bottom right,
-      oklch(0.623 0.214 280 / 0.1) 0%,
+      circle at 80% 70%,
+      oklch(0.65 0.2 290 / 0.1) 0%,
       transparent 50%
-    );
+    ),
+    var(--background);
 }
 
-/* Glass effect */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Glass effect - More premium */
 .glass {
-  background: oklch(1 0 0 / 0.8);
-  backdrop-filter: blur(10px);
-  border: 1px solid oklch(0.92 0.004 286.32 / 0.5);
+  background: oklch(1 0 0 / 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid oklch(1 0 0 / 0.2);
+  box-shadow: 0 8px 32px 0 oklch(0 0 0 / 0.05);
 }
 
 .dark .glass {
-  background: oklch(0.21 0.006 285.885 / 0.8);
-  border: 1px solid oklch(0.274 0.006 286.033 / 0.5);
+  background: oklch(0.141 0.005 285.823 / 0.6);
+  border: 1px solid oklch(1 0 0 / 0.1);
+  box-shadow: 0 8px 32px 0 oklch(0 0 0 / 0.3);
+}
+
+/* Premium Card & Hover States */
+.premium-card {
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.premium-card:hover {
+  transform: translateY(-8px) scale(1.01);
+  box-shadow:
+    0 20px 40px -12px oklch(0 0 0 / 0.1),
+    0 0 20px -5px var(--primary);
+  border-color: var(--primary);
+}
+
+.premium-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    oklch(1 0 0 / 0.1),
+    transparent
+  );
+  transform: skewX(-25deg);
+  transition: 0.7s;
+}
+
+.premium-card:hover::before {
+  left: 150%;
+}
+
+/* Glow utility */
+.glow-primary {
+  filter: drop-shadow(0 0 8px oklch(0.55 0.25 260 / 0.4));
+}
+
+.glow-vivid {
+  filter: drop-shadow(0 0 12px oklch(0.6 0.3 330 / 0.5));
+}
+
+/* Selection & Scrollbar */
+::selection {
+  background: oklch(0.55 0.25 260 / 0.3);
+  color: var(--primary);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+  border: 2px solid var(--background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.55 0.25 260 / 0.5);
+}
+
+/* Interactive Highlight */
+.hover-highlight {
+  position: relative;
+  z-index: 1;
+}
+
+.hover-highlight::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: var(--primary);
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: all 0.2s ease;
+}
+
+.hover-highlight:hover::after {
+  opacity: 0.15;
+  transform: scale(1);
 }

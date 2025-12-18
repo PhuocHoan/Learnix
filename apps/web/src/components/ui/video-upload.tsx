@@ -1,26 +1,22 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-import { Upload, X, Loader2, ImageIcon, AlertCircle } from 'lucide-react';
+import { Upload, X, Loader2, Video, AlertCircle } from 'lucide-react';
 
 import {
   uploadApi,
-  validateImageFile,
+  validateVideoFile,
   createPreviewUrl,
   revokePreviewUrl,
 } from '@/lib/upload-api';
 import { cn } from '@/lib/utils';
 
-interface ImageUploadProps {
-  /** Current image URL (for displaying existing image) */
+interface VideoUploadProps {
+  /** Current video URL (for displaying existing video) */
   value?: string;
-  /** Called when image is uploaded successfully */
+  /** Called when video is uploaded successfully */
   onChange: (url: string | undefined) => void;
   /** Placeholder text */
   placeholder?: string;
-  /** Whether to show a circular preview (for avatars) */
-  circular?: boolean;
-  /** Upload type - avatar has smaller size limit */
-  type?: 'avatar' | 'image';
   /** Max file size in bytes */
   maxSize?: number;
   /** Allowed MIME types */
@@ -29,35 +25,25 @@ interface ImageUploadProps {
   className?: string;
   /** Whether the input is disabled */
   disabled?: boolean;
-  /** Preview size (width and height) */
-  previewSize?: number;
-  /** Fallback URL when value is empty (e.g., OAuth avatar) */
-  fallbackUrl?: string;
 }
 
-export function ImageUpload({
+export function VideoUpload({
   value,
   onChange,
-  placeholder = 'Upload image',
-  circular = false,
-  type = 'image',
+  placeholder = 'Upload video',
   maxSize,
-  allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  allowedTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
   className,
   disabled = false,
-  previewSize = 120,
-  fallbackUrl,
-}: ImageUploadProps) {
+}: VideoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [imageError, setImageError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Determine max size based on type
-  const effectiveMaxSize =
-    maxSize ?? (type === 'avatar' ? 5 * 1024 * 1024 : 10 * 1024 * 1024);
+  // Determine max size (default 100MB)
+  const effectiveMaxSize = maxSize ?? 100 * 1024 * 1024;
 
   // Cleanup preview URL on unmount or when value changes
   useEffect(
@@ -69,18 +55,14 @@ export function ImageUpload({
     [previewUrl],
   );
 
-  // Reset image error when display URL changes
-  const displayUrl = previewUrl ?? value ?? fallbackUrl;
-  useEffect(() => {
-    setImageError(false);
-  }, [displayUrl]);
+  const displayUrl = previewUrl ?? value;
 
   const handleFileSelect = useCallback(
     async (file: File) => {
       setError(null);
 
       // Validate file
-      const validation = validateImageFile(file, {
+      const validation = validateVideoFile(file, {
         maxSize: effectiveMaxSize,
         allowedTypes,
       });
@@ -97,10 +79,7 @@ export function ImageUpload({
       // Upload file
       setIsUploading(true);
       try {
-        const result =
-          type === 'avatar'
-            ? await uploadApi.uploadAvatar(file)
-            : await uploadApi.uploadImage(file);
+        const result = await uploadApi.uploadVideo(file);
 
         onChange(result.url);
         // Clear preview after successful upload (we now use the server URL)
@@ -119,7 +98,7 @@ export function ImageUpload({
         setIsUploading(false);
       }
     },
-    [type, effectiveMaxSize, allowedTypes, onChange, previewUrl],
+    [effectiveMaxSize, allowedTypes, onChange, previewUrl],
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -155,10 +134,10 @@ export function ImageUpload({
     }
 
     const file = e.dataTransfer.files?.[0];
-    if (file?.type.startsWith('image/')) {
+    if (file?.type.startsWith('video/')) {
       void handleFileSelect(file);
     } else {
-      setError('Please drop an image file');
+      setError('Please drop a video file');
     }
   };
 
@@ -173,9 +152,6 @@ export function ImageUpload({
       fileInputRef.current?.click();
     }
   };
-
-  // Whether the current display is the fallback (OAuth avatar)
-  const isShowingFallback = !previewUrl && !value && Boolean(fallbackUrl);
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -193,26 +169,13 @@ export function ImageUpload({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={cn(
-          'relative flex items-center justify-center border-2 border-dashed transition-all cursor-pointer', // Removed overflow-hidden
-          circular ? 'rounded-full' : 'rounded-xl', // Removed overflow-hidden to allow button to overlap
+          'relative flex items-center justify-center border-2 border-dashed transition-all cursor-pointer rounded-xl min-h-[200px]',
           isDragging
             ? 'border-primary bg-primary/5'
             : 'border-border hover:border-primary/50 hover:bg-muted/50',
           disabled && 'opacity-50 cursor-not-allowed',
           isUploading && 'cursor-wait',
         )}
-        style={
-          circular
-            ? {
-                width: previewSize,
-                height: previewSize,
-              }
-            : {
-                width: '100%',
-                minHeight: '200px',
-                // maxHeight removed to let content dictate height up to the image's max-height
-              }
-        }
         aria-label={placeholder}
       >
         {/* Hidden file input */}
@@ -233,25 +196,17 @@ export function ImageUpload({
           </div>
         )}
 
-        {/* Image preview */}
-        {displayUrl && !imageError ? (
-          <>
-            <img
+        {/* Video preview */}
+        {displayUrl ? (
+          <div className="relative w-full h-full min-h-[200px] bg-black rounded-xl overflow-hidden">
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <video
               src={displayUrl}
-              alt="Preview"
-              className={cn(
-                circular
-                  ? 'w-full h-full object-cover rounded-full'
-                  : 'w-auto h-auto max-w-full max-h-[500px] rounded-md shadow-sm', // Use intrinsic size bounded by max constraints
-                circular ? '' : '', // Rounded classes moved to conditional above or on img
-                isShowingFallback && 'opacity-80', // Slightly dim fallback image
-              )}
-              onError={() => {
-                setImageError(true);
-              }}
+              controls
+              className="w-full h-full object-contain"
             />
-            {/* Remove button - only show if there's a custom value (not fallback) */}
-            {!disabled && !isUploading && value && !isShowingFallback && (
+            {/* Remove button */}
+            {!disabled && !isUploading && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -259,22 +214,23 @@ export function ImageUpload({
                   handleRemove();
                 }}
                 className={cn(
-                  'absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full shadow-lg hover:bg-destructive/90 transition-colors z-10',
+                  'absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full shadow-lg hover:bg-destructive/90 transition-colors',
                   'focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2',
+                  'z-20', // Ensure it's above video controls
                 )}
-                aria-label="Remove image"
+                aria-label="Remove video"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
-          </>
+          </div>
         ) : (
           /* Placeholder */
           <div className="flex flex-col items-center justify-center text-muted-foreground p-4">
             {isDragging ? (
               <Upload className="w-8 h-8 mb-2 text-primary" />
             ) : (
-              <ImageIcon className="w-8 h-8 mb-2" />
+              <Video className="w-8 h-8 mb-2" />
             )}
             <span className="text-xs text-center">
               {isDragging ? 'Drop here' : placeholder}

@@ -4,20 +4,33 @@ import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import * as useAuthModule from '@/contexts/use-auth';
+
 import { CoursesPage } from './courses-page';
 
 // Mock the courses API
 const mockGetAllCourses = vi.fn();
+const mockGetTags = vi
+  .fn()
+  .mockResolvedValue(['react', 'typescript', 'javascript']);
+const mockGetEnrolledCourses = vi.fn().mockResolvedValue([]);
 
 vi.mock('@/features/courses/api/courses-api', () => ({
   coursesApi: {
     getAllCourses: (...args: unknown[]) => mockGetAllCourses(...args),
+    getTags: () => mockGetTags(),
+    getEnrolledCourses: () => mockGetEnrolledCourses(),
   },
 }));
 
 // Mock useInView from react-intersection-observer
 vi.mock('react-intersection-observer', () => ({
   useInView: () => ({ ref: vi.fn(), inView: false }),
+}));
+
+// Mock useAuth
+vi.mock('@/contexts/use-auth', () => ({
+  useAuth: vi.fn(),
 }));
 
 const createTestQueryClient = () =>
@@ -51,7 +64,7 @@ describe('CoursesPage', () => {
           level: 'beginner',
           price: 0,
           tags: ['react', 'javascript'],
-          instructor: { fullName: 'John Doe' },
+          instructor: { id: 'inst-1', fullName: 'John Doe' },
           thumbnailUrl: null,
           studentCount: 100,
           updatedAt: new Date().toISOString(),
@@ -63,13 +76,21 @@ describe('CoursesPage', () => {
           level: 'advanced',
           price: 49.99,
           tags: ['typescript'],
-          instructor: { fullName: 'Jane Smith' },
+          instructor: { id: 'inst-2', fullName: 'Jane Smith' },
           thumbnailUrl: null,
           studentCount: 50,
           updatedAt: new Date().toISOString(),
         },
       ],
       meta: { total: 2, page: 1, limit: 9, totalPages: 1 },
+    });
+
+    vi.mocked(useAuthModule.useAuth).mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      isLoading: false,
+      logout: vi.fn(),
+      refreshUser: vi.fn(),
     });
   });
 
@@ -109,15 +130,18 @@ describe('CoursesPage', () => {
   it('displays course prices correctly', async () => {
     renderWithProviders(<CoursesPage />);
 
-    expect(await screen.findByText('Free')).toBeInTheDocument();
+    expect(await screen.findByText(/Free/i)).toBeInTheDocument();
     expect(screen.getByText('$49.99')).toBeInTheDocument();
   });
 
   it('displays course levels', async () => {
     renderWithProviders(<CoursesPage />);
 
-    expect(await screen.findByText('beginner')).toBeInTheDocument();
-    expect(screen.getByText('advanced')).toBeInTheDocument();
+    const beginnerElements = await screen.findAllByText(/beginner/i);
+    expect(beginnerElements.length).toBeGreaterThan(0);
+
+    const advancedElements = await screen.findAllByText(/advanced/i);
+    expect(advancedElements.length).toBeGreaterThan(0);
   });
 
   it('allows searching courses', async () => {

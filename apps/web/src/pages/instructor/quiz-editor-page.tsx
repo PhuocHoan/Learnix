@@ -26,16 +26,30 @@ import {
   Save,
   MoreVertical,
   GripVertical,
+  Trash2,
+  CheckCircle2,
+  Circle,
+  Pencil,
 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import ReactMarkdown from 'react-markdown';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
 import { PageContainer } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,19 +58,24 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { quizzesApi, type Question } from '@/features/quizzes/api/quizzes-api';
+import {
+  quizzesApi,
+  type Question,
+  type QuestionType,
+} from '@/features/quizzes/api/quizzes-api';
 import { cn } from '@/lib/utils';
 
-const questionSchema = z.object({
-  questionText: z.string().min(1, 'Question text is required'),
-  options: z.array(z.string()).min(2, 'At least 2 options are required'),
-  correctAnswer: z.string().min(1, 'Correct answer is required'),
-  explanation: z.string().optional(),
-  points: z.number().min(0, 'Points must be positive').default(1),
-});
-
-type QuestionFormData = z.infer<typeof questionSchema>;
+interface QuestionFormData {
+  questionText: string;
+  imageUrl?: string;
+  options: string[];
+  correctAnswer: string;
+  explanation?: string;
+  points: number;
+  type: QuestionType;
+}
 
 export default function QuizEditorPage() {
   const { courseId, lessonId } = useParams<{
@@ -65,10 +84,13 @@ export default function QuizEditorPage() {
   }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const stateTitle = (location.state as { title?: string })?.title;
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
     null,
   );
+  const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
   const [orderedQuestions, setOrderedQuestions] = useState<Question[]>([]);
 
   const sensors = useSensors(
@@ -91,8 +113,12 @@ export default function QuizEditorPage() {
       try {
         return await quizzesApi.getQuizByLessonId(lessonId);
       } catch (err: unknown) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-        if ((err as any)?.response?.status === 404) {
+        if (
+          err &&
+          typeof err === 'object' &&
+          'response' in err &&
+          (err as { response: { status: number } }).response?.status === 404
+        ) {
           return null;
         }
         throw err;
@@ -106,6 +132,34 @@ export default function QuizEditorPage() {
       quizzesApi.createQuiz(data),
     onSuccess: (newQuiz) => {
       queryClient.setQueryData(['quiz', 'lesson', lessonId], newQuiz);
+    },
+  });
+
+  const updateQuizMutation = useMutation({
+    mutationFn: ({ id, title }: { id: string; title: string }) =>
+      quizzesApi.updateQuiz(id, { title }),
+    onSuccess: () => {
+      toast.success('Quiz title updated');
+      void queryClient.invalidateQueries({
+        queryKey: ['quiz', 'lesson', lessonId],
+      });
+    },
+    onError: () => {
+      toast.error('Failed to update quiz title');
+    },
+  });
+
+  const deleteQuestionMutation = useMutation({
+    mutationFn: (questionId: string) => quizzesApi.deleteQuestion(questionId),
+    onSuccess: () => {
+      toast.success('Question deleted');
+      void queryClient.invalidateQueries({
+        queryKey: ['quiz', 'lesson', lessonId],
+      });
+      setQuestionToDelete(null);
+    },
+    onError: () => {
+      toast.error('Failed to delete question');
     },
   });
 
@@ -123,14 +177,24 @@ export default function QuizEditorPage() {
       !isQuizCreated &&
       lessonId
     ) {
-      createQuiz({ title: 'Untitled Quiz', lessonId });
+      createQuiz({ title: stateTitle ?? 'Untitled Quiz', lessonId });
     }
-  }, [isLoading, quiz, isCreatingQuiz, isQuizCreated, lessonId, createQuiz]);
+  }, [
+    isLoading,
+    quiz,
+    isCreatingQuiz,
+    isQuizCreated,
+    lessonId,
+    createQuiz,
+    stateTitle,
+  ]);
 
   useEffect(() => {
     if (quiz?.questions) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setOrderedQuestions(quiz.questions);
+      const timer = setTimeout(() => {
+        setOrderedQuestions(quiz.questions);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [quiz?.questions]);
 
@@ -174,26 +238,27 @@ export default function QuizEditorPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(`/instructor/courses/${courseId}/edit`)}
+          onClick={() =>
+            navigate(`/instructor/courses/${courseId}/edit?tab=curriculum`)
+          }
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Course
+          Back
         </Button>
         <div className="flex-1">
           {isEditingTitle ? (
             <Input
-              // eslint-disable-next-line jsx-a11y/no-autofocus
-              autoFocus
               defaultValue={quiz?.title}
               onBlur={(e) => {
                 setIsEditingTitle(false);
-                if (quiz && e.target.value !== quiz.title) {
-                  // Update quiz title logic here (not implemented yet in API)
+                const newTitle = e.target.value.trim();
+                if (quiz && newTitle && newTitle !== quiz.title) {
+                  updateQuizMutation.mutate({ id: quiz.id, title: newTitle });
                 }
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  setIsEditingTitle(false);
+                  e.currentTarget.blur();
                 }
               }}
             />
@@ -203,7 +268,7 @@ export default function QuizEditorPage() {
               className="text-2xl font-bold cursor-pointer hover:underline decoration-dashed underline-offset-4 bg-transparent border-none p-0 text-left"
               onClick={() => setIsEditingTitle(true)}
             >
-              {quiz?.title ?? 'Untitled Quiz'}
+              {quiz?.title ?? stateTitle ?? 'Untitled Quiz'}
             </button>
           )}
         </div>
@@ -249,7 +314,7 @@ export default function QuizEditorPage() {
                     index={index}
                     isEditing={editingQuestionId === question.id}
                     onEdit={() => setEditingQuestionId(question.id)}
-                    onDelete={() => {}}
+                    onDelete={() => setQuestionToDelete(question.id)}
                     onCancel={() => setEditingQuestionId(null)}
                     onSave={() => {
                       setEditingQuestionId(null);
@@ -276,6 +341,37 @@ export default function QuizEditorPage() {
           )}
         </div>
       </div>
+
+      <Dialog
+        open={Boolean(questionToDelete)}
+        onOpenChange={(open) => !open && setQuestionToDelete(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Question</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this question? This action cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuestionToDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (questionToDelete) {
+                  deleteQuestionMutation.mutate(questionToDelete);
+                }
+              }}
+              disabled={deleteQuestionMutation.isPending}
+            >
+              {deleteQuestionMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }
@@ -323,63 +419,123 @@ function SortableQuestionItem({
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="mb-4">
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between py-4">
-          <div className="flex gap-4">
+    <div ref={setNodeRef} style={style} className="mb-6 group">
+      <Card className="premium-card border-border/40 hover:border-primary/30 shadow-sm hover:shadow-xl bg-card/60 backdrop-blur-sm transition-all duration-300">
+        <CardHeader className="flex flex-row items-start justify-between py-5 px-6">
+          <div className="flex gap-5">
             <div
               {...attributes}
               {...listeners}
-              className="flex items-center justify-center h-8 cursor-move text-muted-foreground hover:text-foreground"
+              className="flex items-center justify-center h-10 w-6 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-primary transition-colors"
             >
               <GripVertical className="w-5 h-5" />
             </div>
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl gradient-primary text-white font-bold text-sm shadow-lg glow-primary">
               {index + 1}
             </div>
-            <div>
-              <p className="font-medium mb-2">{question.questionText}</p>
-              <div className="flex gap-2">
-                <Badge variant="secondary">{question.points || 1} points</Badge>
+            <div className="flex-1 min-w-0">
+              {question.imageUrl && (
+                <div className="mb-4 rounded-xl overflow-hidden border border-border/60 max-w-sm shadow-inner bg-muted/20">
+                  <img
+                    src={question.imageUrl}
+                    alt="Question"
+                    className="w-full h-auto object-contain max-h-[250px] transition-transform group-hover:scale-[1.02]"
+                  />
+                </div>
+              )}
+              <div className="font-bold text-lg mb-3 text-foreground/90 group-hover:text-foreground transition-colors leading-relaxed prose prose-sm max-w-none dark:prose-invert">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {question.questionText}
+                </ReactMarkdown>
+              </div>
+              <div className="flex gap-3">
+                <Badge className="bg-primary/5 text-primary border-primary/20 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-widest uppercase">
+                  {question.points || 1} POINTS
+                </Badge>
               </div>
             </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreVertical className="w-4 h-4" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10 w-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary"
+              >
+                <MoreVertical className="w-5 h-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onClick={onDelete}>
-                Delete
+            <DropdownMenuContent
+              align="end"
+              className="rounded-xl border-border/60 shadow-xl"
+            >
+              <DropdownMenuItem onClick={onEdit} className="rounded-lg gap-2">
+                <Pencil className="w-4 h-4" /> Edit Question
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive rounded-lg gap-2"
+                onClick={onDelete}
+              >
+                <Trash2 className="w-4 h-4" /> Delete Question
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </CardHeader>
-        <CardContent className="pb-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {question.options.map((opt, i) => {
-              const letter = String.fromCharCode(65 + i); // A, B, C...
-              const isSelectedCorrect = question.correctAnswer === letter;
+        <CardContent className="pb-6 px-6">
+          {question.type !== 'short_answer' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-15">
+              {question.options.map((opt, i) => {
+                const letter = String.fromCharCode(65 + i); // A, B, C...
+                const correctLetters = question.correctAnswer
+                  .split(',')
+                  .map((s) => s.trim());
+                const isSelectedCorrect =
+                  correctLetters.includes(letter) ||
+                  correctLetters.includes(opt);
 
-              return (
-                <div
-                  key={i}
-                  className={cn(
-                    'p-3 rounded-lg border text-sm',
-                    isSelectedCorrect
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-border bg-background',
-                  )}
-                >
-                  <span className="font-semibold mr-2">{letter}:</span>
-                  {opt}
-                </div>
-              );
-            })}
-          </div>
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      'p-4 rounded-xl border-2 text-sm font-medium transition-all flex items-center gap-3',
+                      isSelectedCorrect
+                        ? 'border-green-500 bg-green-500/5 text-green-700 shadow-sm'
+                        : 'border-border/30 bg-muted/20 text-muted-foreground hover:border-border hover:bg-muted/40',
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'w-6 h-6 flex items-center justify-center font-bold text-xs',
+                        question.type === 'multi_select'
+                          ? 'rounded-md'
+                          : 'rounded-full',
+                        isSelectedCorrect
+                          ? 'bg-green-500 text-white'
+                          : 'bg-muted text-muted-foreground',
+                      )}
+                    >
+                      {letter}
+                    </div>
+                    {opt}
+                    {isSelectedCorrect && (
+                      <CheckCircle2 className="w-4 h-4 ml-auto text-green-500" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="pl-15">
+              <div className="p-4 rounded-xl border-2 border-primary/20 bg-primary/5 text-sm flex flex-col gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">
+                  Expected Answer
+                </span>
+                <span className="font-bold text-foreground/80">
+                  {question.correctAnswer}
+                </span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -398,15 +554,65 @@ function QuestionEditor({
   onSave: () => void;
 }) {
   const isNew = !question;
-  const form = useForm({
-    resolver: zodResolver(questionSchema),
+
+  // Internal form structure for useFieldArray
+  const formSchema = z
+    .object({
+      questionText: z.string().min(1, 'Question text is required'),
+      imageUrl: z.string().optional(),
+      type: z.enum([
+        'multiple_choice',
+        'multi_select',
+        'true_false',
+        'short_answer',
+      ]),
+      options: z
+        .array(z.object({ value: z.string().min(1, 'Option required') }))
+        .optional(),
+      correctAnswer: z.string().min(1, 'Correct answer is required'),
+      explanation: z.string().optional(),
+      points: z.number().min(0),
+    })
+    .refine(
+      (data) => {
+        if (
+          data.type === 'multiple_choice' ||
+          data.type === 'multi_select' ||
+          data.type === 'true_false'
+        ) {
+          return (data.options?.length ?? 0) >= 2;
+        }
+        return true;
+      },
+      {
+        message: 'At least 2 options are required for this question type',
+        path: ['options'],
+      },
+    );
+
+  type QuestionFormInternal = z.infer<typeof formSchema>;
+
+  const form = useForm<QuestionFormInternal>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       questionText: question?.questionText ?? '',
-      options: question?.options ?? ['', '', '', ''],
+      imageUrl: question?.imageUrl ?? '',
+      type: question?.type ?? 'multiple_choice',
+      options: question?.options?.map((o) => ({ value: o })) ?? [
+        { value: '' },
+        { value: '' },
+        { value: '' },
+        { value: '' },
+      ],
       correctAnswer: question?.correctAnswer ?? 'A',
       explanation: question?.explanation ?? '',
       points: question?.points ?? 1,
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'options',
   });
 
   const mutation = useMutation({
@@ -430,119 +636,403 @@ function QuestionEditor({
     },
   });
 
-  const onSubmit = (data: QuestionFormData) => {
-    mutation.mutate(data);
+  const onSubmit = (data: QuestionFormInternal) => {
+    const payload: QuestionFormData = {
+      ...data,
+      options:
+        data.type === 'short_answer'
+          ? []
+          : (data.options?.map((o) => o.value) ?? []),
+      imageUrl: data.imageUrl ?? undefined,
+    };
+    mutation.mutate(payload);
   };
 
-  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [activeTab, setActiveTab] = useState('edit');
+
+  // Use useWatch instead of form.watch for React Compiler compatibility
+  const watchedCorrectAnswer = useWatch({
+    control: form.control,
+    name: 'correctAnswer',
+  });
+  const watchedType = useWatch({ control: form.control, name: 'type' });
+  const watchedImageUrl = useWatch({ control: form.control, name: 'imageUrl' });
+  const watchedOptions = useWatch({ control: form.control, name: 'options' });
+  const watchedExplanation = useWatch({
+    control: form.control,
+    name: 'explanation',
+  });
+  const watchedQuestionText = useWatch({
+    control: form.control,
+    name: 'questionText',
+  });
 
   return (
-    <Card className="border-primary">
+    <Card className="border-primary shadow-lg">
+      <CardHeader className="pb-3 border-b bg-muted/20">
+        <CardTitle className="text-lg flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {isNew ? 'Create Question' : 'Edit Question'}
+            <div className="w-px h-6 bg-border/60 mx-1" />
+            <select
+              {...form.register('type')}
+              className="bg-background border rounded px-2 py-1 text-sm font-bold focus:outline-none focus:ring-1 focus:ring-primary h-8"
+              onChange={(e) => {
+                const type = e.target.value as QuestionType;
+                form.setValue('type', type);
+                if (type === 'true_false') {
+                  form.setValue('options', [
+                    { value: 'True' },
+                    { value: 'False' },
+                  ]);
+                  form.setValue('correctAnswer', 'A');
+                } else if (
+                  type === 'multiple_choice' ||
+                  type === 'multi_select'
+                ) {
+                  form.setValue('options', [
+                    { value: '' },
+                    { value: '' },
+                    { value: '' },
+                    { value: '' },
+                  ]);
+                  form.setValue('correctAnswer', 'A');
+                } else {
+                  form.setValue('options', []);
+                }
+              }}
+            >
+              <option value="multiple_choice">Single Choice</option>
+              <option value="multi_select">Multi-Select</option>
+              <option value="true_false">True / False</option>
+              <option value="short_answer">Short Answer</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label
+              className="text-sm font-medium text-muted-foreground mr-2"
+              htmlFor="points-input"
+            >
+              Points:
+            </label>
+            <Input
+              id="points-input"
+              type="number"
+              {...form.register('points', { valueAsNumber: true })}
+              className="w-20 h-8 bg-background"
+              min={0}
+            />
+          </div>
+        </CardTitle>
+      </CardHeader>
       <CardContent className="p-6">
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label className="text-sm font-medium" htmlFor="question-text">
-                Question Text
-              </label>
-              <div className="flex items-center gap-2">
-                <label
-                  className="text-sm font-medium text-muted-foreground mr-2"
-                  htmlFor="points-input"
-                >
-                  Points:
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="edit">Edit Question</TabsTrigger>
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="edit" className="space-y-6 mt-0">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="question-text">
+                  Question Text
                 </label>
-                <Input
-                  id="points-input"
-                  type="number"
-                  {...form.register('points', { valueAsNumber: true })}
-                  className="w-24 h-8"
-                  min={0}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs h-6"
-                  onClick={() => setShowImageUpload(!showImageUpload)}
-                >
-                  {showImageUpload ? 'Hide Image Upload' : 'Insert Image'}
-                </Button>
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-4">
+                  <div className="space-y-2">
+                    <Textarea
+                      id="question-text"
+                      {...form.register('questionText')}
+                      placeholder="Enter your question here... (Markdown supported)"
+                      className="resize-none min-h-[200px] font-mono text-sm"
+                    />
+                    {form.formState.errors.questionText && (
+                      <p className="text-xs text-destructive">
+                        {form.formState.errors.questionText.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground mb-1">
+                      Question Image (Optional)
+                    </div>
+                    <ImageUpload
+                      value={watchedImageUrl}
+                      onChange={(url) => {
+                        form.setValue('imageUrl', url ?? '');
+                      }}
+                      className="w-full"
+                    />
+                    <p className="text-[10px] text-muted-foreground text-center">
+                      {watchedImageUrl
+                        ? 'Image will be displayed above the question'
+                        : 'Upload an image for this question'}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {showImageUpload && (
-              <div className="p-4 border border-dashed rounded-lg bg-muted/20 mb-2">
-                <p className="text-xs text-muted-foreground mb-2">
-                  Upload an image to insert into the question.
-                </p>
-                <ImageUpload
-                  onChange={(url) => {
-                    if (url) {
-                      const currentText = form.getValues('questionText');
-                      form.setValue(
-                        'questionText',
-                        `${currentText}\n\n![Image](${url})`,
+              {watchedType !== 'short_answer' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Answer Options</span>
+                    {(watchedType === 'multiple_choice' ||
+                      watchedType === 'multi_select') && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => append({ value: '' })}
+                        className="h-8"
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Add Option
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {fields.map((field, index) => {
+                      const letter = String.fromCharCode(65 + index); // A, B, C...
+                      const correctLetters = (watchedCorrectAnswer ?? '')
+                        .split(',')
+                        .map((s) => s.trim());
+                      const isCorrect = correctLetters.includes(letter);
+                      const isMulti = watchedType === 'multi_select';
+
+                      return (
+                        <div
+                          key={field.id}
+                          className={cn(
+                            'flex gap-3 items-center p-2 rounded-lg border transition-colors',
+                            isCorrect
+                              ? 'border-green-500 bg-green-50/50'
+                              : 'border-transparent hover:bg-muted/50',
+                          )}
+                        >
+                          <div className="flex-none basis-8 font-bold text-center text-muted-foreground">
+                            {letter}
+                          </div>
+
+                          <div className="flex-1">
+                            <Input
+                              {...form.register(`options.${index}.value`)}
+                              placeholder={`Option ${letter}`}
+                              readOnly={watchedType === 'true_false'}
+                              className={cn(
+                                isCorrect &&
+                                  'border-green-500 focus-visible:ring-green-500',
+                                watchedType === 'true_false' &&
+                                  'bg-muted/30 cursor-default',
+                              )}
+                            />
+                          </div>
+
+                          <div className="flex-none flex items-center gap-2">
+                            <label
+                              className={cn(
+                                'cursor-pointer flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                                isCorrect
+                                  ? 'bg-green-500 text-white hover:bg-green-600'
+                                  : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                              )}
+                            >
+                              <input
+                                type={isMulti ? 'checkbox' : 'radio'}
+                                value={letter}
+                                className="sr-only"
+                                checked={isCorrect}
+                                onChange={(e) => {
+                                  if (isMulti) {
+                                    const next = e.target.checked
+                                      ? [...correctLetters, letter]
+                                          .sort()
+                                          .filter(Boolean)
+                                      : correctLetters
+                                          .filter((l) => l !== letter)
+                                          .sort();
+                                    form.setValue(
+                                      'correctAnswer',
+                                      next.join(','),
+                                      { shouldValidate: true },
+                                    );
+                                  } else {
+                                    form.setValue('correctAnswer', letter, {
+                                      shouldValidate: true,
+                                    });
+                                  }
+                                }}
+                              />
+                              {isCorrect ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                              ) : (
+                                <Circle className="w-4 h-4" />
+                              )}
+                              {isCorrect ? 'Correct' : 'Mark Correct'}
+                            </label>
+
+                            {(watchedType === 'multiple_choice' ||
+                              watchedType === 'multi_select') &&
+                              fields.length > 2 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => remove(index)}
+                                  className="text-muted-foreground hover:text-destructive h-9 w-9 p-0"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                          </div>
+                        </div>
                       );
-                      setShowImageUpload(false);
-                    }
-                  }}
-                  className="w-full max-w-xs mx-auto"
+                    })}
+                  </div>
+                  {form.formState.errors.options && (
+                    <p className="text-xs text-destructive">
+                      {form.formState.errors.options.message}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {watchedType === 'short_answer' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="correct-answer"
+                    >
+                      Expected Answer
+                    </label>
+                    <Input
+                      id="correct-answer"
+                      {...form.register('correctAnswer')}
+                      placeholder="Enter the correct text answer..."
+                      className="font-bold"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Student must type this exact text to earn points.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="explanation">
+                  Explanation (Optional)
+                </label>
+                <Textarea
+                  id="explanation"
+                  {...form.register('explanation')}
+                  placeholder="Explain why the answer is correct..."
+                  className="h-20 resize-none"
                 />
               </div>
-            )}
+            </TabsContent>
 
-            <Textarea
-              id="question-text"
-              {...form.register('questionText')}
-              placeholder="Enter your question here... (Markdown supported)"
-              className="resize-none min-h-[100px]"
-            />
-            {form.formState.errors.questionText && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.questionText.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <span className="text-sm font-medium">Options</span>
-            {['A', 'B', 'C', 'D'].map((letter, index) => (
-              <div key={letter} className="flex gap-3 items-center">
-                <div className="flex-none basis-8 font-semibold text-center pt-2">
-                  {letter}
-                </div>
-                <div className="flex-1">
-                  <Input
-                    {...form.register(`options.${index}`)}
-                    placeholder={`Option ${letter}`}
+            <TabsContent
+              value="preview"
+              className="mt-0 min-h-[400px] space-y-6"
+            >
+              {watchedImageUrl && (
+                <div className="border rounded-lg overflow-hidden bg-muted/30">
+                  <img
+                    src={watchedImageUrl}
+                    alt="Question visual"
+                    className="w-full max-h-[300px] object-contain"
                   />
                 </div>
-                <div className="flex-none">
-                  <input
-                    type="radio"
-                    value={letter}
-                    {...form.register('correctAnswer')}
-                    className="w-4 h-4 text-primary"
-                  />
-                </div>
+              )}
+              <div className="prose prose-sm max-w-none dark:prose-invert p-4 border rounded-lg bg-card shadow-inner">
+                {watchedQuestionText ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {watchedQuestionText}
+                  </ReactMarkdown>
+                ) : (
+                  <span className="text-muted-foreground italic">
+                    No question text...
+                  </span>
+                )}
               </div>
-            ))}
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="explanation">
-              Explanation (Optional)
-            </label>
-            <Textarea
-              id="explanation"
-              {...form.register('explanation')}
-              placeholder="Explain why the answer is correct..."
-              className="h-20 resize-none"
-            />
-          </div>
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">
+                  {watchedType === 'short_answer'
+                    ? 'Answer Preview'
+                    : 'Options Preview'}
+                </h4>
+                {watchedType !== 'short_answer' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {watchedOptions?.map((opt, i) => {
+                      const letter = String.fromCharCode(65 + i);
+                      const correctLetters = (watchedCorrectAnswer || '')
+                        .split(',')
+                        .map((s) => s.trim());
+                      const isCorrect = correctLetters.includes(letter);
+                      return (
+                        <div
+                          key={i}
+                          className={cn(
+                            'p-3 rounded-lg border flex items-start gap-3',
+                            isCorrect
+                              ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                              : 'border-border',
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'font-bold',
+                              isCorrect
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-muted-foreground',
+                            )}
+                          >
+                            {letter}.
+                          </span>
+                          <span>
+                            {opt.value || (
+                              <span className="italic text-muted-foreground">
+                                Empty option
+                              </span>
+                            )}
+                          </span>
+                          {isCorrect && (
+                            <CheckCircle2 className="w-4 h-4 text-green-500 ml-auto shrink-0" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-lg border-2 border-dashed border-primary/20 bg-muted/20">
+                    <p className="text-sm font-mono">
+                      {watchedCorrectAnswer || 'Not set'}
+                    </p>
+                  </div>
+                )}
+              </div>
 
-          <div className="flex justify-end gap-2">
+              {watchedExplanation && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> Explanation Preview
+                  </h4>
+                  <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 prose prose-sm max-w-none dark:prose-invert">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {watchedExplanation || ''}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
             <Button type="button" variant="ghost" onClick={onCancel}>
               Cancel
             </Button>

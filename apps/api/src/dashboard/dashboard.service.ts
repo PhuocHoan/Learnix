@@ -149,11 +149,15 @@ export class DashboardService {
       const allLessons = enrollment.course.sections.flatMap((s) => s.lessons);
       const totalLessons = allLessons.length;
 
-      const completedCount = enrollment.completedLessonIds?.length ?? 0;
+      // Filter completed IDs to only count existing lessons
+      const validCompletedIds = (enrollment.completedLessonIds ?? []).filter(
+        (id) => allLessons.some((l) => l.id === id),
+      );
+      const completedCount = validCompletedIds.length;
 
       const progress =
         totalLessons > 0
-          ? Math.round((completedCount / totalLessons) * 100)
+          ? Math.min(100, Math.round((completedCount / totalLessons) * 100))
           : 0;
 
       return {

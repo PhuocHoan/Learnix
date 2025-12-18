@@ -41,6 +41,12 @@ export function LoginForm() {
           ? (err as { response?: { data?: { message?: string } } }).response
               ?.data?.message
           : 'Failed to login';
+
+      if (errorMessage?.toLowerCase().includes('blocked')) {
+        void navigate('/blocked');
+        return;
+      }
+
       setError(errorMessage ?? 'Failed to login');
     }
   };

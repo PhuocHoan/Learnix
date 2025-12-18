@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -26,7 +26,7 @@ import {
 } from '@/features/courses/api/courses-api';
 import { quizzesApi } from '@/features/quizzes/api/quizzes-api';
 import { QuizPlayer } from '@/features/quizzes/components/quiz-player';
-import { cn } from '@/lib/utils';
+import { cn, getYoutubeId, getVimeoId } from '@/lib/utils';
 
 // --- Block Renderers ---
 
@@ -35,22 +35,16 @@ function VideoBlock({ content }: { content: string }) {
     return null;
   }
 
-  // Simple YouTube/Vimeo check (can be expanded)
-  const isYouTube =
-    content.includes('youtube.com') || content.includes('youtu.be');
+  const youtubeId = getYoutubeId(content);
+  const vimeoId = getVimeoId(content);
 
-  if (isYouTube) {
-    // Extract video ID or use embed URL logic
-    const embedUrl = content.includes('embed')
-      ? content
-      : content.replace('watch?v=', 'embed/').split('&')[0];
-
+  if (youtubeId) {
     return (
       <div className="aspect-video w-full rounded-xl overflow-hidden shadow-sm my-6 bg-black">
         <iframe
-          src={embedUrl}
+          src={`https://www.youtube.com/embed/${youtubeId}`}
           className="w-full h-full"
-          title="Video player"
+          title="YouTube Video"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
         />
@@ -58,13 +52,38 @@ function VideoBlock({ content }: { content: string }) {
     );
   }
 
-  // Native Video
+  if (vimeoId) {
+    return (
+      <div className="aspect-video w-full rounded-xl overflow-hidden shadow-sm my-6 bg-black">
+        <iframe
+          src={`https://player.vimeo.com/video/${vimeoId}`}
+          className="w-full h-full"
+          title="Vimeo Video"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+
+  const isDirectVideo = /\.(mp4|webm|ogg)$/i.test(content);
+  if (isDirectVideo) {
+    return (
+      <div className="aspect-video w-full rounded-xl overflow-hidden shadow-sm my-6 bg-black">
+        <video controls className="w-full h-full">
+          <source src={content} />
+          <track kind="captions" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    );
+  }
+
+  // If it's not a recognized video format but in a video block, still try video tag
   return (
-    <div className="aspect-video w-full rounded-xl overflow-hidden shadow-sm my-6 bg-black">
-      <video controls className="w-full h-full">
-        <source src={content} type="video/mp4" />
+    <div className="aspect-video w-full rounded-xl overflow-hidden shadow-sm my-6 bg-black font-medium">
+      <video controls className="w-full h-full" src={content}>
         <track kind="captions" />
-        Your browser does not support the video tag.
       </video>
     </div>
   );
@@ -109,13 +128,27 @@ function ImageBlock({
   content: string;
   caption?: string;
 }) {
+  const youtubeId = getYoutubeId(content);
+  const vimeoId = getVimeoId(content);
+  const isDirectVideo = /\.(mp4|webm|ogg)$/i.test(content);
+  const isVideo = Boolean(youtubeId ?? vimeoId ?? isDirectVideo);
+
   return (
     <figure className="my-8">
-      <img
-        src={content}
-        alt={caption ?? 'Lesson image'}
-        className="rounded-xl w-full object-cover max-h-[600px] border border-border shadow-sm"
-      />
+      {isVideo ? (
+        <VideoBlock content={content} />
+      ) : (
+        <img
+          src={content}
+          alt={caption ?? 'Lesson image'}
+          className="rounded-xl w-full object-contain max-h-[400px] border border-border shadow-sm bg-black/5"
+          onError={(e) => {
+            // If it failed as image, and we didn't catch it as video, show placeholder
+            (e.target as HTMLImageElement).src =
+              'https://placehold.co/600x400?text=Invalid+Media+URL';
+          }}
+        />
+      )}
       {caption && (
         <figcaption className="text-center text-sm text-muted-foreground mt-2 italic">
           {caption}
@@ -313,14 +346,18 @@ function LessonContent({ blocks }: { blocks: LessonBlock[] }) {
 
 // --- Quiz Component ---
 
+// --- Quiz Component ---
+
 function QuizSection({
   lessonId,
   isEnrolled,
   onComplete,
+  onHasQuiz,
 }: {
   lessonId: string;
   isEnrolled: boolean;
   onComplete: () => void;
+  onHasQuiz: (hasQuiz: boolean) => void;
 }) {
   const { data: quiz, isLoading } = useQuery({
     queryKey: ['quiz', 'lesson', lessonId],
@@ -338,6 +375,12 @@ function QuizSection({
     enabled: Boolean(lessonId) && isEnrolled,
     retry: false,
   });
+
+  useEffect(() => {
+    if (!isLoading) {
+      onHasQuiz(Boolean(quiz && quiz.questions.length > 0));
+    }
+  }, [quiz, isLoading, onHasQuiz]);
 
   if (isLoading) {
     return (
@@ -370,6 +413,11 @@ export function LessonViewerPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { isAuthenticated } = useAuth();
 
+  // Lesson Completion Restrictions
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [hasQuiz, setHasQuiz] = useState(false);
+
   const lessonIdFromUrl = searchParams.get('lesson');
 
   // Fetch Course
@@ -399,8 +447,49 @@ export function LessonViewerPage() {
     undefined,
   );
 
+  // Reset completion states when lesson changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasScrolledToBottom(false);
+      setHasQuiz(false); // Reset/trust QuizSection to update this
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [activeLessonId]);
+
+  // Check initial scroll height (if content fits without scrolling)
+  useEffect(() => {
+    const checkScroll = () => {
+      if (scrollContainerRef.current) {
+        const { scrollHeight, clientHeight } = scrollContainerRef.current;
+        // If content is shorter than or equal to container (with small tolerance)
+        if (scrollHeight <= clientHeight + 50) {
+          setHasScrolledToBottom(true);
+        }
+      }
+    };
+    // Check after a short delay to allow content rendering (images, etc)
+    const timer = setTimeout(checkScroll, 1000);
+    return () => clearTimeout(timer);
+  }, [currentLesson]);
+
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } =
+        scrollContainerRef.current;
+      // Check if reached bottom (within 50px tolerance)
+      if (scrollTop + clientHeight >= scrollHeight - 50) {
+        setHasScrolledToBottom(true);
+      }
+    }
+  };
+
   const isPreviewLesson = currentLesson?.isFreePreview ?? false;
-  const hasAccess = isEnrolled || isPreviewLesson;
+  const isInstructor = enrollment?.isInstructor ?? false;
+  const isAdmin = enrollment?.isAdmin ?? false;
+  const hasAccess = isEnrolled || isPreviewLesson || isInstructor || isAdmin;
   const shouldShowAuthModal =
     !isLoadingEnrollment &&
     !isLoadingCourse &&
@@ -448,6 +537,15 @@ export function LessonViewerPage() {
   }
 
   const completedIds = enrollment?.progress?.completedLessonIds ?? [];
+  const isLessonCompleted =
+    currentLesson && completedIds.includes(currentLesson.id);
+
+  // Determine if Mark Complete button should be disabled
+  const isCompletionDisabled =
+    !isLessonCompleted && // already completed -> explicit enable (looks better)
+    (completeLessonMutation.isPending ||
+      hasQuiz || // Must complete via quiz
+      !hasScrolledToBottom); // Must scroll to bottom
 
   return (
     <>
@@ -492,7 +590,11 @@ export function LessonViewerPage() {
 
         <div className="flex-1 flex overflow-hidden relative">
           {/* Main Content Area */}
-          <div className="flex-1 overflow-y-auto bg-background scroll-smooth">
+          <div
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto bg-background scroll-smooth"
+          >
             <div className="max-w-4xl mx-auto p-6 md:p-10">
               {currentLesson ? (
                 <>
@@ -500,36 +602,71 @@ export function LessonViewerPage() {
                     <h1 className="text-3xl font-bold tracking-tight mb-4">
                       {currentLesson.title}
                     </h1>
-                    {isEnrolled && (
+                    {isEnrolled && !isInstructor && !isAdmin && (
                       <div className="flex items-center gap-4">
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            completeLessonMutation.mutate(currentLesson.id)
+                        {(() => {
+                          if (currentLesson.type === 'quiz') {
+                            if (isLessonCompleted) {
+                              return (
+                                <Button
+                                  size="sm"
+                                  disabled
+                                  variant="outline"
+                                  className="text-green-700 border-green-400 bg-green-100/50 font-bold opacity-100"
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-2 stroke-[3]" />
+                                  Completed
+                                </Button>
+                              );
+                            }
+                            return (
+                              <Button
+                                size="sm"
+                                disabled
+                                className="bg-orange-500 hover:bg-orange-600 text-white border-none font-bold"
+                              >
+                                <Loader2 className="w-4 h-4 mr-2" />
+                                Pass quiz to complete
+                              </Button>
+                            );
                           }
-                          disabled={
-                            completedIds.includes(currentLesson.id) ||
-                            completeLessonMutation.isPending
-                          }
-                          variant={
-                            completedIds.includes(currentLesson.id)
-                              ? 'outline'
-                              : 'primary'
-                          }
-                          className={cn(
-                            completedIds.includes(currentLesson.id) &&
-                              'text-green-600 border-green-200 bg-green-50',
+                          // Standard lesson completion UI
+                          return (
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                completeLessonMutation.mutate(currentLesson.id)
+                              }
+                              disabled={
+                                isCompletionDisabled || isLessonCompleted
+                              }
+                              variant={
+                                isLessonCompleted ? 'outline' : 'primary'
+                              }
+                              className={cn(
+                                'font-bold',
+                                isLessonCompleted &&
+                                  'text-green-700 border-green-400 bg-green-100/50',
+                              )}
+                            >
+                              {isLessonCompleted ? (
+                                <>
+                                  <CheckCircle className="w-4 h-4 mr-2 stroke-[3]" />
+                                  Completed
+                                </>
+                              ) : (
+                                'Mark as Complete'
+                              )}
+                            </Button>
+                          );
+                        })()}
+                        {!isLessonCompleted &&
+                          currentLesson.type === 'standard' &&
+                          !hasScrolledToBottom && (
+                            <span className="text-xs text-muted-foreground font-medium">
+                              Finish reading all contents to complete...
+                            </span>
                           )}
-                        >
-                          {completedIds.includes(currentLesson.id) ? (
-                            <>
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Completed
-                            </>
-                          ) : (
-                            'Mark as Complete'
-                          )}
-                        </Button>
                       </div>
                     )}
                   </div>
@@ -543,6 +680,7 @@ export function LessonViewerPage() {
                         completeLessonMutation.mutate(currentLesson.id);
                       }
                     }}
+                    onHasQuiz={setHasQuiz}
                   />
 
                   {/* Render the Block Content */}
@@ -566,17 +704,19 @@ export function LessonViewerPage() {
           >
             <div className="p-4 border-b border-border font-semibold flex justify-between items-center bg-muted/30">
               <span>Course Content</span>
-              <span className="text-xs font-normal text-muted-foreground">
-                {Math.round(
-                  (completedIds.length /
-                    (course.sections?.reduce(
-                      (acc, s) => acc + s.lessons.length,
-                      0,
-                    ) ?? 1)) *
-                    100,
-                )}
-                % complete
-              </span>
+              {!isInstructor && !isAdmin && isEnrolled && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {Math.round(
+                    (completedIds.length /
+                      (course.sections?.reduce(
+                        (acc, s) => acc + s.lessons.length,
+                        0,
+                      ) ?? 1)) *
+                      100,
+                  )}
+                  % complete
+                </span>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto">
@@ -632,7 +772,7 @@ export function LessonViewerPage() {
                           }}
                           disabled={isLocked && isAuthenticated}
                           className={cn(
-                            'w-full text-left px-4 py-3.5 flex items-start gap-3 transition-all border-l-[3px]',
+                            'w-full text-left px-4 py-3.5 flex items-start gap-3 transition-all border-l-[3px] hover-highlight',
                             isActive
                               ? 'bg-primary/5 border-primary'
                               : 'border-transparent hover:bg-muted/50',

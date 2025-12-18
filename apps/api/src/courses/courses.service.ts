@@ -100,11 +100,12 @@ export class CoursesService {
     queryBuilder
       .leftJoinAndSelect('course.instructor', 'instructor')
       .loadRelationCountAndMap('course.studentCount', 'course.enrollments')
-      .where('course.isPublished = :isPublished', { isPublished: true });
+      .where('course.isPublished = :isPublished', { isPublished: true })
+      .andWhere('course.status = :status', { status: CourseStatus.PUBLISHED });
 
     // 1. UPDATED: Multi-field Search (Title, Description, Tags)
     if (search) {
-      const searchLower = `% ${search.toLowerCase()}% `;
+      const searchLower = `%${search.toLowerCase()}%`;
       queryBuilder.andWhere(
         new Brackets((qb) => {
           qb.where('LOWER(course.title) LIKE :search', { search: searchLower })
@@ -128,9 +129,9 @@ export class CoursesService {
       queryBuilder.andWhere(
         new Brackets((qb) => {
           tags.forEach((tag, index) => {
-            const paramName = `tag_${index} `;
-            qb.orWhere(`course.tags LIKE:${paramName} `, {
-              [paramName]: `% ${tag}% `,
+            const paramName = `tag_${index}`;
+            qb.orWhere(`course.tags LIKE :${paramName}`, {
+              [paramName]: `%${tag}%`,
             });
           });
         }),
@@ -159,7 +160,7 @@ export class CoursesService {
 
   async getUniqueTags(): Promise<string[]> {
     const courses = await this.coursesRepository.find({
-      where: { isPublished: true },
+      where: { isPublished: true, status: CourseStatus.PUBLISHED },
       select: ['tags'],
     });
 
@@ -188,8 +189,8 @@ export class CoursesService {
     }
 
     // Access Control:
-    // If course is NOT published, only the Instructor or Admin can view it.
-    if (!course.isPublished) {
+    // If course is NOT published OR not approved (status != PUBLISHED), only the Instructor or Admin can view it.
+    if (!course.isPublished || course.status !== CourseStatus.PUBLISHED) {
       const isInstructor = user?.id === course.instructor?.id;
       const isAdmin = user?.role === UserRole.ADMIN;
 
@@ -237,11 +238,84 @@ export class CoursesService {
     });
   }
 
+  /**
+   * Check if user has access to a course (either enrolled OR is the instructor)
+   * This is used by the frontend to determine if "Continue Learning" button should be shown
+   */
+  async checkCourseAccess(
+    user: User,
+    courseId: string,
+  ): Promise<{
+    isEnrolled: boolean;
+    isInstructor: boolean;
+    isAdmin: boolean;
+    enrollment: Enrollment | null;
+  }> {
+    const userId = user.id;
+    // Check enrollment first
+    const enrollment = await this.checkEnrollment(userId, courseId);
+
+    // Check if user is the instructor
+    const course = await this.coursesRepository.findOne({
+      where: { id: courseId },
+      select: ['instructorId', 'status'],
+    });
+
+    const isInstructor = course?.instructorId === userId;
+    const isAdmin = user.role === UserRole.ADMIN;
+    const isPending = course?.status === CourseStatus.PENDING;
+
+    // Admin has access to all courses, especially during review (PENDING)
+    const hasAdminAccess = isAdmin && isPending;
+
+    // Sanitize enrollment data to only include existing lessons
+    if (enrollment) {
+      const fullCourse = await this.coursesRepository.findOne({
+        where: { id: courseId },
+        relations: ['sections', 'sections.lessons'],
+      });
+      if (fullCourse) {
+        const allLessonIds = fullCourse.sections
+          .flatMap((s) => s.lessons)
+          .map((l) => l.id);
+        enrollment.completedLessonIds = (
+          enrollment.completedLessonIds ?? []
+        ).filter((id) => allLessonIds.includes(id));
+      }
+    }
+
+    return {
+      isEnrolled: Boolean(enrollment) || isInstructor || hasAdminAccess,
+      isInstructor,
+      isAdmin,
+      enrollment,
+    };
+  }
+
   async completeLesson(
-    userId: string,
+    user: User,
     courseId: string,
     lessonId: string,
-  ): Promise<Enrollment> {
+  ): Promise<Enrollment | null> {
+    const userId = user.id;
+    // Check if user is the instructor or admin - they don't need enrollment to access or track completion
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: lessonId },
+      relations: ['section', 'section.course'],
+    });
+
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+
+    const isInstructor = lesson.section.course.instructorId === userId;
+    const isAdmin = user.role === UserRole.ADMIN;
+
+    // Instructors and Admins can access lessons but don't track completion (no enrollment needed)
+    if (isInstructor || isAdmin) {
+      return null;
+    }
+
     const enrollment = await this.checkEnrollment(userId, courseId);
     if (!enrollment) {
       throw new NotFoundException('User is not enrolled in this course');
@@ -268,10 +342,11 @@ export class CoursesService {
    * Otherwise, throws ForbiddenException
    */
   async getLessonWithAccessControl(
-    userId: string,
+    user: User,
     courseId: string,
     lessonId: string,
   ): Promise<{ lesson: Lesson; hasAccess: boolean }> {
+    const userId = user.id;
     // Find the lesson
     const lesson = await this.lessonRepository.findOne({
       where: { id: lessonId },
@@ -291,8 +366,15 @@ export class CoursesService {
     const enrollment = await this.checkEnrollment(userId, courseId);
     const isEnrolled = Boolean(enrollment);
 
-    // Check access: enrolled OR free preview
-    const hasAccess = isEnrolled || lesson.isFreePreview;
+    // Check access: enrolled OR free preview OR is instructor OR is admin reviewing
+    const isInstructor = lesson.section.course.instructorId === userId;
+    const isAdmin = user.role === UserRole.ADMIN;
+    const isPending = lesson.section.course.status === CourseStatus.PENDING;
+    const hasAccess =
+      isEnrolled ||
+      lesson.isFreePreview ||
+      isInstructor ||
+      (isAdmin && isPending);
 
     if (!hasAccess) {
       throw new ForbiddenException(
@@ -327,10 +409,15 @@ export class CoursesService {
       const allLessons = enrollment.course.sections.flatMap((s) => s.lessons);
       const totalLessons = allLessons.length;
 
-      const completedLessons = enrollment.completedLessonIds?.length ?? 0;
+      // Filter completed IDs to only count existing lessons
+      const validCompletedIds = (enrollment.completedLessonIds ?? []).filter(
+        (id) => allLessons.some((l) => l.id === id),
+      );
+      const completedLessons = validCompletedIds.length;
+
       const progress =
         totalLessons > 0
-          ? Math.round((completedLessons / totalLessons) * 100)
+          ? Math.min(100, Math.round((completedLessons / totalLessons) * 100))
           : 0;
       const courseStatus: 'in-progress' | 'completed' =
         progress === 100 ? 'completed' : 'in-progress';
@@ -429,6 +516,7 @@ export class CoursesService {
         .leftJoinAndSelect('course.instructor', 'instructor')
         .loadRelationCountAndMap('course.studentCount', 'course.enrollments')
         .where('course.isPublished = :isPublished', { isPublished: true })
+        .andWhere('course.status = :status', { status: CourseStatus.PUBLISHED })
         .orderBy('course.createdAt', 'DESC')
         .take(limit)
         .getMany();
@@ -453,7 +541,8 @@ export class CoursesService {
         .createQueryBuilder('course')
         .leftJoinAndSelect('course.instructor', 'instructor')
         .loadRelationCountAndMap('course.studentCount', 'course.enrollments')
-        .where('course.status = :status', { status: CourseStatus.PUBLISHED })
+        .where('course.isPublished = :isPublished', { isPublished: true })
+        .andWhere('course.status = :status', { status: CourseStatus.PUBLISHED })
         .andWhere('course.id NOT IN (:...enrolledIds)', {
           enrolledIds: Array.from(enrolledCourseIds),
         })
@@ -473,7 +562,8 @@ export class CoursesService {
       .createQueryBuilder('course')
       .leftJoinAndSelect('course.instructor', 'instructor')
       .loadRelationCountAndMap('course.studentCount', 'course.enrollments')
-      .where('course.status = :status', { status: CourseStatus.PUBLISHED })
+      .where('course.isPublished = :isPublished', { isPublished: true })
+      .andWhere('course.status = :status', { status: CourseStatus.PUBLISHED })
       .andWhere('course.id NOT IN (:...enrolledIds)', {
         enrolledIds: Array.from(enrolledCourseIds),
       });
@@ -678,6 +768,56 @@ export class CoursesService {
     await this.lessonRepository.remove(lesson);
   }
 
+  async reorderSections(
+    courseId: string,
+    sectionIds: string[],
+    instructorId: string,
+  ): Promise<void> {
+    const course = await this.coursesRepository.findOne({
+      where: { id: courseId },
+      select: ['id', 'instructorId'],
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    if (course.instructorId !== instructorId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    await this.sectionRepository.manager.transaction(async (manager) => {
+      for (const [index, sectionId] of sectionIds.entries()) {
+        await manager.update(CourseSection, sectionId, { orderIndex: index });
+      }
+    });
+  }
+
+  async reorderLessons(
+    sectionId: string,
+    lessonIds: string[],
+    instructorId: string,
+  ): Promise<void> {
+    const section = await this.sectionRepository.findOne({
+      where: { id: sectionId },
+      relations: ['course'],
+    });
+
+    if (!section) {
+      throw new NotFoundException('Section not found');
+    }
+
+    if (section.course.instructorId !== instructorId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    await this.lessonRepository.manager.transaction(async (manager) => {
+      for (const [index, lessonId] of lessonIds.entries()) {
+        await manager.update(Lesson, lessonId, { orderIndex: index });
+      }
+    });
+  }
+
   // --- Statistics ---
 
   async count(): Promise<number> {
@@ -747,6 +887,10 @@ export class CoursesService {
       for (const block of lesson.content) {
         if (block.type === 'text') {
           combinedText += `${block.content}\n\n`;
+        } else if (block.type === 'video') {
+          const videoTitle =
+            block.metadata?.caption ?? block.metadata?.filename ?? 'Video';
+          combinedText += `\n[Video Content: ${videoTitle}]\n(Video URL: ${block.content})\n\n`;
         }
       }
     }
@@ -763,6 +907,10 @@ export class CoursesService {
     }
 
     // Call AI service
-    return this.aiQuizService.generateQuizFromText(combinedText, count);
+    return this.aiQuizService.generateQuizFromText(
+      combinedText,
+      count,
+      dto.preferredTypes,
+    );
   }
 }

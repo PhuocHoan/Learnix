@@ -11,6 +11,7 @@ import {
   Play,
   ArrowRight,
   Lightbulb,
+  User,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -26,7 +27,12 @@ import {
   type EnrolledCourse,
 } from '@/features/courses/api/courses-api';
 import { dashboardApi } from '@/features/dashboard/api/dashboard-api';
-import { cn, formatRelativeTime } from '@/lib/utils';
+import {
+  cn,
+  formatRelativeTime,
+  formatLastUpdated,
+  formatStudentCount,
+} from '@/lib/utils';
 
 // Helper function to get role-based welcome message
 function getRoleMessage(role?: string | null): string {
@@ -47,19 +53,6 @@ function getProgressBadgeVariant(
     return 'success';
   }
   if (progress >= 50) {
-    return 'warning';
-  }
-  return 'default';
-}
-
-// Helper function to get badge variant based on course level
-function getLevelBadgeVariant(
-  level: string,
-): 'success' | 'warning' | 'default' {
-  if (level === 'beginner') {
-    return 'success';
-  }
-  if (level === 'intermediate') {
     return 'warning';
   }
   return 'default';
@@ -221,22 +214,32 @@ export function DashboardPage() {
     <PageContainer>
       <div className="space-y-8 animate-fade-in">
         {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-2xl gradient-primary p-6 sm:p-8 text-white">
-          <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#6366f1] via-[#a855f7] to-[#ec4899] p-8 sm:p-10 text-white shadow-2xl transition-all duration-500 hover:shadow-primary/20">
+          {/* Subtle decorative elements without washing out text */}
+          <div className="absolute top-0 right-0 w-1/3 h-full bg-white/5 [clip-path:polygon(100%_0,0_0,100%_100%)]" />
+          <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-white/10 rounded-full blur-2xl opacity-30" />
 
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 text-white/80 mb-2">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-medium">AI-Powered Learning</span>
+          <div className="relative z-10 space-y-4">
+            <div className="flex items-center gap-2 text-white/90">
+              <div className="p-1 px-2 bg-white/20 rounded-full backdrop-blur-md flex items-center gap-1.5 border border-white/20">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                  AI-Powered Learning
+                </span>
+              </div>
             </div>
-            <h1 className="text-3xl font-bold mb-2">
-              Welcome back,{' '}
-              {user?.name ?? user?.email.split('@')[0] ?? 'Learner'}!
-            </h1>
-            <p className="text-white/80 max-w-xl">
-              {getRoleMessage(user?.role)}
-            </p>
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-black mb-2 tracking-tight drop-shadow-md">
+                Welcome back,{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/70">
+                  {user?.name ?? user?.email.split('@')[0] ?? 'Learner'}
+                </span>
+                !
+              </h1>
+              <p className="text-white/90 text-lg font-medium max-w-xl leading-relaxed drop-shadow-sm">
+                {getRoleMessage(user?.role)}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -275,7 +278,7 @@ export function DashboardPage() {
               }
               if (continueLearningCourse) {
                 return (
-                  <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300">
+                  <Card className="group premium-card overflow-hidden hover:shadow-xl transition-all duration-300">
                     <div className="flex flex-col md:flex-row">
                       {/* Thumbnail */}
                       <Link
@@ -286,7 +289,7 @@ export function DashboardPage() {
                           <img
                             src={continueLearningCourse.thumbnailUrl}
                             alt={continueLearningCourse.title}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                           />
                         ) : (
                           <div className="w-full h-full bg-linear-to-br from-primary/20 to-primary/40 flex items-center justify-center">
@@ -404,87 +407,128 @@ export function DashboardPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {recommendations.map(({ course, matchingTags, score }) => (
-                  <Card
-                    key={course.id}
-                    className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-                  >
-                    {/* Thumbnail */}
+                {recommendations.map(({ course, matchingTags, score }) => {
+                  const isAlreadyEnrolled = enrolledCourses?.some(
+                    (ec) => ec.id === course.id,
+                  );
+
+                  return (
                     <Link
-                      to={`/courses/${course.id}`}
-                      className="relative block h-36 overflow-hidden"
+                      key={course.id}
+                      to={
+                        isAlreadyEnrolled
+                          ? `/courses/${course.id}/learn`
+                          : `/courses/${course.id}`
+                      }
+                      className="group block h-full"
                     >
-                      {course.thumbnailUrl ? (
-                        <img
-                          src={course.thumbnailUrl}
-                          alt={course.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-linear-to-br from-primary/20 to-primary/40 flex items-center justify-center">
-                          <BookOpen className="w-12 h-12 text-primary/50" />
-                        </div>
-                      )}
-                      {/* Score badge */}
-                      {score > 0 && (
-                        <div className="absolute top-2 right-2 bg-yellow-500 text-yellow-950 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                          <Sparkles className="w-3 h-3" />
-                          {score} {score === 1 ? 'match' : 'matches'}
-                        </div>
-                      )}
-                    </Link>
-
-                    {/* Content */}
-                    <div className="p-4">
-                      <Link to={`/courses/${course.id}`}>
-                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                          {course.title}
-                        </h3>
-                      </Link>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {course.instructor?.fullName ?? 'Unknown Instructor'}
-                      </p>
-
-                      {/* Matching tags */}
-                      {matchingTags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-3">
-                          {matchingTags.slice(0, 3).map((tag) => (
-                            <Badge
-                              key={tag}
-                              variant="secondary"
-                              className="text-xs bg-primary/10 text-primary border-0"
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                          {matchingTags.length > 3 && (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs bg-muted text-muted-foreground border-0"
-                            >
-                              +{matchingTags.length - 3}
-                            </Badge>
+                      <Card className="h-full premium-card overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 flex flex-col">
+                        <div className="h-48 bg-linear-to-br from-primary/5 to-primary/20 relative overflow-hidden shrink-0">
+                          {course.thumbnailUrl ? (
+                            <img
+                              src={course.thumbnailUrl}
+                              alt={course.title}
+                              className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <BookOpen className="w-12 h-12 text-primary/20" />
+                            </div>
                           )}
+                          <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
+                            <Badge className="bg-background/80 backdrop-blur text-foreground border-transparent capitalize">
+                              {course.level}
+                            </Badge>
+                            {score > 0 && (
+                              <div className="bg-yellow-500/90 backdrop-blur text-yellow-950 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                                <Sparkles className="w-3 h-3" />
+                                {score} {score === 1 ? 'match' : 'matches'}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
 
-                      {/* Level badge */}
-                      <div className="flex items-center justify-between mt-3">
-                        <Badge
-                          variant={getLevelBadgeVariant(course.level)}
-                          className="capitalize"
-                        >
-                          {course.level}
-                        </Badge>
-                        <span className="text-sm font-semibold text-primary">
-                          {course.price === 0
-                            ? 'Free'
-                            : `$${Number(course.price).toFixed(2)}`}
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+                        <CardContent className="p-5 flex flex-col flex-1">
+                          <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                            {course.title}
+                          </h3>
+                          <p className="text-muted-foreground text-sm line-clamp-2 mb-3 flex-1">
+                            {course.description}
+                          </p>
+
+                          {/* Instructor */}
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                            <User className="w-3.5 h-3.5" />
+                            <span className="font-medium">
+                              {course.instructor?.fullName ??
+                                course.instructor?.name ??
+                                'Instructor'}
+                            </span>
+                          </div>
+
+                          {/* Stats Row */}
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
+                            {course.studentCount !== undefined && (
+                              <div className="flex items-center gap-1">
+                                <Users className="w-3.5 h-3.5" />
+                                <span>
+                                  {formatStudentCount(course.studentCount)}
+                                </span>
+                              </div>
+                            )}
+                            {course.updatedAt && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>
+                                  {formatLastUpdated(course.updatedAt)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Tags & Price */}
+                          <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
+                            <div className="flex flex-wrap gap-1">
+                              {/* Show matching tags first, then general tags */}
+                              {matchingTags.slice(0, 2).map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                              {course.tags
+                                ?.filter((t) => !matchingTags.includes(t))
+                                .slice(0, Math.max(0, 2 - matchingTags.length))
+                                .map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="text-[10px] bg-secondary px-1.5 py-0.5 rounded text-secondary-foreground"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {isAlreadyEnrolled ? (
+                                <Badge className="bg-green-500/10 text-green-600 border-green-200/50 hover:bg-green-500/20">
+                                  Purchased
+                                </Badge>
+                              ) : (
+                                <div className="font-bold text-primary">
+                                  {course.price === 0
+                                    ? 'Free'
+                                    : `$${Number(course.price).toFixed(2)}`}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -501,7 +545,7 @@ export function DashboardPage() {
             return (
               <Card
                 key={card.title}
-                className="group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1"
+                className="group premium-card hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <CardContent className="p-6">

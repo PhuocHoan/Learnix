@@ -24,6 +24,9 @@ export class Question {
   @Column({ type: 'text' })
   questionText: string;
 
+  @Column({ type: 'text', nullable: true, name: 'image_url' })
+  imageUrl: string | null;
+
   @Column({ type: 'json' })
   options: string[]; // Array of 4 options: ["A: ...", "B: ...", "C: ...", "D: ..."]
 
@@ -38,6 +41,9 @@ export class Question {
 
   @Column({ default: 0 })
   position: number;
+
+  @Column({ type: 'varchar', default: 'multiple_choice' })
+  type: string; // 'multiple_choice', 'true_false', 'short_answer'
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

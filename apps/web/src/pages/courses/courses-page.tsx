@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Search, BookOpen, User, Filter, X, Users, Clock } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { PageContainer } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/use-auth';
 import {
   coursesApi,
   type CoursesParams,
@@ -26,6 +27,17 @@ function useDebounceValue<T>(value: T, delay: number): T {
 }
 
 export function CoursesPage() {
+  const { isAuthenticated, user } = useAuth();
+
+  // Fetch enrolled courses to check status
+  const { data: enrolledCourses } = useQuery({
+    queryKey: ['courses', 'enrolled'],
+    queryFn: () => coursesApi.getEnrolledCourses(),
+    enabled: isAuthenticated,
+  });
+
+  const enrolledCourseIds = new Set(enrolledCourses?.map((c) => c.id));
+
   // --- Filter States ---
   const [searchParams, setSearchParams] = useSearchParams();
   // Use URL search param as initial value - controlled by URL
@@ -38,6 +50,13 @@ export function CoursesPage() {
 
   const [selectedLevel, setSelectedLevel] = useState<string>('');
   const [tagInput, setTagInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Fetch available tags for autocomplete
+  const { data: availableTags } = useQuery({
+    queryKey: ['courses', 'tags'],
+    queryFn: coursesApi.getTags,
+  });
 
   // FIX: Initialize selectedTags from URL search params
   const [selectedTags, setSelectedTags] = useState<string[]>(() => {
@@ -67,6 +86,16 @@ export function CoursesPage() {
 
   const debouncedSearch = useDebounceValue(effectiveSearch, 500);
   const { ref, inView } = useInView(); // Infinite scroll trigger
+  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(
+    () => () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   // --- Query Params ---
   const queryParams: CoursesParams = {
@@ -175,13 +204,65 @@ export function CoursesPage() {
             </select>
 
             {/* 4. Tags Input */}
-            <div className="relative">
+            <div className="relative group">
               <Input
                 placeholder="Type tag & press Enter..."
                 value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
+                onChange={(e) => {
+                  setTagInput(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                // Delay blur to allow clicking suggestions
+                onBlur={() => {
+                  blurTimeoutRef.current = setTimeout(() => {
+                    setShowSuggestions(false);
+                  }, 200);
+                }}
                 onKeyDown={handleAddTag}
               />
+
+              {/* Tag Suggestions Dropdown */}
+              {showSuggestions && (availableTags?.length ?? 0) > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 p-1 bg-popover border border-border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto animate-fade-in">
+                  {availableTags
+                    ?.filter(
+                      (tag) =>
+                        !selectedTags.includes(tag) &&
+                        tag.toLowerCase().includes(tagInput.toLowerCase()),
+                    )
+                    .slice(0, 100) // Limit results for performance
+                    .map((tag) => (
+                      <button
+                        key={tag}
+                        className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-muted/80 transition-colors flex items-center justify-between group/item"
+                        onClick={() => {
+                          if (!selectedTags.includes(tag)) {
+                            setSelectedTags([...selectedTags, tag]);
+                          }
+                          setTagInput('');
+                          setShowSuggestions(false);
+                        }}
+                      >
+                        <span className="font-medium">{tag}</span>
+                        <span className="text-xs text-muted-foreground opacity-0 group-hover/item:opacity-100 transition-opacity">
+                          Add
+                        </span>
+                      </button>
+                    ))}
+
+                  {/* Empty state for search */}
+                  {availableTags?.filter(
+                    (tag) =>
+                      !selectedTags.includes(tag) &&
+                      tag.toLowerCase().includes(tagInput.toLowerCase()),
+                  ).length === 0 && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground text-center">
+                      No matching tags found
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -229,13 +310,13 @@ export function CoursesPage() {
                     to={`/courses/${course.id}`}
                     className="group block h-full"
                   >
-                    <Card className="h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 flex flex-col">
+                    <Card className="h-full premium-card overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 flex flex-col">
                       <div className="h-48 bg-linear-to-br from-primary/5 to-primary/20 relative overflow-hidden">
                         {course.thumbnailUrl ? (
                           <img
                             src={course.thumbnailUrl}
                             alt={course.title}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                           />
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center">
@@ -302,9 +383,37 @@ export function CoursesPage() {
                               </span>
                             )}
                           </div>
-                          <div className="font-bold text-primary">
-                            {course.price === 0 ? 'Free' : `$${course.price}`}
-                          </div>
+                          {(() => {
+                            if (user?.id === course.instructor.id) {
+                              return (
+                                <Badge className="bg-violet-500/15 text-violet-600 hover:bg-violet-500/25 border-violet-500/20 shadow-sm gap-1">
+                                  <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
+                                  </span>
+                                  Your Course
+                                </Badge>
+                              );
+                            }
+                            if (enrolledCourseIds.has(course.id)) {
+                              return (
+                                <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 border-emerald-500/20 shadow-sm gap-1">
+                                  <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                  </span>
+                                  Enrolled
+                                </Badge>
+                              );
+                            }
+                            return (
+                              <div className="font-bold text-primary">
+                                {course.price === 0
+                                  ? 'Free'
+                                  : `$${course.price}`}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </CardContent>
                     </Card>

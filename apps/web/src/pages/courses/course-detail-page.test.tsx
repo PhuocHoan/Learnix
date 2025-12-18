@@ -5,21 +5,12 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import * as useAuthModule from '@/contexts/use-auth';
+import { coursesApi } from '@/features/courses/api/courses-api';
 
 import { CourseDetailPage } from './course-detail-page';
 
 // Mock courses API
-const mockGetCourse = vi.fn();
-const mockGetEnrollment = vi.fn();
-const mockEnroll = vi.fn();
-
-vi.mock('@/features/courses/api/courses-api', () => ({
-  coursesApi: {
-    getCourse: (...args: unknown[]) => mockGetCourse(...args),
-    getEnrollment: (...args: unknown[]) => mockGetEnrollment(...args),
-    enroll: (...args: unknown[]) => mockEnroll(...args),
-  },
-}));
+vi.mock('@/features/courses/api/courses-api');
 
 // Mock useAuth
 vi.mock('@/contexts/use-auth', () => ({
@@ -36,14 +27,22 @@ const mockCourse = {
   id: 'course-1',
   title: 'React Masterclass',
   description: 'Learn React from beginner to advanced',
-  level: 'intermediate',
+  level: 'intermediate' as 'intermediate' | 'beginner' | 'advanced',
   price: 29.99,
   tags: ['react', 'javascript'],
-  instructor: { id: 'instructor-1', fullName: 'John Doe' },
-  thumbnailUrl: null,
+  instructor: {
+    id: 'instructor-1',
+    userId: 'instructor-1',
+    fullName: 'John Doe',
+    email: 'instructor@example.com',
+    role: 'instructor',
+  },
+  thumbnailUrl: undefined,
   studentCount: 150,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-06-01T00:00:00Z',
+  status: 'published' as 'published' | 'draft' | 'pending' | 'rejected',
+  isPublished: true,
   sections: [
     {
       id: 'section-1',
@@ -53,7 +52,8 @@ const mockCourse = {
         {
           id: 'lesson-1',
           title: 'Introduction',
-          type: 'video',
+          type: 'standard' as 'standard' | 'quiz',
+          content: [],
           durationSeconds: 600,
           isFreePreview: true,
           orderIndex: 0,
@@ -61,7 +61,8 @@ const mockCourse = {
         {
           id: 'lesson-2',
           title: 'Setting Up',
-          type: 'text',
+          type: 'standard' as 'standard' | 'quiz',
+          content: [],
           durationSeconds: 300,
           isFreePreview: false,
           orderIndex: 1,
@@ -97,8 +98,13 @@ const renderWithProviders = (courseId = 'course-1') => {
 describe('CourseDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetCourse.mockResolvedValue(mockCourse);
-    mockGetEnrollment.mockResolvedValue({ isEnrolled: false, progress: null });
+    vi.mocked(coursesApi.getCourse).mockResolvedValue(mockCourse);
+    vi.mocked(coursesApi.getEnrollment).mockResolvedValue({
+      isEnrolled: false,
+      isInstructor: false,
+      isAdmin: false,
+      progress: null,
+    });
 
     vi.mocked(useAuthModule.useAuth).mockReturnValue({
       user: null,
@@ -200,8 +206,14 @@ describe('CourseDetailPage', () => {
 
   describe('Authenticated User', () => {
     beforeEach(() => {
+      // Reset auth mock for this block
       vi.mocked(useAuthModule.useAuth).mockReturnValue({
-        user: { userId: 'user-1', email: 'test@example.com', role: 'student' },
+        user: {
+          id: 'user-1',
+          userId: 'user-1',
+          email: 'test@example.com',
+          role: 'student',
+        },
         isLoading: false,
         isAuthenticated: true,
         logout: vi.fn(),
@@ -210,36 +222,56 @@ describe('CourseDetailPage', () => {
     });
 
     it('shows enroll button for non-enrolled authenticated user', async () => {
+      vi.mocked(coursesApi.getEnrollment).mockResolvedValue({
+        isEnrolled: false,
+        isInstructor: false,
+        isAdmin: false,
+        progress: null,
+      });
       renderWithProviders();
-
       expect(
         await screen.findByRole('button', { name: /Enroll Now/i }),
       ).toBeInTheDocument();
     });
 
     it('shows enrolled badge and continue button for enrolled user', async () => {
-      mockGetEnrollment.mockResolvedValue({
+      vi.mocked(coursesApi.getEnrollment).mockResolvedValue({
         isEnrolled: true,
-        progress: { completedLessonIds: ['lesson-1'] },
+        isInstructor: false,
+        isAdmin: false,
+        progress: {
+          id: 'progress-1',
+          completedLessonIds: ['lesson-1'],
+          lastAccessedAt: new Date().toISOString(),
+        },
       });
 
       renderWithProviders();
 
+      // Wait for the enrolled text, using findByText which waits/retries
       expect(await screen.findByText(/You are enrolled/i)).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: /Continue Learning/i }),
+        screen.getByRole('button', {
+          name: /Continue Learning|View Course Content/i,
+        }),
       ).toBeInTheDocument();
     });
 
     it('shows View button for lessons when enrolled', async () => {
-      mockGetEnrollment.mockResolvedValue({
+      vi.mocked(coursesApi.getEnrollment).mockResolvedValue({
         isEnrolled: true,
-        progress: { completedLessonIds: [] },
+        isInstructor: false,
+        isAdmin: false,
+        progress: {
+          id: 'progress-1',
+          completedLessonIds: [],
+          lastAccessedAt: new Date().toISOString(),
+        },
       });
 
       renderWithProviders();
 
-      // Wait for enrolled state to render
+      // Wait for enrolled text first to confirm state
       await screen.findByText(/You are enrolled/i);
 
       const viewButtons = await screen.findAllByRole('button', {
@@ -250,14 +282,22 @@ describe('CourseDetailPage', () => {
   });
 
   it('shows loading state while fetching', () => {
-    mockGetCourse.mockImplementation(() => new Promise(() => {})); // Never resolves
+    vi.mocked(coursesApi.getCourse).mockImplementation(
+      () => new Promise(() => {}),
+    ); // Never resolves
     renderWithProviders();
 
     expect(screen.getByText(/Loading/i)).toBeInTheDocument();
   });
 
   it('shows not found message for invalid course', async () => {
-    mockGetCourse.mockResolvedValue(null);
+    vi.mocked(coursesApi.getCourse).mockResolvedValue(
+      null as unknown as ReturnType<
+        typeof coursesApi.getCourse
+      > extends Promise<infer T>
+        ? T
+        : never,
+    );
     renderWithProviders();
 
     await waitFor(() => {

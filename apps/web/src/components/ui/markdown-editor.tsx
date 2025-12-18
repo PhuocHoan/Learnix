@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { Link } from '@tiptap/extension-link';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
@@ -19,6 +19,16 @@ import { Markdown } from 'tiptap-markdown';
 import { cn } from '@/lib/utils';
 
 import { Button } from './button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './dialog';
+import { Input } from './input';
+import { Label } from './label';
 
 interface MarkdownEditorProps {
   value: string;
@@ -26,7 +36,83 @@ interface MarkdownEditorProps {
   placeholder?: string;
 }
 
-const MenuBar = ({ editor }: { editor: Editor | null }) => {
+interface LinkDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (url: string) => void;
+  initialUrl: string;
+}
+
+function LinkDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  initialUrl,
+}: LinkDialogProps) {
+  // Use a key pattern - when initialUrl changes while dialog is open, we want to reset
+  // Initialize with initialUrl directly
+  const [url, setUrl] = useState('');
+
+  // Reset URL when dialog opens (using a controlled pattern)
+  const dialogKey = isOpen ? `open-${initialUrl}` : 'closed';
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onConfirm(url);
+    onClose();
+  };
+
+  // Handle dialog open state change
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      setUrl(initialUrl);
+    }
+    if (!open) {
+      onClose();
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange} key={dialogKey}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Insert Link</DialogTitle>
+          <DialogDescription>
+            Enter the URL for the link. Leave empty to remove the link.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="url">URL</Label>
+              <Input
+                id="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://example.com"
+                // Auto-fill when dialog opens
+                defaultValue={initialUrl}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit">{url ? 'Add Link' : 'Remove Link'}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface MenuBarProps {
+  editor: Editor | null;
+  onLinkClick: () => void;
+}
+
+const MenuBar = ({ editor, onLinkClick }: MenuBarProps) => {
   if (!editor) {
     return null;
   }
@@ -43,23 +129,6 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         : 'text-muted-foreground hover:bg-muted hover:text-foreground',
     ),
   });
-
-  const setLink = () => {
-    const previousUrl = String(editor.getAttributes('link').href ?? '');
-    // eslint-disable-next-line no-alert
-    const url = window.prompt('URL', previousUrl);
-
-    if (url === null) {
-      return;
-    }
-
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
-    }
-
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-  };
 
   return (
     <div className="flex flex-wrap items-center gap-1 border-b border-input bg-muted/30 p-2">
@@ -130,7 +199,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
       <Button
         {...getButtonProps(editor.isActive('link'))}
-        onClick={setLink}
+        onClick={onLinkClick}
         title="Add Link"
       >
         <LinkIcon className="h-5 w-5" />
@@ -146,6 +215,8 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   // Use state to force re-render on transaction
   const [, setTick] = useState(0);
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
+  const [currentLinkUrl, setCurrentLinkUrl] = useState('');
 
   const editor = useEditor({
     extensions: [
@@ -210,6 +281,36 @@ export function MarkdownEditor({
     },
   });
 
+  const handleLinkClick = useCallback(() => {
+    if (!editor) {
+      return;
+    }
+    const previousUrl = String(editor.getAttributes('link').href ?? '');
+    setCurrentLinkUrl(previousUrl);
+    setIsLinkDialogOpen(true);
+  }, [editor]);
+
+  const handleLinkConfirm = useCallback(
+    (url: string) => {
+      if (!editor) {
+        return;
+      }
+
+      if (url === '') {
+        editor.chain().focus().extendMarkRange('link').unsetLink().run();
+        return;
+      }
+
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange('link')
+        .setLink({ href: url })
+        .run();
+    },
+    [editor],
+  );
+
   // Sync content if external value changes (e.g. data loaded from API)
   useEffect(() => {
     if (!editor) {
@@ -234,9 +335,17 @@ export function MarkdownEditor({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-input bg-background focus-within:ring-1 focus-within:ring-ring transition-all shadow-sm">
-      <MenuBar editor={editor} />
-      <EditorContent editor={editor} placeholder={placeholder} />
-    </div>
+    <>
+      <div className="overflow-hidden rounded-xl border border-input bg-background focus-within:ring-1 focus-within:ring-ring transition-all shadow-sm">
+        <MenuBar editor={editor} onLinkClick={handleLinkClick} />
+        <EditorContent editor={editor} placeholder={placeholder} />
+      </div>
+      <LinkDialog
+        isOpen={isLinkDialogOpen}
+        onClose={() => setIsLinkDialogOpen(false)}
+        onConfirm={handleLinkConfirm}
+        initialUrl={currentLinkUrl}
+      />
+    </>
   );
 }

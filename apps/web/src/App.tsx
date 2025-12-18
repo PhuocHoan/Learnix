@@ -45,6 +45,7 @@ const PrivacyPage = lazy(() => import('@/pages/legal/privacy-page'));
 const TermsPage = lazy(() => import('@/pages/legal/terms-page'));
 const NotFoundPage = lazy(() => import('@/pages/not-found-page'));
 const SettingsPage = lazy(() => import('@/pages/settings/settings-page'));
+const BlockedPage = lazy(() => import('@/pages/auth/blocked-page'));
 
 const InstructorCoursesPage = lazy(
   () => import('@/pages/instructor/instructor-courses-page'),
@@ -70,8 +71,8 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
+      <BrowserRouter>
+        <AuthProvider>
           <ScrollToTop />
           <Toaster
             position="top-right"
@@ -118,6 +119,7 @@ function App() {
               <Route path="/activate" element={<ActivatePage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/blocked" element={<BlockedPage />} />
               <Route
                 path="/select-role"
                 element={
@@ -238,8 +240,8 @@ function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>
-        </BrowserRouter>
-      </AuthProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }

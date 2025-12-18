@@ -86,6 +86,13 @@ export class AuthService {
       );
     }
 
+    // Check if account is active (not blocked)
+    if (!user.isActive) {
+      throw new UnauthorizedException(
+        'Your account has been blocked. Please contact support.',
+      );
+    }
+
     const payload = { email: user.email, sub: user.id, role: user.role };
     return {
       access_token: this.jwtService.sign(payload),
@@ -254,6 +261,12 @@ export class AuthService {
 
     // TypeScript narrows user to non-null after the else block above
     const validUser = user;
+
+    if (!validUser.isActive) {
+      throw new UnauthorizedException(
+        'Your account has been blocked. Please contact support.',
+      );
+    }
 
     const payload = {
       email: validUser.email,

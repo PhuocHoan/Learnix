@@ -25,7 +25,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const variantStyles = new Map<ButtonVariant, string>([
   [
     'primary',
-    'gradient-primary text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:opacity-90',
+    'gradient-primary text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:opacity-90 glow-primary',
   ],
   ['secondary', 'bg-secondary text-secondary-foreground hover:bg-secondary/80'],
   [
@@ -58,7 +58,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const buttonStyles = cn(
-    'inline-flex items-center justify-center font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
+    'inline-flex items-center justify-center font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]',
     variantStyles.get(variant),
     sizeStyles.get(size),
     className,

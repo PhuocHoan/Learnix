@@ -63,17 +63,22 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-card border-t border-border mt-auto">
+    <footer className="glass border-t border-border mt-auto">
       {/* Main Footer Content */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 lg:gap-12">
           {/* Brand Section */}
           <div className="lg:col-span-2">
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary text-primary-foreground">
+            <Link
+              to="/"
+              className="flex items-center gap-2 mb-4 group/footer-logo"
+            >
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl gradient-primary text-white glow-primary transition-transform group-hover/footer-logo:scale-110">
                 <GraduationCap className="w-6 h-6" />
               </div>
-              <span className="text-xl font-bold text-foreground">Learnix</span>
+              <span className="text-xl font-bold text-foreground group-hover/footer-logo:text-primary transition-colors">
+                Learnix
+              </span>
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed mb-6 max-w-sm">
               Empowering learners worldwide with AI-powered education. Master

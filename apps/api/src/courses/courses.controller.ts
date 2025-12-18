@@ -75,19 +75,31 @@ export class CoursesController {
     });
   }
 
+  @Get('instructor/my-courses')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  getMyCourses(@CurrentUser() user: User): Promise<Course[]> {
+    return this.coursesService.findInstructorCourses(user.id);
+  }
+
+  @Get('admin/pending')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  findPending(): Promise<Course[]> {
+    return this.coursesService.findAllPending();
+  }
+
   @Get()
   findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('search') search?: string,
     @Query('level') level?: CourseLevel,
-    @Query('tags') tags?: string, // Received as comma-separated string "react,js"
+    @Query('tags') tags?: string,
     @Query('sort') sort?: 'price' | 'date',
     @Query('order') order?: 'ASC' | 'DESC',
   ): Promise<CoursesListResult> {
-    // Parse tags string into array if it exists
     const tagsArray = tags ? tags.split(',').map((t) => t.trim()) : undefined;
-
     return this.coursesService.findAllPublished({
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 10,
@@ -122,9 +134,19 @@ export class CoursesController {
   async checkEnrollment(
     @Param('id') id: string,
     @CurrentUser() user: User,
-  ): Promise<{ isEnrolled: boolean; progress: Enrollment | null }> {
-    const enrollment = await this.coursesService.checkEnrollment(user.id, id);
-    return { isEnrolled: Boolean(enrollment), progress: enrollment };
+  ): Promise<{
+    isEnrolled: boolean;
+    isInstructor: boolean;
+    isAdmin: boolean;
+    progress: Enrollment | null;
+  }> {
+    const accessInfo = await this.coursesService.checkCourseAccess(user, id);
+    return {
+      isEnrolled: accessInfo.isEnrolled,
+      isInstructor: accessInfo.isInstructor,
+      isAdmin: accessInfo.isAdmin,
+      progress: accessInfo.enrollment,
+    };
   }
 
   /**
@@ -139,7 +161,7 @@ export class CoursesController {
     @CurrentUser() user: User,
   ): Promise<{ lesson: Lesson; hasAccess: boolean }> {
     return this.coursesService.getLessonWithAccessControl(
-      user.id,
+      user,
       courseId,
       lessonId,
     );
@@ -151,8 +173,8 @@ export class CoursesController {
     @Param('id') courseId: string,
     @Param('lessonId') lessonId: string,
     @CurrentUser() user: User,
-  ): Promise<Enrollment> {
-    return this.coursesService.completeLesson(user.id, courseId, lessonId);
+  ): Promise<Enrollment | null> {
+    return this.coursesService.completeLesson(user, courseId, lessonId);
   }
 
   /**
@@ -179,13 +201,6 @@ export class CoursesController {
   ): Promise<{ success: boolean; message: string }> {
     await this.coursesService.unarchiveCourse(user.id, id);
     return { success: true, message: 'Course unarchived successfully' };
-  }
-
-  @Get('instructor/my-courses')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
-  getMyCourses(@CurrentUser() user: User): Promise<Course[]> {
-    return this.coursesService.findInstructorCourses(user.id);
   }
 
   @Post()
@@ -270,6 +285,28 @@ export class CoursesController {
   ): Promise<void> {
     return this.coursesService.removeLesson(lessonId, user.id);
   }
+
+  @Post(':id/sections/reorder')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  reorderSections(
+    @Param('id') courseId: string,
+    @Body('sectionIds') sectionIds: string[],
+    @CurrentUser() user: User,
+  ): Promise<void> {
+    return this.coursesService.reorderSections(courseId, sectionIds, user.id);
+  }
+
+  @Post('sections/:sectionId/lessons/reorder')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  reorderLessons(
+    @Param('sectionId') sectionId: string,
+    @Body('lessonIds') lessonIds: string[],
+    @CurrentUser() user: User,
+  ): Promise<void> {
+    return this.coursesService.reorderLessons(sectionId, lessonIds, user.id);
+  }
   @Patch(':id/submit')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
@@ -298,12 +335,5 @@ export class CoursesController {
   @Roles(UserRole.ADMIN)
   reject(@Param('id') id: string): Promise<Course> {
     return this.coursesService.rejectCourse(id);
-  }
-
-  @Get('admin/pending')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  findPending(): Promise<Course[]> {
-    return this.coursesService.findAllPending();
   }
 }

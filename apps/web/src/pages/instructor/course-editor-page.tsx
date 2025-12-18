@@ -1,5 +1,22 @@
 import { useEffect, useState, useId } from 'react';
 
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -17,7 +34,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -50,7 +67,12 @@ import {
   type Lesson,
   type CreateLessonData,
   type LessonBlock,
+  type CourseSection as Section,
 } from '@/features/courses/api/courses-api';
+import {
+  quizzesApi,
+  type CreateQuestionData,
+} from '@/features/quizzes/api/quizzes-api';
 import { QuizGenerationModal } from '@/features/quizzes/components/quiz-generation-modal';
 import { cn } from '@/lib/utils';
 
@@ -61,7 +83,7 @@ const courseSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
-  price: z.coerce.number().min(0, 'Price must be 0 or greater'),
+  price: z.number().min(0, 'Price must be 0 or greater'),
   thumbnailUrl: z.string().optional().or(z.literal('')),
   isPublished: z.boolean().optional(),
 });
@@ -72,9 +94,9 @@ const sectionSchema = z.object({
 
 const lessonSchema = z.object({
   title: z.string().min(2, 'Title must be at least 2 characters'),
-  isFreePreview: z.boolean().default(false),
-  durationSeconds: z.coerce.number().default(0),
-  content: z.array(z.any()).default([]),
+  isFreePreview: z.boolean(),
+  durationSeconds: z.number(),
+  content: z.array(z.any()),
 });
 
 type CourseFormData = z.infer<typeof courseSchema>;
@@ -85,8 +107,18 @@ export default function CourseEditorPage() {
   const { courseId } = useParams<{ courseId: string }>();
   const isNew = !courseId;
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('details');
+
+  const activeTab = searchParams.get('tab') ?? 'details';
+  const setActiveTab = (tab: string) => {
+    setSearchParams((prev) => {
+      prev.set('tab', tab);
+      return prev;
+    });
+  };
+
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
 
   const { data: course, isLoading } = useQuery({
     queryKey: ['course', courseId],
@@ -159,14 +191,7 @@ export default function CourseEditorPage() {
               !course.status) && (
               <Button
                 variant="primary"
-                onClick={() => {
-                  if (
-                    // eslint-disable-next-line no-alert
-                    window.confirm('Submit this course for admin approval?')
-                  ) {
-                    submitMutation.mutate();
-                  }
-                }}
+                onClick={() => setShowSubmitConfirm(true)}
                 disabled={submitMutation.isPending}
               >
                 {submitMutation.isPending && (
@@ -200,10 +225,12 @@ export default function CourseEditorPage() {
             navigate={navigate}
             onSuccess={(newId) => {
               if (isNew && newId) {
-                void navigate(`/instructor/courses/${newId}/edit`, {
-                  replace: true,
-                });
-                setActiveTab('curriculum');
+                void navigate(
+                  `/instructor/courses/${newId}/edit?tab=curriculum`,
+                  {
+                    replace: true,
+                  },
+                );
               }
             }}
           />
@@ -213,6 +240,36 @@ export default function CourseEditorPage() {
           {course && <CurriculumEditor course={course} />}
         </TabsContent>
       </Tabs>
+
+      {/* Confirmation Dialogs */}
+      <Dialog
+        open={showSubmitConfirm}
+        onOpenChange={(open) => !open && setShowSubmitConfirm(false)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit for Approval</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to submit this course for admin approval?
+              You won't be able to make changes until it's reviewed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowSubmitConfirm(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                submitMutation.mutate();
+                setShowSubmitConfirm(false);
+              }}
+            >
+              Submit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }
@@ -249,8 +306,7 @@ function CourseDetailsForm({
     .slice(0, 8);
 
   const form = useForm<CourseFormData>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-    resolver: zodResolver(courseSchema) as any,
+    resolver: zodResolver(courseSchema),
     defaultValues: {
       title: course?.title ?? '',
       description: course?.description ?? '',
@@ -298,17 +354,14 @@ function CourseDetailsForm({
     // Explicitly construct the payload to match API types and avoid 'any'
     const cleanData = {
       ...data,
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-      thumbnailUrl: data.thumbnailUrl || DEFAULT_THUMBNAIL_URL,
+      thumbnailUrl: data.thumbnailUrl ?? DEFAULT_THUMBNAIL_URL,
       tags,
     };
 
     if (isNew) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-      createMutation.mutate(cleanData as any);
+      createMutation.mutate(cleanData);
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-      updateMutation.mutate(cleanData as any);
+      updateMutation.mutate(cleanData);
     }
   };
 
@@ -458,7 +511,10 @@ function CourseDetailsForm({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="relative">
-                <label htmlFor="course-tags" className="sr-only">
+                <label
+                  htmlFor="course-tags"
+                  className="text-sm font-medium mb-1 block"
+                >
                   Tags
                 </label>
                 <Input
@@ -590,13 +646,18 @@ function CourseDetailsForm({
 function CurriculumEditor({ course }: { course: Course }) {
   const queryClient = useQueryClient();
   const [isAddingSection, setIsAddingSection] = useState(false);
-  const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(
-    null,
-  );
-  const [draggedLessonInfo, setDraggedLessonInfo] = useState<{
+  const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
+  const [lessonToDelete, setLessonToDelete] = useState<{
     sectionId: string;
-    index: number;
+    lessonId: string;
   } | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const sectionForm = useForm<SectionFormData>({
     resolver: zodResolver(sectionSchema),
@@ -623,97 +684,46 @@ function CurriculumEditor({ course }: { course: Course }) {
     onSuccess: () => {
       toast.success('Section deleted');
       void queryClient.invalidateQueries({ queryKey: ['course', course.id] });
+      setSectionToDelete(null);
     },
   });
 
-  // --- Section Drag Logic ---
-  const handleSectionDragStart = (index: number) => {
-    setDraggedSectionIndex(index);
-  };
+  const deleteLessonMutation = useMutation({
+    mutationFn: coursesApi.deleteLesson,
+    onSuccess: () => {
+      toast.success('Lesson deleted');
+      void queryClient.invalidateQueries({ queryKey: ['course', course.id] });
+      setLessonToDelete(null);
+    },
+  });
 
-  const handleSectionDragEnter = (index: number) => {
-    if (draggedSectionIndex === null || draggedSectionIndex === index) {
-      return;
-    }
+  const handleSectionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const sections = [...(course.sections ?? [])];
+      const oldIndex = sections.findIndex((s) => s.id === active.id);
+      const newIndex = sections.findIndex((s) => s.id === over.id);
 
-    // Optimistic update of sections array
-    const sections = [...(course.sections ?? [])];
+      const reordered = arrayMove(sections, oldIndex, newIndex).map(
+        (s: Section, i: number) => ({ ...s, orderIndex: i }),
+      );
+      const sectionIds = reordered.map((s) => s.id);
 
-    // Check bounds before access to satisfy no-object-injection
-    if (draggedSectionIndex >= sections.length || index >= sections.length) {
-      return;
-    }
-
-    const [item] = sections.splice(draggedSectionIndex, 1);
-    if (item) {
-      sections.splice(index, 0, item);
-
-      // Update local React Query cache immediately for "dynamic" feel
       queryClient.setQueryData(['course', course.id], {
         ...course,
-        sections,
+        sections: reordered,
       });
 
-      setDraggedSectionIndex(index);
-    }
-  };
-
-  const handleSectionDragEnd = () => {
-    setDraggedSectionIndex(null);
-  };
-
-  // --- Lesson Drag Logic ---
-  const handleLessonDragStart = (
-    sectionId: string,
-    index: number,
-    e: React.DragEvent,
-  ) => {
-    e.stopPropagation(); // Prevent bubbling to section drag
-    setDraggedLessonInfo({ sectionId, index });
-  };
-
-  const handleLessonDragEnter = (
-    targetSectionId: string,
-    targetIndex: number,
-  ) => {
-    if (!draggedLessonInfo) {
-      return;
-    }
-    if (draggedLessonInfo.sectionId !== targetSectionId) {
-      return; // Only allow sort within same section for now
-    }
-    if (draggedLessonInfo.index === targetIndex) {
-      return;
-    }
-
-    // Deep clone needed because we're mutating nested arrays
-    // Cast to Course to avoid 'any' errors
-    const newCourse = JSON.parse(JSON.stringify(course)) as Course;
-    const section = newCourse.sections?.find((s) => s.id === targetSectionId);
-
-    if (section?.lessons) {
-      const [item] = section.lessons.splice(draggedLessonInfo.index, 1);
-      if (item) {
-        section.lessons.splice(targetIndex, 0, item);
-
-        // Update indices
-        section.lessons.forEach((l, i) => {
-          l.orderIndex = i;
-        });
-
-        // Update cache
-        queryClient.setQueryData(['course', course.id], newCourse);
-
-        setDraggedLessonInfo({
-          sectionId: targetSectionId,
-          index: targetIndex,
-        });
-      }
+      void coursesApi.reorderSections(course.id, sectionIds).catch((err) => {
+        console.error('Failed to reorder sections:', err);
+        toast.error('Failed to save section order');
+        void queryClient.invalidateQueries({ queryKey: ['course', course.id] });
+      });
     }
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto pb-20">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Course Curriculum</h2>
         <Button
@@ -738,7 +748,6 @@ function CurriculumEditor({ course }: { course: Course }) {
                 <Input
                   {...sectionForm.register('title')}
                   placeholder="Section Title (e.g., Introduction)"
-                  // Removed autoFocus for A11y warning
                 />
               </div>
               <Button
@@ -764,164 +773,355 @@ function CurriculumEditor({ course }: { course: Course }) {
         </Card>
       )}
 
-      <div className="space-y-4">
-        {course.sections?.map((section, sectionIndex) => (
-          <div
-            key={section.id}
-            draggable
-            onDragStart={() => handleSectionDragStart(sectionIndex)}
-            onDragEnter={() => handleSectionDragEnter(sectionIndex)}
-            onDragEnd={handleSectionDragEnd}
-            onDragOver={(e) => e.preventDefault()}
-            className={cn(
-              'transition-all duration-200',
-              draggedSectionIndex === sectionIndex
-                ? 'opacity-50'
-                : 'opacity-100',
-            )}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleSectionDragEnd}
+      >
+        <div className="space-y-4">
+          <SortableContext
+            items={course.sections?.map((s) => s.id) ?? []}
+            strategy={verticalListSortingStrategy}
           >
-            <Card>
-              <CardHeader className="py-4 px-6 bg-muted/30 flex flex-row items-center justify-between space-y-0">
-                <div className="flex items-center gap-3">
-                  <div className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted/50 rounded">
-                    <GripVertical className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                  <h3 className="font-semibold">{section.title}</h3>
-                  <span className="text-xs text-muted-foreground ml-2">
-                    {section.lessons?.length ?? 0} lessons
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => {
-                    // eslint-disable-next-line no-alert
-                    if (window.confirm('Delete section and all its lessons?')) {
-                      deleteSectionMutation.mutate(section.id);
-                    }
-                  }}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {section.lessons?.map((lesson, lessonIndex) => (
-                    <div
-                      key={lesson.id}
-                      draggable
-                      onDragStart={(e) =>
-                        handleLessonDragStart(section.id, lessonIndex, e)
-                      }
-                      onDragEnter={(e) => {
-                        e.stopPropagation();
-                        handleLessonDragEnter(section.id, lessonIndex);
-                      }}
-                      onDragEnd={(e) => {
-                        e.stopPropagation();
-                        setDraggedLessonInfo(null);
-                        // Trigger API update for order here using updateLesson if backend supported bulk
-                      }}
-                      onDragOver={(e) => e.preventDefault()}
-                      className={cn(
-                        'transition-all',
-                        draggedLessonInfo?.index === lessonIndex &&
-                          draggedLessonInfo?.sectionId === section.id
-                          ? 'opacity-40 bg-muted'
-                          : '',
-                      )}
-                    >
-                      <LessonItem
-                        lesson={lesson}
-                        courseId={course.id}
-                        sectionId={section.id}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="p-4 bg-muted/10 flex gap-2">
-                  <AddLessonDialog
-                    sectionId={section.id}
-                    courseId={course.id}
-                  />
-                  <AddQuizDialog sectionId={section.id} courseId={course.id} />
-                  <AddAiQuizDialog
-                    sectionId={section.id}
-                    courseId={course.id}
-                    lessons={course.sections?.flatMap((s) => s.lessons) ?? []}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ))}
-      </div>
+            {course.sections?.map((section) => (
+              <SortableSectionItem
+                key={section.id}
+                section={section}
+                course={course}
+                onDeleteSection={setSectionToDelete}
+                onDeleteLesson={setLessonToDelete}
+              />
+            ))}
+          </SortableContext>
+        </div>
+      </DndContext>
+
+      {/* Delete Section Dialog */}
+      <Dialog
+        open={Boolean(sectionToDelete)}
+        onOpenChange={(open) => !open && setSectionToDelete(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Section</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this section and all its lessons?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSectionToDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (sectionToDelete) {
+                  deleteSectionMutation.mutate(sectionToDelete);
+                }
+              }}
+              disabled={deleteSectionMutation.isPending}
+            >
+              {deleteSectionMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Lesson Dialog */}
+      <Dialog
+        open={Boolean(lessonToDelete)}
+        onOpenChange={(open) => !open && setLessonToDelete(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Lesson</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this lesson? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLessonToDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (lessonToDelete) {
+                  deleteLessonMutation.mutate(lessonToDelete.lessonId);
+                }
+              }}
+              disabled={deleteLessonMutation.isPending}
+            >
+              {deleteLessonMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-// ... LessonItem and AddLessonDialog components (unchanged from previous) ...
-function LessonItem({
+function SortableSectionItem({
+  section,
+  course,
+  onDeleteSection,
+  onDeleteLesson,
+}: {
+  section: Section;
+  course: Course;
+  onDeleteSection: (id: string) => void;
+  onDeleteLesson: (data: { sectionId: string; lessonId: string }) => void;
+}) {
+  const queryClient = useQueryClient();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section.id });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    position: 'relative' as const,
+  };
+
+  const handleLessonDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const lessons = [...(section.lessons ?? [])];
+      const oldIndex = lessons.findIndex((l) => l.id === active.id);
+      const newIndex = lessons.findIndex((l) => l.id === over.id);
+
+      const reordered = arrayMove(lessons, oldIndex, newIndex).map(
+        (l: Lesson, i: number) => ({ ...l, orderIndex: i }),
+      );
+      const lessonIds = reordered.map((l) => l.id);
+
+      queryClient.setQueryData(['course', course.id], {
+        ...course,
+        sections: course.sections?.map((s) =>
+          s.id === section.id ? { ...s, lessons: reordered } : s,
+        ),
+      });
+
+      void coursesApi.reorderLessons(section.id, lessonIds).catch((err) => {
+        console.error('Failed to reorder lessons:', err);
+        toast.error('Failed to save lesson order');
+        void queryClient.invalidateQueries({ queryKey: ['course', course.id] });
+      });
+    }
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn('transition-all', isDragging && 'opacity-50')}
+    >
+      <Card className="overflow-hidden border-border/40 hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-md bg-card/50 backdrop-blur-sm">
+        <CardHeader className="py-4 px-6 bg-muted/30 border-b border-border/40 flex flex-row items-center justify-between space-y-0 select-none">
+          <div className="flex items-center gap-4">
+            <div
+              {...attributes}
+              {...listeners}
+              className="cursor-grab active:cursor-grabbing p-1.5 hover:bg-primary/10 rounded-md transition-all text-muted-foreground/50 hover:text-primary"
+            >
+              <GripVertical className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col">
+              <h3 className="font-bold text-base tracking-tight text-foreground flex items-center gap-2 group-hover:text-primary transition-colors">
+                {section.title}
+              </h3>
+              <div className="flex items-center gap-2 mt-0.5">
+                <Badge
+                  variant="secondary"
+                  className="h-4 px-1.5 text-[9px] uppercase font-black bg-primary/10 text-primary border-none"
+                >
+                  {section.lessons?.length ?? 0} ITEMS
+                </Badge>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <AddLessonDialog courseId={course.id} sectionId={section.id} />
+            <QuizCreationDialog
+              sectionId={section.id}
+              courseId={course.id}
+              lessons={course.sections?.flatMap((s) => s.lessons) ?? []}
+            />
+            <div className="w-px h-6 bg-border/60 mx-1" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:bg-destructive/10"
+              onClick={() => onDeleteSection(section.id)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          <DndContext
+            collisionDetection={closestCenter}
+            onDragEnd={handleLessonDragEnd}
+          >
+            <SortableContext
+              items={section.lessons?.map((l) => l.id) ?? []}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="divide-y divide-border/50">
+                {section.lessons?.map((lesson) => (
+                  <SortableLessonItem
+                    key={lesson.id}
+                    lesson={lesson}
+                    courseId={course.id}
+                    sectionId={section.id}
+                    onDeleteLesson={onDeleteLesson}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
+          {(!section.lessons || section.lessons.length === 0) && (
+            <div className="p-8 text-center border-t border-border/50">
+              <p className="text-sm text-muted-foreground">
+                No lessons added to this section yet.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SortableLessonItem({
   lesson,
   courseId,
   sectionId,
+  onDeleteLesson,
 }: {
   lesson: Lesson;
   courseId: string;
   sectionId: string;
+  onDeleteLesson: (data: { sectionId: string; lessonId: string }) => void;
 }) {
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: lesson.id });
 
-  const deleteLessonMutation = useMutation({
-    mutationFn: coursesApi.deleteLesson,
-    onSuccess: () => {
-      toast.success('Lesson deleted');
-      void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
-    },
-  });
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+  };
 
   return (
-    <div className="flex items-center justify-between p-4 hover:bg-muted/20 group">
-      <div className="flex items-center gap-3">
-        <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
-        <div className="p-2 rounded-lg bg-primary/10 text-primary">
-          {lesson.type === 'quiz' ? (
-            <BrainCircuit className="w-4 h-4" />
-          ) : (
-            <LayoutList className="w-4 h-4" />
-          )}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'transition-all',
+        isDragging && 'opacity-30 bg-primary/5 shadow-inner scale-[0.98]',
+      )}
+    >
+      <LessonItem
+        lesson={lesson}
+        courseId={courseId}
+        sectionId={sectionId}
+        dragHandleProps={{ ...attributes, ...listeners }}
+        onDeleteLesson={onDeleteLesson}
+      />
+    </div>
+  );
+}
+
+function LessonItem({
+  lesson,
+  courseId,
+  sectionId,
+  dragHandleProps,
+  onDeleteLesson,
+}: {
+  lesson: Lesson;
+  courseId: string;
+  sectionId: string;
+  dragHandleProps?: Record<string, unknown>;
+  onDeleteLesson: (data: { sectionId: string; lessonId: string }) => void;
+}) {
+  const navigate = useNavigate();
+
+  return (
+    <div className="group flex items-center justify-between py-3.5 px-6 hover:bg-primary/[0.02] transition-all border-l-4 border-transparent hover:border-primary/60 relative overflow-hidden">
+      <div className="flex items-center gap-4 flex-1 min-w-0 z-10">
+        <div
+          {...dragHandleProps}
+          className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/30 group-hover:text-primary/60 transition-colors"
+        >
+          <GripVertical className="w-5 h-5" />
         </div>
-        <div>
-          <p className="font-medium text-sm">{lesson.title}</p>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-4 min-w-0">
+          <div
+            className={cn(
+              'w-10 h-10 rounded-xl shrink-0 flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md',
+              lesson.type === 'quiz'
+                ? 'bg-orange-500/10 text-orange-600 border border-orange-200/50 group-hover:bg-orange-500 group-hover:text-white'
+                : 'bg-primary/10 text-primary border border-primary/20 group-hover:bg-primary group-hover:text-white',
+            )}
+          >
             {lesson.type === 'quiz' ? (
-              <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                Quiz
-              </Badge>
+              <FileQuestion className="w-5 h-5" />
             ) : (
-              <span>{Math.round((lesson.durationSeconds ?? 0) / 60)} min</span>
+              <LayoutList className="w-5 h-5" />
             )}
-            {lesson.isFreePreview && (
-              <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                Preview
-              </Badge>
-            )}
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold truncate text-foreground/80 group-hover:text-foreground transition-colors">
+              {lesson.title}
+            </span>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span
+                className={cn(
+                  'text-[9px] uppercase font-black tracking-widest',
+                  lesson.type === 'quiz'
+                    ? 'text-orange-600/80'
+                    : 'text-primary/80',
+                )}
+              >
+                {lesson.type === 'quiz' ? 'Interactive Quiz' : 'Video Lesson'}
+              </span>
+              {lesson.isFreePreview && (
+                <Badge className="h-3.5 px-1 text-[8px] bg-green-500/5 text-green-600 border-green-500/20">
+                  PREVIEW
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0 z-10">
         {lesson.type === 'quiz' ? (
           <Button
             variant="ghost"
             size="sm"
+            className="h-9 w-9 p-0 rounded-lg hover:bg-orange-500/10 hover:text-orange-600"
             onClick={() =>
               navigate(
                 `/instructor/courses/${courseId}/quizzes/${lesson.id}/edit`,
               )
-            } // Using lesson ID to find quiz later
+            }
           >
             <Pencil className="w-4 h-4" />
           </Button>
@@ -931,7 +1131,11 @@ function LessonItem({
             courseId={courseId}
             existingLesson={lesson}
             trigger={
-              <Button variant="ghost" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0 rounded-lg hover:bg-primary/10 hover:text-primary"
+              >
                 <Pencil className="w-4 h-4" />
               </Button>
             }
@@ -940,13 +1144,8 @@ function LessonItem({
         <Button
           variant="ghost"
           size="sm"
-          className="text-destructive hover:text-destructive"
-          onClick={() => {
-            // eslint-disable-next-line no-alert
-            if (window.confirm('Delete lesson?')) {
-              deleteLessonMutation.mutate(lesson.id);
-            }
-          }}
+          className="h-9 w-9 p-0 rounded-lg text-destructive/60 hover:text-destructive hover:bg-destructive/10"
+          onClick={() => onDeleteLesson({ sectionId, lessonId: lesson.id })}
         >
           <Trash2 className="w-4 h-4" />
         </Button>
@@ -971,8 +1170,7 @@ function AddLessonDialog({
   const checkboxId = useId();
 
   const form = useForm<LessonFormData>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-    resolver: zodResolver(lessonSchema) as any,
+    resolver: zodResolver(lessonSchema),
     defaultValues: {
       title: existingLesson?.title ?? '',
       isFreePreview: existingLesson?.isFreePreview ?? false,
@@ -999,6 +1197,8 @@ function AddLessonDialog({
       });
     }
   }, [open, existingLesson, form]);
+
+  const [isBlocksValid, setIsBlocksValid] = useState(true);
 
   const mutation = useMutation({
     mutationFn: (data: CreateLessonData) => {
@@ -1093,6 +1293,7 @@ function AddLessonDialog({
                 onChange={(newBlocks: LessonBlock[]) =>
                   form.setValue('content', newBlocks, { shouldDirty: true })
                 }
+                onValidationChange={setIsBlocksValid}
               />
             </div>
           </div>
@@ -1120,7 +1321,10 @@ function AddLessonDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button
+              type="submit"
+              disabled={mutation.isPending || !isBlocksValid}
+            >
               {mutation.isPending && (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
@@ -1133,31 +1337,38 @@ function AddLessonDialog({
   );
 }
 
-function AddQuizDialog({
+function QuizCreationDialog({
   sectionId,
   courseId,
-  trigger,
+  lessons,
 }: {
   sectionId: string;
   courseId: string;
-  trigger?: React.ReactNode;
+  lessons: { id: string; title: string; type?: 'standard' | 'quiz' }[];
 }) {
   const queryClient = useQueryClient();
-
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [method, setMethod] = useState<'choice' | 'manual' | 'ai'>('choice');
+  const [manualTitle, setManualTitle] = useState('');
+  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const reset = () => {
+    setMethod('choice');
+    setManualTitle('');
+    setIsSubmittingManual(false);
+  };
+
+  const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
+    if (!manualTitle.trim()) {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsSubmittingManual(true);
     try {
-      await coursesApi.createLesson(sectionId, {
-        title: title.trim(),
+      const lesson = await coursesApi.createLesson(sectionId, {
+        title: manualTitle.trim(),
         type: 'quiz',
         content: [],
         durationSeconds: 0,
@@ -1165,139 +1376,196 @@ function AddQuizDialog({
         orderIndex: 0,
       });
 
+      await quizzesApi.createQuiz({
+        title: manualTitle.trim(),
+        lessonId: lesson.id,
+      });
+
       toast.success('Quiz added');
       setOpen(false);
-      setTitle('');
-      void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
-    } catch (error) {
-      console.error(error);
-      toast.error('Unable to create quiz. Please try again.');
+      reset();
+      await queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+      void navigate(
+        `/instructor/courses/${courseId}/quizzes/${lesson.id}/edit`,
+        {
+          state: { title: manualTitle.trim() },
+        },
+      );
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error('Unable to create quiz');
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingManual(false);
+    }
+  };
+
+  const handleAiSave = async ({
+    questions,
+    title,
+  }: {
+    questions: CreateQuestionData[];
+    title: string;
+  }) => {
+    try {
+      const quizTitle =
+        title || `AI Quiz ${new Date().toISOString().slice(0, 10)}`;
+
+      const lesson = await coursesApi.createLesson(sectionId, {
+        title: quizTitle,
+        type: 'quiz',
+        content: [],
+        durationSeconds: 0,
+        isFreePreview: false,
+        orderIndex: 0,
+      });
+
+      await quizzesApi.createQuiz({
+        title: quizTitle,
+        lessonId: lesson.id,
+        courseId,
+        questions,
+      });
+
+      toast.success('AI Quiz Created!');
+      setOpen(false);
+      reset();
+      void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error('Failed to save AI quiz');
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button variant="outline" size="sm" className="w-full border-dashed">
-            <FileQuestion className="w-4 h-4 mr-2" /> Add Quiz
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add New Quiz</DialogTitle>
-          <DialogDescription>
-            Create a manual quiz for this section.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="quiz-title" className="text-sm font-medium">
-              Quiz Title
-            </label>
-            <Input
-              id="quiz-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Chapter 1 Quiz"
-              // eslint-disable-next-line jsx-a11y/no-autofocus
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting || !title.trim()}>
-              {isSubmitting && (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              )}
-              Create Quiz
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function AddAiQuizDialog({
-  sectionId,
-  courseId,
-  lessons,
-  trigger,
-}: {
-  sectionId: string;
-  courseId: string;
-  lessons: { id: string; title: string }[];
-  trigger?: React.ReactNode;
-}) {
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-
-  return (
     <>
-      {trigger ?? (
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full border-dashed"
-          onClick={() => setOpen(true)}
-        >
-          <BrainCircuit className="w-4 h-4 mr-2" /> AI Quiz
-        </Button>
-      )}
-
-      <QuizGenerationModal
-        isOpen={open}
-        onClose={() => setOpen(false)}
-        courseId={courseId}
-        sectionId={sectionId}
-        lessons={lessons}
-        onSave={async ({ questions, title }) => {
-          try {
-            const quizTitle =
-              title || `AI Quiz ${new Date().toISOString().slice(0, 10)}`;
-
-            // 1. Create Lesson
-            const lesson = await coursesApi.createLesson(sectionId, {
-              title: quizTitle,
-              type: 'quiz',
-              content: [],
-              durationSeconds: 0,
-              isFreePreview: false,
-              orderIndex: 0,
-            });
-
-            // 2. Create Quiz with questions
-            // Use dynamic import for now to avoid dealing with top-level imports that might be tricky if I can't see them all
-            // Or assume quizzesApi is available - but it's not.
-            const { quizzesApi } =
-              await import('@/features/quizzes/api/quizzes-api');
-
-            await quizzesApi.createQuiz({
-              title: quizTitle,
-              lessonId: lesson.id,
-              courseId,
-              questions,
-            });
-
-            toast.success('AI Quiz Created!');
-            void queryClient.invalidateQueries({
-              queryKey: ['course', courseId],
-            });
-          } catch (e) {
-            console.error(e);
-            toast.error('Failed to save quiz');
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) {
+            reset();
           }
         }}
+      >
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary"
+          >
+            <Plus className="w-4 h-4 mr-2" /> Quiz
+          </Button>
+        </DialogTrigger>
+        <DialogContent
+          className={cn(
+            'sm:max-w-[500px] transition-all duration-300',
+            method !== 'choice' && 'sm:max-w-[400px]',
+          )}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileQuestion className="w-5 h-5 text-primary" />
+              {method === 'choice' && 'Create New Quiz'}
+              {method === 'manual' && 'Manual Quiz Details'}
+            </DialogTitle>
+            <DialogDescription>
+              {method === 'choice' && 'How would you like to create your quiz?'}
+              {method === 'manual' &&
+                'Set a title for your manual quiz. You can add questions later.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {method === 'choice' && (
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <button
+                type="button"
+                onClick={() => setMethod('manual')}
+                className="group premium-card flex flex-col items-center gap-4 p-6 rounded-2xl border-2 border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all text-center"
+              >
+                <div className="p-3 rounded-xl bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                  <Pencil className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm mb-1 text-foreground">
+                    Manual Create
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    Add questions and answers yourself
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMethod('ai')}
+                className="group premium-card flex flex-col items-center gap-4 p-6 rounded-2xl border-2 border-border/50 hover:border-purple-500/50 hover:bg-purple-500/5 transition-all text-center"
+              >
+                <div className="p-3 rounded-xl bg-muted group-hover:bg-purple-500/10 group-hover:text-purple-600 transition-colors">
+                  <BrainCircuit className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm mb-1 text-foreground">
+                    AI Powered
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    Generate from your lesson content
+                  </p>
+                </div>
+              </button>
+            </div>
+          )}
+
+          {method === 'manual' && (
+            <form onSubmit={handleManualSubmit} className="space-y-4 py-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="quiz-title">
+                  Quiz Title
+                </label>
+                <Input
+                  id="quiz-title"
+                  placeholder="e.g. JavaScript Basics Final"
+                  value={manualTitle}
+                  onChange={(e) => setManualTitle(e.target.value)}
+                />
+              </div>
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => setMethod('choice')}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmittingManual || !manualTitle.trim()}
+                >
+                  {isSubmittingManual && (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  )}
+                  Create Quiz
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+
+          {method === 'choice' && (
+            <DialogFooter className="sm:justify-start">
+              <Button variant="ghost" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <QuizGenerationModal
+        isOpen={method === 'ai'}
+        onClose={() => setMethod('choice')}
+        courseId={courseId}
+        sectionId={sectionId}
+        lessons={lessons.filter((l) => l.type !== 'quiz')}
+        onSave={handleAiSave}
       />
     </>
   );

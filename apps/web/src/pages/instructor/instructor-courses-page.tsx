@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit, Trash2, Eye, AlertCircle, UserCog } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -7,6 +9,14 @@ import { PageContainer } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/use-auth';
 import { coursesApi } from '@/features/courses/api/courses-api';
@@ -15,6 +25,12 @@ export function InstructorCoursesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    type: 'delete' | 'submit' | null;
+    courseId: string | null;
+    courseTitle: string | null;
+  }>({ isOpen: false, type: null, courseId: null, courseTitle: null });
 
   const {
     data: courses,
@@ -30,14 +46,22 @@ export function InstructorCoursesPage() {
     onSuccess: () => {
       toast.success('Course deleted');
       void queryClient.invalidateQueries({ queryKey: ['instructor-courses'] });
+      setConfirmDialog({
+        isOpen: false,
+        type: null,
+        courseId: null,
+        courseTitle: null,
+      });
     },
   });
 
-  const handleDelete = (id: string) => {
-    // eslint-disable-next-line no-alert
-    if (window.confirm('Are you sure? This cannot be undone.')) {
-      deleteMutation.mutate(id);
-    }
+  const handleDelete = (id: string, title: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'delete',
+      courseId: id,
+      courseTitle: title,
+    });
   };
 
   const submitMutation = useMutation({
@@ -45,16 +69,35 @@ export function InstructorCoursesPage() {
     onSuccess: () => {
       toast.success('Course submitted for approval');
       void queryClient.invalidateQueries({ queryKey: ['instructor-courses'] });
+      setConfirmDialog({
+        isOpen: false,
+        type: null,
+        courseId: null,
+        courseTitle: null,
+      });
     },
     onError: () => {
       toast.error('Failed to submit course');
     },
   });
 
-  const handleSubmit = (id: string) => {
-    // eslint-disable-next-line no-alert
-    if (window.confirm('Submit this course for admin approval?')) {
-      submitMutation.mutate(id);
+  const handleSubmit = (id: string, title: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'submit',
+      courseId: id,
+      courseTitle: title,
+    });
+  };
+
+  const handleConfirm = () => {
+    if (!confirmDialog.courseId) {
+      return;
+    }
+    if (confirmDialog.type === 'delete') {
+      deleteMutation.mutate(confirmDialog.courseId);
+    } else if (confirmDialog.type === 'submit') {
+      submitMutation.mutate(confirmDialog.courseId);
     }
   };
 
@@ -159,7 +202,7 @@ export function InstructorCoursesPage() {
           courses.map((course) => (
             <Card
               key={course.id}
-              className="overflow-hidden hover:shadow-lg transition-shadow"
+              className="instructor-course-card overflow-hidden hover:shadow-lg transition-shadow"
             >
               <CardContent className="p-0 flex items-center">
                 <div className="w-56 h-32 bg-gradient-to-br from-muted to-muted/50 shrink-0 relative group">
@@ -167,7 +210,7 @@ export function InstructorCoursesPage() {
                     <img
                       src={course.thumbnailUrl}
                       alt={course.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
@@ -194,7 +237,7 @@ export function InstructorCoursesPage() {
                         <Button
                           variant="primary"
                           size="sm"
-                          onClick={() => handleSubmit(course.id)}
+                          onClick={() => handleSubmit(course.id, course.title)}
                           title="Submit for Approval"
                         >
                           <span className="text-xs">Submit</span>
@@ -214,7 +257,7 @@ export function InstructorCoursesPage() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDelete(course.id)}
+                        onClick={() => handleDelete(course.id, course.title)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -247,6 +290,62 @@ export function InstructorCoursesPage() {
           </Card>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialog.isOpen}
+        onOpenChange={(open) =>
+          !open &&
+          setConfirmDialog({
+            isOpen: false,
+            type: null,
+            courseId: null,
+            courseTitle: null,
+          })
+        }
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {confirmDialog.type === 'delete'
+                ? 'Delete Course?'
+                : 'Submit for Approval?'}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmDialog.type === 'delete'
+                ? `Are you sure you want to delete "${confirmDialog.courseTitle}"? This action cannot be undone.`
+                : `Are you sure you want to submit "${confirmDialog.courseTitle}" for admin approval?`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setConfirmDialog({
+                  isOpen: false,
+                  type: null,
+                  courseId: null,
+                  courseTitle: null,
+                })
+              }
+            >
+              Cancel
+            </Button>
+            {confirmDialog.type === 'delete' ? (
+              <Button onClick={handleConfirm} variant="destructive">
+                Delete
+              </Button>
+            ) : (
+              <Button
+                onClick={handleConfirm}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Submit
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

@@ -7,10 +7,12 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
+import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { Question } from './entities/question.entity';
 import { QuizSubmission } from './entities/quiz-submission.entity';
 import { Quiz, QuizStatus } from './entities/quiz.entity';
 import { AiQuizGeneratorService } from './services/ai-quiz-generator.service';
+import { Lesson } from '../courses/entities/lesson.entity';
 
 @Injectable()
 export class QuizzesService {
@@ -21,6 +23,8 @@ export class QuizzesService {
     private questionsRepository: Repository<Question>,
     @InjectRepository(QuizSubmission)
     private submissionRepository: Repository<QuizSubmission>,
+    @InjectRepository(Lesson)
+    private lessonsRepository: Repository<Lesson>,
     private aiQuizGenerator: AiQuizGeneratorService,
   ) {}
 
@@ -45,6 +49,7 @@ export class QuizzesService {
           options: q.options,
           correctAnswer: q.correctAnswer,
           explanation: q.explanation,
+          type: q.type,
           position: index,
           points: 1,
         }),
@@ -53,6 +58,22 @@ export class QuizzesService {
     }
 
     return this.findOne(savedQuiz.id);
+  }
+
+  async update(id: string, updateDto: UpdateQuizDto): Promise<Quiz> {
+    const quiz = await this.findOne(id);
+
+    // Check if we need to update basic fields
+    const { questions: _questions, ...data } = updateDto;
+
+    Object.assign(quiz, data);
+
+    // If title is updated and quiz is linked to a lesson, update lesson title
+    if (data.title && quiz.lessonId) {
+      await this.lessonsRepository.update(quiz.lessonId, { title: data.title });
+    }
+
+    return this.quizzesRepository.save(quiz);
   }
 
   async createQuestion(
@@ -197,10 +218,36 @@ export class QuizzesService {
     let score = 0;
     let totalPoints = 0;
 
+    const answersMap = new Map(Object.entries(submitDto.answers));
+
     quiz.questions.forEach((question) => {
-      const studentAnswer = submitDto.answers[question.id];
-      const isCorrect = studentAnswer === question.correctAnswer;
-      const points = question.points || 1; // Default to 1 point if null
+      const studentAnswer = answersMap.get(question.id) ?? '';
+      let isCorrect = false;
+      const points = question.points || 1;
+
+      if (question.type === 'multi_select') {
+        const studentChoices = studentAnswer
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .sort();
+        const correctChoices = question.correctAnswer
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .sort();
+        isCorrect =
+          studentChoices.length === correctChoices.length &&
+          studentChoices.every(
+            (val, index) => val === correctChoices.at(index),
+          );
+      } else if (question.type === 'short_answer') {
+        isCorrect =
+          studentAnswer.trim().toLowerCase() ===
+          question.correctAnswer.trim().toLowerCase();
+      } else {
+        isCorrect = studentAnswer.trim() === question.correctAnswer.trim();
+      }
 
       totalPoints += points;
       if (isCorrect) {

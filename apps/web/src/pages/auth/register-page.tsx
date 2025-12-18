@@ -32,11 +32,18 @@ export function RegisterPage() {
 
   return (
     <div className="min-h-screen flex relative">
-      <div className="absolute top-4 left-4 z-50">
+      {/* Back to Home Button - High Visibility Glass Pill */}
+      <div className="absolute top-6 left-6 z-50 animate-in fade-in slide-in-from-left-4 duration-500">
         <Link to="/">
-          <Button variant="ghost" size="sm" className="gap-1 pl-2">
-            <ChevronLeft className="w-4 h-4" />
-            Back to Home
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 px-5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-lg border-white/20 text-white shadow-[0_8px_32px_rgba(0,0,0,0.1)] hover:shadow-primary/20 transition-all group border"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1 transition-transform group-hover:-translate-x-1" />
+            <span className="font-bold text-xs uppercase tracking-widest">
+              Back to Home
+            </span>
           </Button>
         </Link>
       </div>

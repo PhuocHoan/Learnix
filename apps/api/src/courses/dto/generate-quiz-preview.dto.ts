@@ -21,4 +21,9 @@ export class GenerateQuizPreviewDto {
   @IsString()
   @IsOptional()
   topic?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  preferredTypes?: string[];
 }

@@ -145,14 +145,20 @@ const adminNavItems: NavItem[] = [
   { icon: Shield, label: 'Admin Dashboard', href: '/admin', roles: ['admin'] },
   {
     icon: Users,
-    label: 'User Management',
+    label: 'Users',
     href: '/admin/users',
     roles: ['admin'],
   },
   {
     icon: BarChart3,
-    label: 'System Stats',
+    label: 'Statistics',
     href: '/admin/stats',
+    roles: ['admin'],
+  },
+  {
+    icon: BookOpen,
+    label: 'Moderation',
+    href: '/admin/courses',
     roles: ['admin'],
   },
 ];
@@ -368,9 +374,9 @@ export function Header() {
     return 'Good evening';
   };
 
-  const isActive = (href: string) => {
-    if (href === '/') {
-      return location.pathname === '/';
+  const isActive = (href: string, exact = false) => {
+    if (exact || href === '/') {
+      return location.pathname === href;
     }
     return location.pathname.startsWith(href);
   };
@@ -393,7 +399,7 @@ export function Header() {
     });
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/60">
+    <header className="sticky top-0 z-50 w-full glass border-b border-border">
       {/* Mobile Search Overlay */}
       {isMobileSearchOpen && (
         <div className="absolute inset-0 lg:hidden bg-background z-50 flex flex-col px-4 pt-3 gap-2 h-screen">
@@ -466,7 +472,7 @@ export function Header() {
           <div className="flex items-center gap-8">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2.5 shrink-0">
-              <div className="p-1.5 gradient-primary rounded-xl">
+              <div className="p-1.5 gradient-primary rounded-xl glow-primary">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
               <span className="text-xl font-bold text-foreground hidden sm:block">
@@ -479,7 +485,7 @@ export function Header() {
               className="hidden lg:flex items-center gap-1"
               aria-label="Main navigation"
             >
-              {/* Public Items (Home, Courses - filtered for instructors) */}
+              {/* Public Items */}
               {getVisibleMainNavItems().map((item) => {
                 const Icon = item.icon;
                 return (
@@ -487,7 +493,7 @@ export function Header() {
                     key={item.href}
                     to={item.href}
                     className={cn(
-                      'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                      'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover-highlight',
                       isActive(item.href)
                         ? 'bg-primary/10 text-primary'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted',
@@ -499,17 +505,17 @@ export function Header() {
                 );
               })}
 
-              {/* Admin Navigation Items */}
-              {user?.role === 'admin' && (
+              {/* Roles-based Primary Links */}
+              {user && user.role !== 'admin' && (
                 <>
-                  {adminNavItems.map((item) => {
+                  {getVisibleNavItems(authenticatedNavItems).map((item) => {
                     const Icon = item.icon;
                     return (
                       <Link
                         key={item.href}
                         to={item.href}
                         className={cn(
-                          'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                          'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover-highlight',
                           isActive(item.href)
                             ? 'bg-primary/10 text-primary'
                             : 'text-muted-foreground hover:text-foreground hover:bg-muted',
@@ -523,68 +529,130 @@ export function Header() {
                 </>
               )}
 
-              {/* Authenticated Items (Dashboard, My Learning) - Hide for Admin */}
-              {user &&
-                user.role !== 'admin' &&
-                getVisibleNavItems(authenticatedNavItems).map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      to={item.href}
-                      className={cn(
-                        'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
-                        isActive(item.href)
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-                      )}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-
-              {/* Instructor Items - Hide for Admin unless they want to see it, but user requested replacement */}
-              {user &&
-                user.role !== 'admin' &&
-                getVisibleNavItems(instructorNavItems).map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      to={item.href}
-                      className={cn(
-                        'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
-                        isActive(item.href)
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-                      )}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              {user &&
-                (user.role === 'instructor' || user.role === 'admin') && (
-                  <Link
-                    to="/instructor/courses/new"
+              {/* Administration Dropdown (Desktop) */}
+              {user?.role === 'admin' && (
+                <div className="relative group/nav">
+                  <button
                     className={cn(
-                      'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all text-muted-foreground hover:text-primary hover:bg-primary/5',
+                      'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover-highlight',
+                      isActive('/admin', true) ||
+                        adminNavItems.some((item) =>
+                          isActive(item.href, item.href === '/admin'),
+                        )
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted',
                     )}
                   >
-                    <Plus className="w-4 h-4" />
-                    Create Course
-                  </Link>
-                )}
+                    <Shield className="w-4 h-4" />
+                    Administration
+                    <ChevronDown className="w-3 h-3 opacity-50 group-hover/nav:rotate-180 transition-transform" />
+                  </button>
+                  <div className="absolute top-full left-0 pt-2 w-56 hidden group-hover/nav:block animate-in fade-in slide-in-from-top-1 duration-200 z-50">
+                    <div className="bg-card border border-border rounded-xl shadow-xl overflow-hidden p-1.5 font-medium">
+                      <p className="px-3 py-1.5 text-xs text-muted-foreground uppercase tracking-wider">
+                        Management
+                      </p>
+                      {adminNavItems.map((item) => {
+                        const Icon = item.icon;
+                        const isDashboard = item.href === '/admin';
+                        return (
+                          <Link
+                            key={item.href}
+                            to={item.href}
+                            className={cn(
+                              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                              isActive(item.href, isDashboard)
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                            )}
+                          >
+                            <Icon className="w-4 h-4" />
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                      <div className="my-1.5 border-t border-border" />
+                      <p className="px-3 py-1.5 text-xs text-muted-foreground uppercase tracking-wider">
+                        Course Content
+                      </p>
+                      <Link
+                        to="/instructor/courses"
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                          isActive('/instructor/courses')
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                        )}
+                      >
+                        <Library className="w-4 h-4" />
+                        My Courses
+                      </Link>
+                      <Link
+                        to="/instructor/courses/new"
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Create New Course
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Instructor Tool Dropdown (Desktop) */}
+              {user?.role === 'instructor' && (
+                <div className="relative group/nav">
+                  <button
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover-highlight',
+                      instructorNavItems.some((item) => isActive(item.href))
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                    )}
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Instructor
+                    <ChevronDown className="w-3 h-3 opacity-50 group-hover/nav:rotate-180 transition-transform" />
+                  </button>
+                  <div className="absolute top-full left-0 pt-2 w-56 hidden group-hover/nav:block animate-in fade-in slide-in-from-top-1 duration-200 z-50">
+                    <div className="bg-card border border-border rounded-xl shadow-xl overflow-hidden p-1.5 font-medium">
+                      {instructorNavItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            to={item.href}
+                            className={cn(
+                              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                              isActive(item.href)
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                            )}
+                          >
+                            <Icon className="w-4 h-4" />
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                      <div className="my-1.5 border-t border-border" />
+                      <Link
+                        to="/instructor/courses/new"
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors font-medium"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Create New Course
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
             </nav>
           </div>
 
           {/* Center: Search (Desktop) */}
           <div
             ref={searchContainerRef}
-            className="relative hidden md:block flex-1 max-w-md mx-8"
+            className="relative hidden lg:block flex-1 max-w-md mx-4"
           >
             <div className="relative group">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -912,7 +980,7 @@ export function Header() {
                                   to={item.href}
                                   className={cn(
                                     'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-                                    isActive(item.href)
+                                    isActive(item.href, item.href === '/admin')
                                       ? 'bg-primary/10 text-primary'
                                       : 'text-muted-foreground hover:text-foreground hover:bg-muted',
                                   )}

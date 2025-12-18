@@ -111,6 +111,7 @@ export function CourseDetailPage() {
 
   // Force isEnrolled to false if not authenticated, ignoring cached enrollment data
   const isEnrolled = isAuthenticated && enrollment?.isEnrolled;
+  const isInstructor = isAuthenticated && course?.instructor?.id === user?.id;
   const completedIds = enrollment?.progress?.completedLessonIds ?? [];
 
   return (
@@ -124,6 +125,15 @@ export function CourseDetailPage() {
         {/* Header */}
         <div className="bg-card rounded-2xl p-8 border border-border shadow-sm flex flex-col md:flex-row gap-8">
           <div className="flex-1 space-y-4">
+            {course.thumbnailUrl && (
+              <div className="rounded-xl overflow-hidden border border-border shadow-sm w-full max-w-2xl bg-muted/20">
+                <img
+                  src={course.thumbnailUrl}
+                  alt={course.title}
+                  className="w-full h-auto max-h-[500px] object-contain"
+                />
+              </div>
+            )}
             <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium capitalize">
               {course.level}
             </div>
@@ -184,16 +194,23 @@ export function CourseDetailPage() {
           <div className="w-full md:w-80 shrink-0 flex flex-col gap-4 p-6 bg-muted/30 rounded-xl border border-border/50">
             {isEnrolled ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-green-600 bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg text-sm font-medium">
-                  <CheckCircle className="w-4 h-4" />
-                  You are enrolled
-                </div>
+                {isInstructor ? (
+                  <div className="flex items-center gap-2 text-primary bg-primary/10 px-4 py-3 rounded-lg text-sm font-bold border-2 border-primary/20">
+                    <CheckCircle className="w-5 h-5" />
+                    Course Instructor
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-green-600 bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg text-sm font-medium">
+                    <CheckCircle className="w-4 h-4" />
+                    You are enrolled
+                  </div>
+                )}
                 <Button
                   size="lg"
                   className="w-full font-semibold"
                   onClick={() => navigate(`/courses/${id}/learn`)}
                 >
-                  Continue Learning
+                  {isInstructor ? 'View Course Content' : 'Continue Learning'}
                 </Button>
               </div>
             ) : (
@@ -268,7 +285,7 @@ export function CourseDetailPage() {
                           role={isLocked ? 'button' : undefined}
                           tabIndex={isLocked ? 0 : undefined}
                           className={cn(
-                            'p-4 flex items-center gap-4 transition-colors',
+                            'p-4 flex items-center gap-4 transition-all hover-highlight',
                             isLocked
                               ? 'opacity-75 hover:bg-muted/10 cursor-pointer'
                               : 'hover:bg-muted/20',

@@ -15,6 +15,7 @@ vi.mock('@/features/courses/api/courses-api', () => ({
     updateCourse: vi.fn(),
     createSection: vi.fn(),
     createLesson: vi.fn(),
+    getTags: vi.fn(),
   },
 }));
 
@@ -50,6 +51,10 @@ function renderCourseEditor(courseId?: string) {
             path="/instructor/courses/:courseId"
             element={<CourseEditorPage />}
           />
+          <Route
+            path="/instructor/courses/:courseId/edit"
+            element={<CourseEditorPage />}
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -59,6 +64,7 @@ function renderCourseEditor(courseId?: string) {
 describe('CourseEditorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (coursesApi.getTags as any).mockResolvedValue(['react', 'typescript']);
   });
 
   it('renders create course form when no courseId provided', () => {

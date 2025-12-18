@@ -384,7 +384,7 @@ function CourseCard({ course, onArchive, onUnarchive }: CourseCardProps) {
   const isCompleted = course.status === 'completed';
 
   return (
-    <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+    <Card className="group premium-card overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
       <CardContent className="p-0">
         <div className="flex flex-col md:flex-row">
           {/* Thumbnail */}
@@ -396,7 +396,7 @@ function CourseCard({ course, onArchive, onUnarchive }: CourseCardProps) {
               <img
                 src={course.thumbnailUrl}
                 alt={course.title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
               <div className="w-full h-full bg-linear-to-br from-primary/10 to-primary/30 flex items-center justify-center">

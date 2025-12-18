@@ -1,13 +1,21 @@
 import { api } from '@/lib/api';
 
+export type QuestionType =
+  | 'multiple_choice'
+  | 'multi_select'
+  | 'true_false'
+  | 'short_answer';
+
 export interface Question {
   id: string;
   questionText: string;
+  imageUrl?: string;
   options: string[];
   correctAnswer: string;
   explanation?: string;
   points: number;
   position: number;
+  type: QuestionType;
 }
 
 export interface Quiz {
@@ -36,10 +44,12 @@ export interface CreateQuizData {
 
 export interface CreateQuestionData {
   questionText: string;
+  imageUrl?: string;
   options: string[];
   correctAnswer: string;
   explanation?: string;
   points?: number;
+  type: QuestionType;
 }
 
 export interface QuizSubmission {
@@ -86,6 +96,14 @@ export const quizzesApi = {
 
   getMyQuizzes: async (): Promise<Quiz[]> => {
     const response = await api.get<Quiz[]>('/quizzes/my-quizzes');
+    return response.data;
+  },
+
+  updateQuiz: async (
+    id: string,
+    data: Partial<CreateQuizData>,
+  ): Promise<Quiz> => {
+    const response = await api.patch<Quiz>(`/quizzes/${id}`, data);
     return response.data;
   },
 

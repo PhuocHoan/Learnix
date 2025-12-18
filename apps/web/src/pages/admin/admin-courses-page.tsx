@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, X, Eye, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -6,11 +8,30 @@ import { toast } from 'sonner';
 import { PageContainer } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { adminApi } from '@/features/admin/api/admin-api';
 
 export function AdminCoursesPage() {
   const queryClient = useQueryClient();
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    type: 'approve' | 'reject' | null;
+    courseId: string | null;
+    courseTitle: string | null;
+  }>({
+    isOpen: false,
+    type: null,
+    courseId: null,
+    courseTitle: null,
+  });
 
   const { data: courses, isLoading } = useQuery({
     queryKey: ['admin-pending-courses'],
@@ -24,6 +45,12 @@ export function AdminCoursesPage() {
       void queryClient.invalidateQueries({
         queryKey: ['admin-pending-courses'],
       });
+      setConfirmDialog({
+        isOpen: false,
+        type: null,
+        courseId: null,
+        courseTitle: null,
+      });
     },
   });
 
@@ -34,20 +61,42 @@ export function AdminCoursesPage() {
       void queryClient.invalidateQueries({
         queryKey: ['admin-pending-courses'],
       });
+      setConfirmDialog({
+        isOpen: false,
+        type: null,
+        courseId: null,
+        courseTitle: null,
+      });
     },
   });
 
-  const handleApprove = (id: string) => {
-    // eslint-disable-next-line no-alert
-    if (window.confirm('Approve this course and publish it?')) {
-      approveMutation.mutate(id);
-    }
+  const handleApprove = (id: string, title: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'approve',
+      courseId: id,
+      courseTitle: title,
+    });
   };
 
-  const handleReject = (id: string) => {
-    // eslint-disable-next-line no-alert
-    if (window.confirm('Reject this course?')) {
-      rejectMutation.mutate(id);
+  const handleReject = (id: string, title: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'reject',
+      courseId: id,
+      courseTitle: title,
+    });
+  };
+
+  const handleConfirm = () => {
+    if (!confirmDialog.courseId) {
+      return;
+    }
+
+    if (confirmDialog.type === 'approve') {
+      approveMutation.mutate(confirmDialog.courseId);
+    } else if (confirmDialog.type === 'reject') {
+      rejectMutation.mutate(confirmDialog.courseId);
     }
   };
 
@@ -102,7 +151,7 @@ export function AdminCoursesPage() {
                       <img
                         src={course.thumbnailUrl}
                         alt={course.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted">
@@ -146,7 +195,7 @@ export function AdminCoursesPage() {
                         variant="primary"
                         size="sm"
                         className="flex-1 bg-green-600 hover:bg-green-700"
-                        onClick={() => handleApprove(course.id)}
+                        onClick={() => handleApprove(course.id, course.title)}
                       >
                         <Check className="w-4 h-4 mr-2" /> Approve
                       </Button>
@@ -154,7 +203,7 @@ export function AdminCoursesPage() {
                         variant="destructive"
                         size="sm"
                         className="flex-1"
-                        onClick={() => handleReject(course.id)}
+                        onClick={() => handleReject(course.id, course.title)}
                       >
                         <X className="w-4 h-4 mr-2" /> Reject
                       </Button>
@@ -165,6 +214,62 @@ export function AdminCoursesPage() {
             ))}
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialog.isOpen}
+        onOpenChange={(open) =>
+          !open &&
+          setConfirmDialog({
+            isOpen: false,
+            type: null,
+            courseId: null,
+            courseTitle: null,
+          })
+        }
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {confirmDialog.type === 'approve'
+                ? 'Approve Course?'
+                : 'Reject Course?'}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmDialog.type === 'approve'
+                ? `Are you sure you want to approve and publish "${confirmDialog.courseTitle}"? This will make it visible to all students.`
+                : `Are you sure you want to reject "${confirmDialog.courseTitle}"? The instructor will be notified.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setConfirmDialog({
+                  isOpen: false,
+                  type: null,
+                  courseId: null,
+                  courseTitle: null,
+                })
+              }
+            >
+              Cancel
+            </Button>
+            {confirmDialog.type === 'approve' ? (
+              <Button
+                onClick={handleConfirm}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Approve
+              </Button>
+            ) : (
+              <Button onClick={handleConfirm} variant="destructive">
+                Reject
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

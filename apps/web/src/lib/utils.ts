@@ -119,3 +119,69 @@ export function formatStudentCount(count: number): string {
   }
   return `${(count / 1000000).toFixed(1)}M students`;
 }
+/**
+ * Simple URL format validation
+ */
+export function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if a URL is reachable (best effort due to CORS)
+ */
+export async function validateUrlReachability(url: string): Promise<{
+  reachable: boolean;
+  message?: string;
+}> {
+  if (!isValidUrl(url)) {
+    return { reachable: false, message: 'Invalid URL format' };
+  }
+
+  try {
+    // We use mode: 'no-cors' because most external sites block cross-origin HEAD requests.
+    // This won't let us see the status code (404 etc), but it will throw if the domain/IP is dead.
+    await fetch(url, { method: 'GET', mode: 'no-cors' });
+    return { reachable: true };
+  } catch (_e) {
+    return { reachable: false, message: 'Link is unreachable or corrupted' };
+  }
+}
+
+/**
+ * Extract YouTube video ID from URL
+ */
+export function getYoutubeId(url: string): string | null {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = regExp.exec(url);
+  return match?.[2].length === 11 ? match[2] : null;
+}
+
+/**
+ * Extract Vimeo video ID from URL
+ */
+export function getVimeoId(url: string): string | null {
+  if (!url) {
+    return null;
+  }
+  try {
+    const urlObj = new URL(url);
+    if (!urlObj.hostname.includes('vimeo.com')) {
+      return null;
+    }
+    const parts = urlObj.pathname.split('/');
+    // Find the last numeric segment in the path by reversing and finding
+    const numericPart = [...parts].reverse().find((part) => /^\d+$/.test(part));
+    if (numericPart) {
+      return numericPart;
+    }
+  } catch {
+    const match = /vimeo\.com\/(\d+)/.exec(url);
+    return match ? match[1] : null;
+  }
+  return null;
+}

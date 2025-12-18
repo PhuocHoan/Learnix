@@ -14,6 +14,7 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
+import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { Question } from './entities/question.entity';
 import { QuizSubmission } from './entities/quiz-submission.entity';
 import { Quiz } from './entities/quiz.entity';
@@ -100,6 +101,15 @@ export class QuizzesController {
   ): Promise<{ message: string }> {
     await this.quizzesService.deleteQuestion(questionId);
     return { message: 'Question deleted successfully' };
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateQuizDto,
+  ): Promise<Quiz> {
+    return this.quizzesService.update(id, updateDto);
   }
 
   @Post(':id/save-progress')

@@ -1,4 +1,8 @@
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
@@ -7,7 +11,10 @@ import { CourseSection } from './entities/course-section.entity';
 import { Course, CourseLevel } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { Lesson } from './entities/lesson.entity';
+import { CourseStatus } from './enums/course-status.enum';
 import { AiQuizGeneratorService } from '../quizzes/services/ai-quiz-generator.service';
+import { type User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
 
 interface MockEnrollmentRepository {
   find: jest.Mock;
@@ -74,6 +81,7 @@ describe('CoursesService', () => {
     description: `Description for ${title}`,
     tags,
     level: CourseLevel.BEGINNER,
+    status: CourseStatus.PUBLISHED,
     isPublished: true,
     instructor: { id: 'instructor-1', fullName: 'Test Instructor' } as never,
     sections: [], // Added sections
@@ -86,7 +94,7 @@ describe('CoursesService', () => {
     courseId: string,
     course: Partial<Course>,
   ): Partial<Enrollment> => ({
-    id: `enrollment-${courseId}`,
+    id: `enrollment - ${courseId} `,
     userId,
     courseId,
     course: course as Course,
@@ -277,7 +285,7 @@ describe('CoursesService', () => {
       const enrolledCourse = mockCourse('enrolled-1', 'React', ['react']);
       const recommendations: Partial<Course>[] = Array.from(
         { length: 10 },
-        (_, i) => mockCourse(`rec-${i}`, `Course ${i}`, ['react']),
+        (_, i) => mockCourse(`rec - ${i} `, `Course ${i} `, ['react']),
       );
 
       mockEnrollmentRepositoryValue.find.mockResolvedValue([
@@ -543,13 +551,102 @@ describe('CoursesService', () => {
     });
   });
 
+  describe('checkCourseAccess', () => {
+    it('should return isEnrolled=true when user is enrolled', async () => {
+      const enrollment = { id: 'enrollment-1', userId: 'user-1' };
+      mockEnrollmentRepositoryValue.findOne.mockResolvedValue(enrollment);
+      courseRepository.findOne.mockResolvedValue({
+        id: 'course-1',
+        instructorId: 'instructor-1',
+        sections: [],
+      });
+
+      const result = await service.checkCourseAccess(
+        { id: 'user-1', role: UserRole.STUDENT } as User,
+        'course-1',
+      );
+
+      expect(result.isEnrolled).toBe(true);
+      expect(result.isInstructor).toBe(false);
+      expect(result.enrollment).toEqual(enrollment);
+    });
+
+    it('should return isEnrolled=true when user is the instructor', async () => {
+      mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
+      courseRepository.findOne.mockResolvedValue({
+        id: 'course-1',
+        instructorId: 'instructor-1',
+        sections: [],
+      });
+
+      const result = await service.checkCourseAccess(
+        { id: 'instructor-1', role: UserRole.INSTRUCTOR } as User,
+        'course-1',
+      );
+
+      expect(result.isEnrolled).toBe(true);
+      expect(result.isInstructor).toBe(true);
+      expect(result.enrollment).toBeNull();
+    });
+
+    it('should return isEnrolled=false when user is neither enrolled nor instructor', async () => {
+      mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
+      courseRepository.findOne.mockResolvedValue({
+        id: 'course-1',
+        instructorId: 'instructor-1',
+        sections: [],
+      });
+
+      const result = await service.checkCourseAccess(
+        { id: 'user-1', role: UserRole.STUDENT } as User,
+        'course-1',
+      );
+
+      expect(result.isEnrolled).toBe(false);
+      expect(result.isInstructor).toBe(false);
+      expect(result.enrollment).toBeNull();
+    });
+  });
+
   describe('completeLesson', () => {
-    it('should add lesson to completed list', async () => {
+    it('should return null for instructors without tracking completion', async () => {
+      const lesson = {
+        id: 'lesson-1',
+        section: {
+          course: {
+            id: 'course-1',
+            instructorId: 'instructor-1',
+          },
+        },
+      };
+      mockLessonRepositoryValue.findOne.mockResolvedValue(lesson);
+
+      const result = await service.completeLesson(
+        { id: 'instructor-1', role: UserRole.INSTRUCTOR } as User,
+        'course-1',
+        'lesson-1',
+      );
+
+      expect(result).toBeNull();
+      expect(mockEnrollmentRepositoryValue.save).not.toHaveBeenCalled();
+    });
+
+    it('should add lesson to completed list for enrolled students', async () => {
+      const lesson = {
+        id: 'lesson-2',
+        section: {
+          course: {
+            id: 'course-1',
+            instructorId: 'instructor-1',
+          },
+        },
+      };
       const enrollment = {
         id: 'enrollment-1',
         completedLessonIds: ['lesson-1'],
         lastAccessedAt: new Date(),
       };
+      mockLessonRepositoryValue.findOne.mockResolvedValue(lesson);
       mockEnrollmentRepositoryValue.findOne.mockResolvedValue(enrollment);
       mockEnrollmentRepositoryValue.save.mockResolvedValue({
         ...enrollment,
@@ -557,59 +654,203 @@ describe('CoursesService', () => {
       });
 
       const result = await service.completeLesson(
-        'user-1',
+        { id: 'user-1', role: UserRole.STUDENT } as User,
         'course-1',
         'lesson-2',
       );
 
-      expect(result.completedLessonIds).toContain('lesson-2');
+      expect(result?.completedLessonIds).toContain('lesson-2');
     });
 
     it('should not duplicate completed lesson', async () => {
+      const lesson = {
+        id: 'lesson-1',
+        section: {
+          course: {
+            id: 'course-1',
+            instructorId: 'instructor-1',
+          },
+        },
+      };
       const enrollment = {
         id: 'enrollment-1',
         completedLessonIds: ['lesson-1', 'lesson-2'],
         lastAccessedAt: new Date(),
       };
+      mockLessonRepositoryValue.findOne.mockResolvedValue(lesson);
       mockEnrollmentRepositoryValue.findOne.mockResolvedValue(enrollment);
 
       const result = await service.completeLesson(
-        'user-1',
+        { id: 'user-1', role: UserRole.STUDENT } as User,
         'course-1',
         'lesson-1',
       );
 
       expect(mockEnrollmentRepositoryValue.save).not.toHaveBeenCalled();
-      expect(result.completedLessonIds).toHaveLength(2);
+      expect(result?.completedLessonIds).toHaveLength(2);
+    });
+
+    it('should throw NotFoundException when lesson not found', async () => {
+      mockLessonRepositoryValue.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.completeLesson(
+          { id: 'user-1', role: UserRole.STUDENT } as User,
+          'course-1',
+          'lesson-1',
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException when not enrolled', async () => {
+      const lesson = {
+        id: 'lesson-1',
+        section: {
+          course: {
+            id: 'course-1',
+            instructorId: 'instructor-1',
+          },
+        },
+      };
+      mockLessonRepositoryValue.findOne.mockResolvedValue(lesson);
       mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
 
       await expect(
-        service.completeLesson('user-1', 'course-1', 'lesson-1'),
+        service.completeLesson(
+          { id: 'user-1', role: UserRole.STUDENT } as User,
+          'course-1',
+          'lesson-1',
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('should initialize completedLessonIds if null', async () => {
+      const lesson = {
+        id: 'lesson-1',
+        section: {
+          course: {
+            id: 'course-1',
+            instructorId: 'instructor-1',
+          },
+        },
+      };
       const enrollment = {
         id: 'enrollment-1',
         completedLessonIds: null,
         lastAccessedAt: new Date(),
       };
+      mockLessonRepositoryValue.findOne.mockResolvedValue(lesson);
       mockEnrollmentRepositoryValue.findOne.mockResolvedValue(enrollment);
       mockEnrollmentRepositoryValue.save.mockResolvedValue({
         ...enrollment,
         completedLessonIds: ['lesson-1'],
       });
 
-      await service.completeLesson('user-1', 'course-1', 'lesson-1');
+      await service.completeLesson(
+        { id: 'user-1', role: UserRole.STUDENT } as User,
+        'course-1',
+        'lesson-1',
+      );
 
       expect(mockEnrollmentRepositoryValue.save).toHaveBeenCalledWith(
         expect.objectContaining({
           completedLessonIds: ['lesson-1'],
         }),
       );
+    });
+  });
+
+  describe('getLessonWithAccessControl', () => {
+    it('should return lesson for instructor of the course', async () => {
+      const lesson = {
+        id: 'lesson-1',
+        section: {
+          course: {
+            id: 'course-1',
+            instructorId: 'instructor-1',
+          },
+        },
+      };
+      mockLessonRepositoryValue.findOne.mockResolvedValue(lesson);
+      mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
+
+      const result = await service.getLessonWithAccessControl(
+        { id: 'instructor-1', role: UserRole.INSTRUCTOR } as User,
+        'course-1',
+        'lesson-1',
+      );
+
+      expect(result.lesson).toEqual(lesson);
+      expect(result.hasAccess).toBe(true);
+    });
+
+    it('should return lesson for enrolled student', async () => {
+      const lesson = {
+        id: 'lesson-1',
+        section: {
+          course: {
+            id: 'course-1',
+            instructorId: 'instructor-1',
+          },
+        },
+      };
+      mockLessonRepositoryValue.findOne.mockResolvedValue(lesson);
+      mockEnrollmentRepositoryValue.findOne.mockResolvedValue({
+        id: 'enrollment-1',
+      });
+
+      const result = await service.getLessonWithAccessControl(
+        { id: 'student-1', role: UserRole.STUDENT } as User,
+        'course-1',
+        'lesson-1',
+      );
+
+      expect(result.lesson).toEqual(lesson);
+      expect(result.hasAccess).toBe(true);
+    });
+
+    it('should throw NotFoundException if lesson does not belong to course', async () => {
+      const lesson = {
+        id: 'lesson-1',
+        section: {
+          course: {
+            id: 'other-course',
+            instructorId: 'instructor-1',
+          },
+        },
+      };
+      mockLessonRepositoryValue.findOne.mockResolvedValue(lesson);
+
+      await expect(
+        service.getLessonWithAccessControl(
+          { id: 'student-1', role: UserRole.STUDENT } as User,
+          'course-1',
+          'lesson-1',
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException for non-enrolled student and non-preview lesson', async () => {
+      const lesson = {
+        id: 'lesson-1',
+        isFreePreview: false,
+        section: {
+          course: {
+            id: 'course-1',
+            instructorId: 'instructor-1',
+          },
+        },
+      };
+      mockLessonRepositoryValue.findOne.mockResolvedValue(lesson);
+      mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getLessonWithAccessControl(
+          { id: 'student-1', role: UserRole.STUDENT } as User,
+          'course-1',
+          'lesson-1',
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

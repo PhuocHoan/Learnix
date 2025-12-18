@@ -57,6 +57,8 @@ export interface CoursesResponse {
 
 export interface EnrollmentResponse {
   isEnrolled: boolean;
+  isInstructor: boolean;
+  isAdmin: boolean;
   progress: {
     id: string;
     completedLessonIds: string[];
@@ -125,6 +127,7 @@ export interface LessonBlock {
     filename?: string;
     size?: number;
     caption?: string;
+    videoSource?: 'upload' | 'url';
   };
   orderIndex: number;
 }
@@ -288,6 +291,22 @@ export const coursesApi = {
 
   deleteLesson: async (lessonId: string) => {
     await api.delete(`/courses/lessons/${lessonId}`);
+  },
+
+  reorderSections: async (
+    courseId: string,
+    sectionIds: string[],
+  ): Promise<void> => {
+    await api.post(`/courses/${courseId}/sections/reorder`, { sectionIds });
+  },
+
+  reorderLessons: async (
+    sectionId: string,
+    lessonIds: string[],
+  ): Promise<void> => {
+    await api.post(`/courses/sections/${sectionId}/lessons/reorder`, {
+      lessonIds,
+    });
   },
 
   submitForApproval: async (id: string): Promise<Course> => {

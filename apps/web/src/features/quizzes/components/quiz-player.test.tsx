@@ -60,7 +60,7 @@ describe('QuizPlayer', () => {
   it('renders the first question', () => {
     renderQuizPlayer();
     expect(screen.getByText('Question 1')).toBeInTheDocument();
-    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.getAllByText('A').length).toBeGreaterThan(0);
   });
 
   it('navigates to next question', () => {
@@ -87,7 +87,7 @@ describe('QuizPlayer', () => {
     // Answer Q2: Select first option
     options = screen.getAllByRole('radio');
     fireEvent.click(options[0]);
-    fireEvent.click(screen.getByText(/Submit/i));
+    fireEvent.click(screen.getByText(/Complete Quiz/i));
 
     await waitFor(() => {
       expect(quizzesApi.submitQuiz).toHaveBeenCalled();

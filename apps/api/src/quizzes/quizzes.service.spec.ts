@@ -7,6 +7,7 @@ import { QuizSubmission } from './entities/quiz-submission.entity';
 import { Quiz, QuizStatus } from './entities/quiz.entity';
 import { QuizzesService } from './quizzes.service';
 import { AiQuizGeneratorService } from './services/ai-quiz-generator.service';
+import { Lesson } from '../courses/entities/lesson.entity';
 
 import type { Repository, DeleteResult } from 'typeorm';
 
@@ -74,6 +75,13 @@ describe('QuizzesService', () => {
             create: jest.fn(),
             save: jest.fn(),
             findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(Lesson),
+          useValue: {
+            findOne: jest.fn(),
+            update: jest.fn(),
           },
         },
         {

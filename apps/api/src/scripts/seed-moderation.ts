@@ -16,20 +16,19 @@ async function bootstrap(): Promise<void> {
   const instructorEmail = 'instructor_mod_js@example.com';
   const instructorPass = 'Password123!';
 
-  /* eslint-disable no-console */
   let instructor = await usersService.findByEmail(instructorEmail);
   if (!instructor) {
-    console.log('Creating instructor...');
+    console.warn('Creating instructor...');
     instructor = await usersService.create({
       email: instructorEmail,
       password: instructorPass,
       fullName: 'Test Instructor JS',
     });
   } else {
-    console.log('Instructor exists.');
+    console.warn('Instructor exists.');
   }
 
-  console.log('Updating instructor status...');
+  console.warn('Updating instructor status...');
   // Force update verify status and role
   // Using query builder to bypass any service logic constraints
   await usersRepository
@@ -43,9 +42,8 @@ async function bootstrap(): Promise<void> {
     .where('email = :email', { email: instructorEmail })
     .execute();
 
-  console.log('Instructor updated: Verified and Active.');
+  console.warn('Instructor updated: Verified and Active.');
   await app.close();
-  /* eslint-enable no-console */
 }
 
 void bootstrap();

@@ -12,13 +12,12 @@ async function bootstrap(): Promise<void> {
   const password = 'Password123!';
   const fullName = 'Admin User';
 
-  /* eslint-disable no-console */
-  console.log(`Checking for user with email: ${email}`);
+  console.warn(`Checking for user with email: ${email}`);
 
   let user = await usersService.findByEmail(email);
 
   if (!user) {
-    console.log('User not found. Creating new admin user...');
+    console.warn('User not found. Creating new admin user...');
 
     try {
       const result = await usersService.createWithActivationToken({
@@ -27,29 +26,27 @@ async function bootstrap(): Promise<void> {
         password,
       });
 
-      // eslint-disable-next-line prefer-destructuring
-      user = result.user;
-      console.log(`User created with ID: ${user.id}`);
+      ({ user } = result);
+      console.warn(`User created with ID: ${user.id}`);
     } catch (error) {
       console.error('Error creating user:', error);
       process.exit(1);
     }
   } else {
-    console.log(`User found with ID: ${user.id}. Updating to admin...`);
+    console.warn(`User found with ID: ${user.id}. Updating to admin...`);
   }
 
   await usersService.updateRole(user.id, UserRole.ADMIN);
-  console.log('Role updated to ADMIN');
+  console.warn('Role updated to ADMIN');
 
   await usersService.activateUser(user.id);
-  console.log('User activated');
+  console.warn('User activated');
 
-  console.log('Admin user setup complete.');
-  console.log(`Email: ${email}`);
-  console.log(`Password: ${password}`);
+  console.warn('Admin user setup complete.');
+  console.warn(`Email: ${email}`);
+  console.warn(`Password: ${password}`);
 
   await app.close();
-  /* eslint-enable no-console */
 }
 
 void bootstrap();

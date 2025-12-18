@@ -1,9 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 
 import { Request } from 'express';
 import { Strategy } from 'passport-jwt';
+
+import { User } from '../../users/entities/user.entity';
+import { UsersService } from '../../users/users.service';
 
 interface JwtPayload {
   sub: string;
@@ -18,14 +21,12 @@ const cookieExtractor = (req: Request): string | null => {
   // First try to get token from HTTP-only cookie
   const cookies = req.cookies as Record<string, string> | undefined;
   if (cookies?.access_token) {
-    logger.debug('Token found in cookie');
     return cookies.access_token;
   }
 
   // Fallback to Authorization header (for API clients, testing, etc.)
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith('Bearer ')) {
-    logger.debug('Token found in Authorization header');
     return authHeader.substring(7);
   }
 
@@ -41,7 +42,10 @@ const cookieExtractor = (req: Request): string | null => {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    private readonly usersService: UsersService,
+  ) {
     super({
       jwtFromRequest: cookieExtractor,
       ignoreExpiration: false,
@@ -49,8 +53,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(payload: JwtPayload): { id: string; email: string; role: string } {
-    // Return 'id' instead of 'userId' to match User entity property
-    return { id: payload.sub, email: payload.email, role: payload.role };
+  async validate(payload: JwtPayload): Promise<User> {
+    const user = await this.usersService.findOne(payload.sub);
+
+    if (!user) {
+      throw new UnauthorizedException('User no longer exists');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('User is inactive');
+    }
+
+    return user;
   }
 }

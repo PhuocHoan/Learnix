@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { Readable } from 'stream';
 
 import { Injectable, BadRequestException } from '@nestjs/common';
@@ -18,6 +19,7 @@ export interface CloudinaryUploadResult {
   height?: number;
   bytes: number;
   resourceType: string;
+  existing?: boolean;
 }
 
 @Injectable()
@@ -66,13 +68,26 @@ export class CloudinaryService {
       );
     }
 
+    // Generate deterministic public ID based on file content (MD5 hash)
+    // This ensures that identical files result in the same public ID,
+    // avoiding duplicates in storage.
+    let { publicId } = options;
+    let overwrite = true; // Default to overwrite if ID is manually provided
+
+    if (!publicId) {
+      const hash = createHash('md5').update(buffer).digest('hex');
+      publicId = hash;
+      overwrite = false; // Do not overwrite if we are using content hash (deduplication)
+    }
+
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: options.folder ?? 'learnix',
-          public_id: options.publicId,
+          public_id: publicId,
           resource_type: options.resourceType ?? 'auto',
           transformation: options.transformation,
+          overwrite,
         },
         (
           error: UploadApiErrorResponse | undefined,
@@ -94,6 +109,7 @@ export class CloudinaryService {
               height: result.height,
               bytes: result.bytes,
               resourceType: result.resource_type,
+              existing: (result as { existing?: boolean }).existing,
             });
           } else {
             reject(new BadRequestException('Cloudinary upload failed'));
@@ -116,6 +132,7 @@ export class CloudinaryService {
     file: Express.Multer.File,
     options: {
       folder?: string;
+      resourceType?: 'image' | 'video' | 'raw' | 'auto';
       transformation?: Record<string, unknown>;
     } = {},
   ): Promise<CloudinaryUploadResult> {
@@ -131,11 +148,13 @@ export class CloudinaryService {
     }
 
     // Determine resource type from mimetype
-    let resourceType: 'image' | 'video' | 'raw' | 'auto' = 'auto';
-    if (file.mimetype.startsWith('image/')) {
-      resourceType = 'image';
-    } else if (file.mimetype.startsWith('video/')) {
-      resourceType = 'video';
+    let resourceType = options.resourceType ?? 'auto';
+    if (resourceType === 'auto') {
+      if (file.mimetype.startsWith('image/')) {
+        resourceType = 'image';
+      } else if (file.mimetype.startsWith('video/')) {
+        resourceType = 'video';
+      }
     }
 
     return this.uploadBuffer(buffer, {
@@ -164,6 +183,24 @@ export class CloudinaryService {
   }
 
   /**
+   * Upload a general image (no strict crop, just limit size)
+   */
+  async uploadGeneralImage(
+    file: Express.Multer.File,
+  ): Promise<CloudinaryUploadResult> {
+    return this.uploadFile(file, {
+      folder: 'learnix/images',
+      transformation: {
+        width: 1920,
+        height: 1920,
+        crop: 'limit', // Resize to fit within 1920x1920, preserving aspect ratio
+        quality: 'auto',
+        fetch_format: 'auto',
+      },
+    });
+  }
+
+  /**
    * Upload a course image with optimization
    */
   async uploadCourseImage(
@@ -178,6 +215,20 @@ export class CloudinaryService {
         quality: 'auto',
         fetch_format: 'auto',
       },
+    });
+  }
+
+  /**
+   * Upload a video with optimization
+   */
+  async uploadVideo(
+    file: Express.Multer.File,
+  ): Promise<CloudinaryUploadResult> {
+    return this.uploadFile(file, {
+      folder: 'learnix/videos',
+      // Transformations on upload can cause "Video file corrupt" errors for some formats/sizes
+      // It is safer to apply transformations on delivery
+      resourceType: 'video',
     });
   }
 

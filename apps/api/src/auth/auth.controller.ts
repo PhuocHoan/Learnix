@@ -11,6 +11,7 @@ import {
   Query,
   Patch,
   Delete,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -124,20 +125,33 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    const profile = req.user as unknown as OAuthProfile;
-    const result = await this.authService.validateOAuthLogin(
-      AuthProvider.GOOGLE,
-      profile,
-    );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // Set HTTP-only cookie - in monorepo deployment, this cookie works directly
-    // since frontend and API are on the same domain
-    res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
+    try {
+      const profile = req.user as unknown as OAuthProfile;
+      const result = await this.authService.validateOAuthLogin(
+        AuthProvider.GOOGLE,
+        profile,
+      );
 
-    // Redirect to frontend callback page
-    // Token in URL is kept for backward compatibility and as fallback
-    res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
+      // Set HTTP-only cookie - in monorepo deployment, this cookie works directly
+      // since frontend and API are on the same domain
+      res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
+
+      // Redirect to frontend callback page
+      // Token in URL is kept for backward compatibility and as fallback
+      res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
+    } catch (error) {
+      if (
+        error instanceof UnauthorizedException &&
+        error.message.includes('blocked')
+      ) {
+        res.redirect(`${frontendUrl}/blocked`);
+      } else {
+        // Redirect to login with generic error for other issues
+        res.redirect(`${frontendUrl}/login?error=oauth_failed`);
+      }
+    }
   }
 
   @Get('github')
@@ -152,17 +166,30 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    const result = await this.authService.validateOAuthLogin(
-      AuthProvider.GITHUB,
-      req.user as unknown as OAuthProfile,
-    );
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // Set HTTP-only cookie - in monorepo deployment, this cookie works directly
-    res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
+    try {
+      const result = await this.authService.validateOAuthLogin(
+        AuthProvider.GITHUB,
+        req.user as unknown as OAuthProfile,
+      );
 
-    // Redirect to frontend callback page
-    res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
+      // Set HTTP-only cookie - in monorepo deployment, this cookie works directly
+      res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
+
+      // Redirect to frontend callback page
+      res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
+    } catch (error) {
+      if (
+        error instanceof UnauthorizedException &&
+        error.message.includes('blocked')
+      ) {
+        res.redirect(`${frontendUrl}/blocked`);
+      } else {
+        // Redirect to login with generic error for other issues
+        res.redirect(`${frontendUrl}/login?error=oauth_failed`);
+      }
+    }
   }
 
   @Get('me')
@@ -170,6 +197,11 @@ export class AuthController {
   async getProfile(@CurrentUser() user: User): Promise<User> {
     // Fetch fresh user data from database to get updated role
     const freshUser = await this.authService.getUserById(user.id);
+
+    if (!freshUser.isActive) {
+      throw new UnauthorizedException('Your account has been blocked.');
+    }
+
     return freshUser;
   }
 
@@ -309,12 +341,15 @@ export class AuthController {
       user.id,
       UserRole.INSTRUCTOR,
     );
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, activationToken, passwordResetToken, ...safeUser } =
-      updatedUser;
+    const {
+      password: _p,
+      activationToken: _at,
+      passwordResetToken: _prt,
+      ...safeUser
+    } = updatedUser;
     return {
       message: 'Successfully promoted to Instructor. Please return to the app.',
-      user: safeUser,
+      user: safeUser as SafeUser,
     };
   }
 }

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -12,12 +12,70 @@ import {
   UserCheck,
   UserX,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 import { PageContainer } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { adminApi, type User } from '@/features/admin/api/admin-api';
+import { config } from '@/lib/config';
 import { cn } from '@/lib/utils';
+
+// User Avatar Component with Error Handling
+function UserAvatar({ user }: { user: User }) {
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    // Determine initial source
+    let src = user.avatarUrl;
+    if (src && !src.startsWith('http')) {
+      // Handle relative URLs for local uploads
+      // Ensure we don't double slash
+      const baseUrl = config.apiUrl.endsWith('/')
+        ? config.apiUrl.slice(0, -1)
+        : config.apiUrl;
+      const path = src.startsWith('/') ? src : `/${src}`;
+      src = `${baseUrl}${path}`;
+    }
+
+    // Set initial source, preferring dedicated avatarUrl, then oauth, then null
+    const timer = setTimeout(() => {
+      setImgSrc(src ?? user.oauthAvatarUrl ?? null);
+      setError(false);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [user.avatarUrl, user.oauthAvatarUrl]);
+
+  const handleError = () => {
+    // If we're currently trying the primary avatar and failing...
+    if (imgSrc !== user.oauthAvatarUrl && user.oauthAvatarUrl) {
+      // Fallback to oauth url
+      setImgSrc(user.oauthAvatarUrl);
+    } else {
+      // If we already tried oauth or there isn't one, give up
+      setError(true);
+    }
+  };
+
+  if (!imgSrc || error) {
+    return (
+      <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-semibold shrink-0 border border-border">
+        {user.fullName?.charAt(0).toUpperCase() ??
+          user.email.charAt(0).toUpperCase()}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imgSrc}
+      alt={user.fullName ?? ''}
+      className="w-12 h-12 rounded-full object-cover shrink-0 border border-border"
+      onError={handleError}
+    />
+  );
+}
 
 // Skeleton component
 function Skeleton({ className }: { className?: string }) {
@@ -163,10 +221,7 @@ export function UserManagementPage() {
                         >
                           {/* Avatar & Info */}
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-semibold shrink-0">
-                              {user.fullName?.charAt(0).toUpperCase() ??
-                                user.email.charAt(0).toUpperCase()}
-                            </div>
+                            <UserAvatar user={user} />
                             <div className="min-w-0 flex-1">
                               <p className="font-medium text-foreground truncate">
                                 {user.fullName ?? 'No name'}
@@ -252,110 +307,121 @@ export function UserManagementPage() {
         </Card>
 
         {/* Role Change Modal */}
-        {selectedUser && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-            <div className="bg-card rounded-2xl p-6 max-w-md w-full shadow-2xl animate-fade-in">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-foreground">
-                  Change Role
-                </h2>
-                <button
-                  onClick={() => setSelectedUser(null)}
-                  className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mb-6">
-                <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white font-semibold">
-                  {selectedUser.fullName?.charAt(0).toUpperCase() ??
-                    selectedUser.email.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate">
-                    {selectedUser.fullName ?? 'No name'}
-                  </p>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {selectedUser.email}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {[
-                  {
-                    role: 'guest',
-                    label: 'Guest',
-                    desc: 'Limited access, view only',
-                    icon: Users,
-                  },
-                  {
-                    role: 'student',
-                    label: 'Student',
-                    desc: 'Can enroll in courses and take quizzes',
-                    icon: GraduationCap,
-                  },
-                  {
-                    role: 'instructor',
-                    label: 'Instructor',
-                    desc: 'Can create courses and quizzes',
-                    icon: BookOpen,
-                  },
-                  {
-                    role: 'admin',
-                    label: 'Admin',
-                    desc: 'Full platform access and control',
-                    icon: Shield,
-                  },
-                ].map(({ role, label, desc, icon: Icon }) => (
+        {selectedUser &&
+          createPortal(
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] animate-fade-in">
+              <div
+                className="absolute inset-0 z-0"
+                onClick={() => setSelectedUser(null)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setSelectedUser(null);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label="Close modal"
+              />
+              <div className="bg-card rounded-2xl p-6 max-w-md w-full shadow-2xl animate-fade-in relative z-10">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-foreground">
+                    Change Role
+                  </h2>
                   <button
-                    key={role}
-                    onClick={() => {
-                      void updateRoleMutation.mutateAsync({
-                        userId: selectedUser.id,
-                        role,
-                      });
-                    }}
-                    disabled={updateRoleMutation.isPending}
-                    className={cn(
-                      'w-full p-4 text-left rounded-xl border-2 transition-all flex items-center gap-3 disabled:opacity-50',
-                      selectedUser.role === role
-                        ? 'border-primary bg-primary/10 shadow-md'
-                        : 'border-border hover:border-primary/50 hover:bg-muted/50',
-                    )}
+                    onClick={() => setSelectedUser(null)}
+                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
                   >
-                    <div
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mb-6">
+                  <UserAvatar user={selectedUser} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">
+                      {selectedUser.fullName ?? 'No name'}
+                    </p>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {selectedUser.email}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {[
+                    {
+                      role: 'guest',
+                      label: 'Guest',
+                      desc: 'Limited access, view only',
+                      icon: Users,
+                    },
+                    {
+                      role: 'student',
+                      label: 'Student',
+                      desc: 'Can enroll in courses and take quizzes',
+                      icon: GraduationCap,
+                    },
+                    {
+                      role: 'instructor',
+                      label: 'Instructor',
+                      desc: 'Can create courses and quizzes',
+                      icon: BookOpen,
+                    },
+                    {
+                      role: 'admin',
+                      label: 'Admin',
+                      desc: 'Full platform access and control',
+                      icon: Shield,
+                    },
+                  ].map(({ role, label, desc, icon: Icon }) => (
+                    <button
+                      key={role}
+                      onClick={() => {
+                        void updateRoleMutation.mutateAsync({
+                          userId: selectedUser.id,
+                          role,
+                        });
+                      }}
+                      disabled={updateRoleMutation.isPending}
                       className={cn(
-                        'p-2 rounded-lg',
+                        'w-full p-4 text-left rounded-xl border-2 transition-all flex items-center gap-3 disabled:opacity-50',
                         selectedUser.role === role
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground',
+                          ? 'border-primary bg-primary/10 shadow-md'
+                          : 'border-border hover:border-primary/50 hover:bg-muted/50',
                       )}
                     >
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{label}</p>
-                      <p className="text-sm text-muted-foreground">{desc}</p>
-                    </div>
-                    {updateRoleMutation.isPending &&
-                      selectedUser.role !== role && (
-                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                      )}
-                  </button>
-                ))}
-              </div>
+                      <div
+                        className={cn(
+                          'p-2 rounded-lg',
+                          selectedUser.role === role
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground',
+                        )}
+                      >
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{label}</p>
+                        <p className="text-sm text-muted-foreground">{desc}</p>
+                      </div>
+                      {updateRoleMutation.isPending &&
+                        selectedUser.role !== role && (
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        )}
+                    </button>
+                  ))}
+                </div>
 
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="mt-6 w-full py-3 border border-border rounded-xl hover:bg-muted font-medium transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+                <button
+                  onClick={() => setSelectedUser(null)}
+                  className="mt-6 w-full py-3 border border-border rounded-xl hover:bg-muted font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )}
       </div>
     </PageContainer>
   );

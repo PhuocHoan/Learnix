@@ -124,7 +124,58 @@ export class UploadController {
 
     // Use Cloudinary for serverless environment
     if (this.useCloudinary) {
-      const result = await this.cloudinaryService.uploadCourseImage(file);
+      const result = await this.cloudinaryService.uploadGeneralImage(file);
+      return {
+        filename: result.publicId,
+        originalName: file.originalname,
+        mimetype: file.mimetype,
+        size: result.bytes,
+        url: result.secureUrl,
+      };
+    }
+
+    return this.uploadService.processUploadedFile(file);
+  }
+
+  /**
+   * Upload a video (max 100MB)
+   */
+  @Post('video')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+      fileFilter: (req, file, cb) => {
+        const allowedMimes = [
+          'video/mp4',
+          'video/webm',
+          'video/ogg',
+          'video/quicktime',
+        ];
+        if (allowedMimes.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              'Only MP4, WebM, OGG, and MOV videos are allowed',
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
+  async uploadVideo(
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ): Promise<FileUploadResult> {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    this.uploadService.validateVideoFile(file);
+
+    // Use Cloudinary for serverless environment
+    if (this.useCloudinary) {
+      const result = await this.cloudinaryService.uploadVideo(file);
       return {
         filename: result.publicId,
         originalName: file.originalname,
@@ -180,7 +231,7 @@ export class UploadController {
     // Use Cloudinary for serverless environment
     if (this.useCloudinary) {
       const results = await Promise.all(
-        files.map((file) => this.cloudinaryService.uploadCourseImage(file)),
+        files.map((file) => this.cloudinaryService.uploadGeneralImage(file)),
       );
       return results.map((result, idx) => {
         const file = files.at(idx);

@@ -200,7 +200,7 @@ test.describe('Error Handling', () => {
     test('should show auth modal for unauthorized access to instructor pages', async ({
       page,
     }) => {
-      await page.goto('/instructor/quiz-generator');
+      await page.goto('/instructor/courses');
       const authModal = page.getByRole('dialog');
       await expect(authModal).toBeVisible();
     });

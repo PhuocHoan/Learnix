@@ -86,6 +86,7 @@ describe('Auth unit tests (mocked DB)', () => {
       email: 'u@example.com',
       role: UserRole.STUDENT,
       isEmailVerified: true, // Email must be verified for login
+      isActive: true,
     };
     // mock validateUser to return user
     jest

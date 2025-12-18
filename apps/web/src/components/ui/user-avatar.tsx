@@ -70,8 +70,19 @@ export function UserAvatar({
   };
 
   const initials = getInitials();
-  // eslint-disable-next-line security/detect-object-injection
-  const sizeClass = sizeClasses[size];
+  const getSizeClass = (s: typeof size): string => {
+    switch (s) {
+      case 'sm':
+        return sizeClasses.sm;
+      case 'md':
+        return sizeClasses.md;
+      case 'lg':
+        return sizeClasses.lg;
+      case 'xl':
+        return sizeClasses.xl;
+    }
+  };
+  const sizeClass = getSizeClass(size);
 
   // Show fallback if no image or image failed to load
   if (!imageSrc || imageError) {

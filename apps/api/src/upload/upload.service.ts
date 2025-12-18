@@ -51,6 +51,17 @@ export class UploadService {
     '.svg',
   ];
 
+  // Allowed video MIME types
+  private readonly allowedVideoTypes = [
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+    'video/quicktime',
+  ];
+
+  // Allowed video extensions
+  private readonly allowedVideoExtensions = ['.mp4', '.webm', '.ogg', '.mov'];
+
   // Max file sizes (in bytes)
   // Use Map instead of object to avoid object injection
   private readonly maxFileSizes = new Map([
@@ -154,6 +165,34 @@ export class UploadService {
 
     // Check file size
     const maxSize = this.maxFileSizes.get(type) ?? 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new BadRequestException(
+        `File size exceeds limit. Maximum size: ${maxSize / (1024 * 1024)}MB`,
+      );
+    }
+  }
+
+  /**
+   * Validate a video file for upload
+   */
+  validateVideoFile(file: Express.Multer.File): void {
+    // Check MIME type
+    if (!this.allowedVideoTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        `Invalid file type. Allowed types: ${this.allowedVideoTypes.join(', ')}`,
+      );
+    }
+
+    // Check extension
+    const ext = extname(file.originalname).toLowerCase();
+    if (!this.allowedVideoExtensions.includes(ext)) {
+      throw new BadRequestException(
+        `Invalid file extension. Allowed extensions: ${this.allowedVideoExtensions.join(', ')}`,
+      );
+    }
+
+    // Check file size
+    const maxSize = this.maxFileSizes.get('video') ?? 100 * 1024 * 1024;
     if (file.size > maxSize) {
       throw new BadRequestException(
         `File size exceeds limit. Maximum size: ${maxSize / (1024 * 1024)}MB`,

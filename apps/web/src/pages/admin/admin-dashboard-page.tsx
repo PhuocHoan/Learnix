@@ -5,7 +5,7 @@ import {
   BookOpen,
   Shield,
   ArrowRight,
-  Sparkles,
+  GraduationCap,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -17,6 +17,7 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { adminApi } from '@/features/admin/api/admin-api';
 import { cn } from '@/lib/utils';
 
@@ -54,7 +55,7 @@ export function AdminDashboardPage() {
 
   /* Fetch system stats */
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['admin-stats'],
+    queryKey: ['admin', 'stats'],
     queryFn: adminApi.getSystemStats,
     staleTime: 60000, // 1 minute
   });
@@ -89,9 +90,7 @@ export function AdminDashboardPage() {
               </div>
               <div>
                 {isLoading ? (
-                  <p className="text-2xl font-bold text-foreground animate-pulse">
-                    ...
-                  </p>
+                  <Skeleton className="h-8 w-20" />
                 ) : (
                   <p className="text-2xl font-bold text-foreground">
                     {stats?.totalUsers ?? '—'}
@@ -108,9 +107,7 @@ export function AdminDashboardPage() {
               </div>
               <div>
                 {isLoading ? (
-                  <p className="text-2xl font-bold text-foreground animate-pulse">
-                    ...
-                  </p>
+                  <Skeleton className="h-8 w-20" />
                 ) : (
                   <p className="text-2xl font-bold text-foreground">
                     {stats?.totalCourses ?? '—'}
@@ -122,12 +119,20 @@ export function AdminDashboardPage() {
           </Card>
           <Card className="group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1">
             <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-green-500/10">
-                <Sparkles className="w-6 h-6 text-green-500" />
+              <div className="p-3 rounded-xl bg-orange-500/10">
+                <GraduationCap className="w-6 h-6 text-orange-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">—</p>
-                <p className="text-sm text-muted-foreground">Active Today</p>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <p className="text-2xl font-bold text-foreground">
+                    {stats?.totalEnrollments ?? '—'}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Total Enrollments
+                </p>
               </div>
             </CardContent>
           </Card>

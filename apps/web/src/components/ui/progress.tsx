@@ -22,7 +22,7 @@ export function Progress({
       {...props}
     >
       <div
-        className="h-full w-full flex-1 bg-primary transition-all"
+        className="h-full w-full flex-1 gradient-primary transition-all duration-500 ease-out glow-primary"
         style={{ transform: `translateX(-${100 - percentage}%)` }}
       />
     </div>
