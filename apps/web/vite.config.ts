@@ -49,6 +49,17 @@ export default defineConfig({
             '@radix-ui/react-tabs',
             '@radix-ui/react-tooltip',
           ],
+          'editor-vendor': [
+            '@tiptap/react',
+            '@tiptap/starter-kit',
+            '@tiptap/extension-link',
+            'tiptap-markdown',
+          ],
+          'dnd-vendor': [
+            '@dnd-kit/core',
+            '@dnd-kit/sortable',
+            '@dnd-kit/utilities',
+          ],
           'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
           utils: ['clsx', 'tailwind-merge', 'class-variance-authority'],
         },

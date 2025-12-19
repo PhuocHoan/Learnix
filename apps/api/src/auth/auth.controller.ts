@@ -331,12 +331,17 @@ export class AuthController {
     return { hasPassword };
   }
 
-  // TODO: Remove this dev endpoint in production
+  // Dev endpoint - only accessible in non-production environments
   @Get('dev/promote')
   @UseGuards(JwtAuthGuard)
   async promoteToInstructor(
     @CurrentUser() user: User,
   ): Promise<{ message: string; user: SafeUser }> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new UnauthorizedException(
+        'Dev tools are not available in production',
+      );
+    }
     const updatedUser = await this.authService.updateUserRole(
       user.id,
       UserRole.INSTRUCTOR,

@@ -465,7 +465,7 @@ function CourseDetailsForm({
                     type="number"
                     step="0.01"
                     min="0"
-                    {...form.register('price')}
+                    {...form.register('price', { valueAsNumber: true })}
                   />
                 </div>
               </div>

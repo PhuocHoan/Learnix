@@ -54,7 +54,7 @@
     "@nestjs/testing": "^11.1.9",
     "@swc-node/register": "^1.11.1",
     "@swc/cli": "^0.7.9",
-    "@swc/core": "^1.15.6",
+    "@swc/core": "^1.15.7",
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",

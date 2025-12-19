@@ -45,7 +45,10 @@ test.describe('Admin Features', () => {
     await expect(adminPage.userTable).toBeVisible();
 
     // Check for some header or expected user
-    await expect(page.getByText(/Email|User|Role/i).first()).toBeVisible();
+    // Scope to the table to avoid matching navigation links
+    await expect(
+      adminPage.userTable.getByText(/Email|User|Role/i).first(),
+    ).toBeVisible();
   });
 
   test('should display course moderation table', async ({ page }) => {
@@ -53,6 +56,8 @@ test.describe('Admin Features', () => {
     await expect(adminPage.courseTable).toBeVisible();
 
     // Check for moderation specific columns
-    await expect(page.getByText(/Status|Instructor|Title/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/Status|Instructor|Title/i).first(),
+    ).toBeVisible();
   });
 });

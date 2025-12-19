@@ -199,10 +199,10 @@ export function VideoUpload({
         {/* Video preview */}
         {displayUrl ? (
           <div className="relative w-full h-full min-h-[200px] bg-black rounded-xl overflow-hidden">
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
             <video
               src={displayUrl}
               controls
+              muted
               className="w-full h-full object-contain"
             />
             {/* Remove button */}

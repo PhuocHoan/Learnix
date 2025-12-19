@@ -312,11 +312,11 @@ export default tseslint.config(
     },
   },
 
-  // Seed files configuration (allow console.log for CLI output)
+  // Seed and script files configuration (allow console.log for CLI output)
   {
-    files: ['**/seed.ts', '**/seed/**/*.ts'],
+    files: ['**/seed.ts', '**/seed/**/*.ts', '**/scripts/**/*.ts'],
     rules: {
-      'no-console': 'off', // Seed scripts use console for CLI output
+      'no-console': 'off', // Seed and scripts use console for CLI output
     },
   },
 

@@ -29,9 +29,9 @@ export default defineConfig({
   webServer: process.env.CI
     ? undefined
     : {
-        command: 'pnpm --filter @repo/web dev',
-        url: 'http://localhost:5173',
+        command: 'sh -c "make db && pnpm dev"',
+        url: 'http://localhost:3000/health',
         reuseExistingServer: !process.env.CI,
-        timeout: 120 * 1000,
+        timeout: 180 * 1000,
       },
 });

@@ -11,6 +11,7 @@ import { Course } from './courses/entities/course.entity';
 import { Enrollment } from './courses/entities/enrollment.entity';
 import { Lesson } from './courses/entities/lesson.entity';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { HealthController } from './health.controller';
 import { Question } from './quizzes/entities/question.entity';
 import { QuizSubmission } from './quizzes/entities/quiz-submission.entity';
 import { Quiz } from './quizzes/entities/quiz.entity';
@@ -20,6 +21,7 @@ import { User } from './users/entities/user.entity';
 import { UsersModule } from './users/users.module';
 
 @Module({
+  controllers: [HealthController],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,

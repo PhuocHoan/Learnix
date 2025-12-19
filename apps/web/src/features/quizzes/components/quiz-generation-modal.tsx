@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection */
 import { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -140,9 +139,9 @@ export function QuizGenerationModal({
     field: K,
     value: GeneratedQuestion[K],
   ) => {
-    const newQuestions = [...questions];
-    newQuestions[index] = { ...newQuestions[index], [field]: value };
-    setQuestions(newQuestions);
+    setQuestions((prev) =>
+      prev.map((q, i) => (i === index ? { ...q, [field]: value } : q)),
+    );
   };
 
   const handleOptionChange = (
@@ -150,16 +149,23 @@ export function QuizGenerationModal({
     oIndex: number,
     value: string,
   ) => {
-    const newQuestions = [...questions];
-    const newOptions = [...newQuestions[qIndex].options];
-    newOptions[oIndex] = value;
-    newQuestions[qIndex] = { ...newQuestions[qIndex], options: newOptions };
-    setQuestions(newQuestions);
+    setQuestions((prev) =>
+      prev.map((q, qi) =>
+        qi === qIndex
+          ? {
+              ...q,
+              options: q.options.map((opt, oi) =>
+                oi === oIndex ? value : opt,
+              ),
+            }
+          : q,
+      ),
+    );
   };
 
   const toggleMultiSelectCorrect = (qIndex: number, letter: string) => {
-    const q = questions[qIndex];
-    if (q.type !== 'multi_select') {
+    const q = questions.find((_, i) => i === qIndex);
+    if (q?.type !== 'multi_select') {
       return;
     }
 
@@ -541,7 +547,10 @@ export function QuizGenerationModal({
                           {q.type !== 'short_answer' ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                               {q.options.map((opt, oIndex) => {
-                                const letter = ['A', 'B', 'C', 'D'][oIndex];
+                                const letter =
+                                  (['A', 'B', 'C', 'D'] as const).find(
+                                    (_, i) => i === oIndex,
+                                  ) ?? 'A';
                                 const correctLetters =
                                   q.correctAnswer.split(',');
                                 const isCorrect = correctLetters.includes(

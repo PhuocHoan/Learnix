@@ -34,7 +34,8 @@ Refer to these files for specific coding rules:
 
 - **Frontend**: `.github/instructions/frontend.instructions.md` (React 19 features, A11y, Tailwind v4).
 - **Backend**: `.github/instructions/backend.instructions.md` (NestJS modules, DTOs, TypeORM).
-- **Common**: `.github/instructions/common.instructions.md` (Security, Performance, Git).1
+- **Common**: `.github/instructions/common.instructions.md` (Security, Performance, Git).
+- **Testing**: `.github/instructions/testing.instructions.md` (`make pre/build/e2e` must pass with zero warnings).
 - **E2E**: `.github/instructions/e2e.instructions.md` (Playwright patterns).
 
 ## Project-Specific Conventions

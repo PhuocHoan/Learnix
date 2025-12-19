@@ -244,13 +244,20 @@ export function InstructorCoursesPage() {
                         </Button>
                       )}
 
-                      <Link to={`/courses/${course.id}`} target="_blank">
-                        <Button variant="ghost" size="sm">
+                      <Link
+                        to={`/courses/${course.id}`}
+                        target="_blank"
+                        aria-label="View Course"
+                      >
+                        <Button variant="ghost" size="sm" title="View Course">
                           <Eye className="w-4 h-4" />
                         </Button>
                       </Link>
-                      <Link to={`/instructor/courses/${course.id}/edit`}>
-                        <Button variant="outline" size="sm">
+                      <Link
+                        to={`/instructor/courses/${course.id}/edit`}
+                        aria-label="Edit Course"
+                      >
+                        <Button variant="outline" size="sm" title="Edit Course">
                           <Edit className="w-4 h-4" />
                         </Button>
                       </Link>
@@ -258,6 +265,8 @@ export function InstructorCoursesPage() {
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDelete(course.id, course.title)}
+                        aria-label="Delete Course"
+                        title="Delete Course"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
