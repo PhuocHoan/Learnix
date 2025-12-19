@@ -2,12 +2,23 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { toast } from 'sonner';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import * as useAuthModule from '@/contexts/use-auth';
 import { coursesApi } from '@/features/courses/api/courses-api';
 
 import { CourseDetailPage } from './course-detail-page';
+
+// Mock sonner
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    promise: vi.fn((p) => p),
+  },
+}));
 
 // Mock courses API
 vi.mock('@/features/courses/api/courses-api');
@@ -103,6 +114,7 @@ describe('CourseDetailPage', () => {
       isEnrolled: false,
       isInstructor: false,
       isAdmin: false,
+      hasAccess: false,
       progress: null,
     });
 
@@ -226,6 +238,7 @@ describe('CourseDetailPage', () => {
         isEnrolled: false,
         isInstructor: false,
         isAdmin: false,
+        hasAccess: false,
         progress: null,
       });
       renderWithProviders();
@@ -234,11 +247,44 @@ describe('CourseDetailPage', () => {
       ).toBeInTheDocument();
     });
 
+    it('shows success toast when enrollment is successful', async () => {
+      const user = userEvent.setup();
+      vi.mocked(coursesApi.getEnrollment).mockResolvedValue({
+        isEnrolled: false,
+        isInstructor: false,
+        isAdmin: false,
+        hasAccess: false,
+        progress: null,
+      });
+      vi.mocked(coursesApi.enroll).mockResolvedValue({
+        success: true,
+        message: 'Enrolled successfully',
+      });
+
+      renderWithProviders();
+
+      const enrollButton = await screen.findByRole('button', {
+        name: /Enroll Now/i,
+      });
+      await user.click(enrollButton);
+
+      await waitFor(() => {
+        expect(coursesApi.enroll).toHaveBeenCalledWith('course-1');
+        expect(toast.promise).toHaveBeenCalledWith(
+          expect.any(Promise),
+          expect.objectContaining({
+            success: 'Successfully enrolled!',
+          }),
+        );
+      });
+    });
+
     it('shows enrolled badge and continue button for enrolled user', async () => {
       vi.mocked(coursesApi.getEnrollment).mockResolvedValue({
         isEnrolled: true,
         isInstructor: false,
         isAdmin: false,
+        hasAccess: true,
         progress: {
           id: 'progress-1',
           completedLessonIds: ['lesson-1'],
@@ -262,6 +308,7 @@ describe('CourseDetailPage', () => {
         isEnrolled: true,
         isInstructor: false,
         isAdmin: false,
+        hasAccess: true,
         progress: {
           id: 'progress-1',
           completedLessonIds: [],
@@ -278,6 +325,40 @@ describe('CourseDetailPage', () => {
         name: /View/i,
       });
       expect(viewButtons.length).toBeGreaterThan(0);
+    });
+
+    it('shows Review Course button for admin when course is pending', async () => {
+      vi.mocked(useAuthModule.useAuth).mockReturnValue({
+        user: {
+          id: 'admin-1',
+          userId: 'admin-1',
+          email: 'admin@example.com',
+          role: 'admin',
+        },
+        isLoading: false,
+        isAuthenticated: true,
+        logout: vi.fn(),
+        refreshUser: vi.fn(),
+      });
+
+      vi.mocked(coursesApi.getCourse).mockResolvedValue({
+        ...mockCourse,
+        status: 'pending',
+        isPublished: false,
+      });
+      vi.mocked(coursesApi.getEnrollment).mockResolvedValue({
+        isEnrolled: false,
+        isInstructor: false,
+        isAdmin: true,
+        hasAccess: true,
+        progress: null,
+      });
+
+      renderWithProviders();
+
+      expect(
+        await screen.findByRole('button', { name: /Review Course/i }),
+      ).toBeInTheDocument();
     });
   });
 

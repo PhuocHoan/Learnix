@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import {
   FileText,
   CheckCircle,
@@ -10,9 +11,15 @@ import {
   Loader2,
   Lock,
   Code as CodeIcon,
+  CircleHelp,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  useParams,
+  useNavigate,
+  useSearchParams,
+  useLocation,
+} from 'react-router-dom';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 
@@ -141,7 +148,7 @@ function ImageBlock({
         <img
           src={content}
           alt={caption ?? 'Lesson image'}
-          className="rounded-xl w-full object-contain max-h-[400px] border border-border shadow-sm bg-black/5"
+          className="rounded-xl w-full object-contain max-h-100 border border-border shadow-sm bg-black/5"
           onError={(e) => {
             // If it failed as image, and we didn't catch it as video, show placeholder
             (e.target as HTMLImageElement).src =
@@ -395,7 +402,7 @@ function QuizSection({
   }
 
   return (
-    <div className="my-10 border-t border-border pt-10">
+    <div className="my-10">
       <h2 className="text-2xl font-bold mb-6">Lesson Quiz</h2>
       <QuizPlayer quiz={quiz} onComplete={onComplete} />
     </div>
@@ -407,11 +414,12 @@ export function LessonViewerPage() {
   // Use default value to avoid non-null assertions later
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   // Lesson Completion Restrictions
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -428,7 +436,14 @@ export function LessonViewerPage() {
   });
 
   // Fetch Enrollment
-  const { data: enrollment, isLoading: isLoadingEnrollment } = useQuery({
+  const {
+    data: enrollment,
+    isLoading: isLoadingEnrollment,
+    isFetching: isFetchingEnrollment,
+    status: enrollmentStatus,
+    error: enrollmentError,
+    refetch: refetchEnrollment,
+  } = useQuery({
     queryKey: ['enrollment', id],
     queryFn: () => coursesApi.getEnrollment(id),
     enabled: Boolean(id) && isAuthenticated,
@@ -487,9 +502,13 @@ export function LessonViewerPage() {
   };
 
   const isPreviewLesson = currentLesson?.isFreePreview ?? false;
-  const isInstructor = enrollment?.isInstructor ?? false;
-  const isAdmin = enrollment?.isAdmin ?? false;
-  const hasAccess = isEnrolled || isPreviewLesson || isInstructor || isAdmin;
+  const isInstructor = Boolean(
+    isAuthenticated && user?.id && course?.instructor?.id === user.id,
+  );
+  const isAdmin = Boolean(isAuthenticated && user?.role === 'admin');
+  const hasCourseAccess =
+    (enrollment?.hasAccess ?? false) || isInstructor || isAdmin;
+  const hasAccess = hasCourseAccess || isPreviewLesson;
   const shouldShowAuthModal =
     !isLoadingEnrollment &&
     !isLoadingCourse &&
@@ -497,33 +516,87 @@ export function LessonViewerPage() {
     !hasAccess &&
     !isAuthenticated;
 
+  const accessRedirectedRef = useRef(false);
+  const enrollGraceAttemptsRef = useRef(0);
+
   // Auth/Access Redirect Logic
   useEffect(() => {
-    if (
-      !isLoadingEnrollment &&
-      !isLoadingCourse &&
-      course &&
-      !hasAccess &&
-      isAuthenticated
-    ) {
-      toast.error('Please enroll in this course to access lessons');
-      void navigate(`/courses/${id}`, { replace: true });
+    // Wait until both course and enrollment queries have settled.
+    // React Query can be in a refetching state where isLoading=false but isFetching=true.
+    if (isLoadingCourse || isFetchingEnrollment) {
+      return;
+    }
+
+    if (course && !hasAccess && isAuthenticated) {
+      const cameFromEnroll = Boolean(
+        (location.state as { fromEnroll?: boolean } | null)?.fromEnroll,
+      );
+
+      // Enrollment can briefly lag behind after enrolling, and in some cases the
+      // enrollment endpoint can return a transient 404 right after navigation or refresh.
+      // Give it a few short retries before showing an error + redirecting back.
+      const status = isAxiosError(enrollmentError)
+        ? enrollmentError.response?.status
+        : undefined;
+
+      const shouldGraceRetry =
+        cameFromEnroll ||
+        (status === 404 && enrollGraceAttemptsRef.current < 2);
+
+      // If enrollment is still not available (or transient 404), retry a few times.
+      if (shouldGraceRetry && enrollGraceAttemptsRef.current < 3) {
+        enrollGraceAttemptsRef.current += 1;
+        const retryDelayMs = 350 * enrollGraceAttemptsRef.current;
+
+        // Only retry if we don't already have an enrollment payload.
+        if (!enrollment || status === 404) {
+          const timer = setTimeout(() => {
+            void refetchEnrollment();
+          }, retryDelayMs);
+          return () => clearTimeout(timer);
+        }
+      }
+
+      // Prevent duplicate toasts/redirects in React StrictMode.
+      if (accessRedirectedRef.current) {
+        return;
+      }
+      accessRedirectedRef.current = true;
+
+      // Only show the enroll-required toast when we are confident the user truly has no access.
+      // - If we successfully fetched enrollment and hasAccess is false, user isn't allowed.
+      // - If the enrollment endpoint returns 404 after grace retries, user isn't enrolled.
+      const isConfirmedNotEnrolled = status === 404;
+      const isConfirmedNoAccess = enrollmentStatus === 'success';
+
+      if (isConfirmedNoAccess || isConfirmedNotEnrolled) {
+        toast.error('Please enroll in this course to access lessons');
+        void navigate(`/courses/${id}`, { replace: true });
+      }
     }
   }, [
-    isLoadingEnrollment,
     isLoadingCourse,
+    isFetchingEnrollment,
     course,
     hasAccess,
     isAuthenticated,
     id,
     navigate,
+    location.state,
+    enrollment,
+    enrollmentError,
+    enrollmentStatus,
+    refetchEnrollment,
   ]);
 
   const completeLessonMutation = useMutation({
-    mutationFn: (lessonId: string) => coursesApi.completeLesson(id, lessonId),
-    onSuccess: () => {
+    mutationFn: (variables: { lessonId: string; suppressToast?: boolean }) =>
+      coursesApi.completeLesson(id, variables.lessonId),
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['enrollment', id] });
-      toast.success('Lesson completed!');
+      if (!variables.suppressToast) {
+        toast.success('Lesson completed!');
+      }
     },
   });
 
@@ -614,7 +687,7 @@ export function LessonViewerPage() {
                                   variant="outline"
                                   className="text-green-700 border-green-400 bg-green-100/50 font-bold opacity-100"
                                 >
-                                  <CheckCircle className="w-4 h-4 mr-2 stroke-[3]" />
+                                  <CheckCircle className="w-4 h-4 mr-2 stroke-3" />
                                   Completed
                                 </Button>
                               );
@@ -635,7 +708,9 @@ export function LessonViewerPage() {
                             <Button
                               size="sm"
                               onClick={() =>
-                                completeLessonMutation.mutate(currentLesson.id)
+                                completeLessonMutation.mutate({
+                                  lessonId: currentLesson.id,
+                                })
                               }
                               disabled={
                                 isCompletionDisabled || isLessonCompleted
@@ -651,7 +726,7 @@ export function LessonViewerPage() {
                             >
                               {isLessonCompleted ? (
                                 <>
-                                  <CheckCircle className="w-4 h-4 mr-2 stroke-[3]" />
+                                  <CheckCircle className="w-4 h-4 mr-2 stroke-3" />
                                   Completed
                                 </>
                               ) : (
@@ -660,13 +735,6 @@ export function LessonViewerPage() {
                             </Button>
                           );
                         })()}
-                        {!isLessonCompleted &&
-                          currentLesson.type === 'standard' &&
-                          !hasScrolledToBottom && (
-                            <span className="text-xs text-muted-foreground font-medium">
-                              Finish reading all contents to complete...
-                            </span>
-                          )}
                       </div>
                     )}
                   </div>
@@ -674,17 +742,23 @@ export function LessonViewerPage() {
                   {/* Quiz Section */}
                   <QuizSection
                     lessonId={currentLesson.id}
-                    isEnrolled={isEnrolled}
+                    isEnrolled={isEnrolled || isInstructor}
                     onComplete={() => {
                       if (!completedIds.includes(currentLesson.id)) {
-                        completeLessonMutation.mutate(currentLesson.id);
+                        completeLessonMutation.mutate({
+                          lessonId: currentLesson.id,
+                          suppressToast: true,
+                        });
                       }
                     }}
                     onHasQuiz={setHasQuiz}
                   />
 
                   {/* Render the Block Content */}
-                  <LessonContent blocks={currentLesson.content} />
+                  {currentLesson.type === 'quiz' &&
+                  (currentLesson.content?.length ?? 0) === 0 ? null : (
+                    <LessonContent blocks={currentLesson.content} />
+                  )}
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -732,8 +806,17 @@ export function LessonViewerPage() {
                     {section.lessons.map((lesson, index) => {
                       const isCompleted = completedIds.includes(lesson.id);
                       const isActive = activeLessonId === lesson.id;
-                      const canAccess = isEnrolled || lesson.isFreePreview;
+                      const canAccess = hasCourseAccess || lesson.isFreePreview;
                       const isLocked = !canAccess;
+
+                      const typeLabel =
+                        lesson.type === 'quiz' ? 'Quiz' : 'Lesson';
+                      const typeIcon =
+                        lesson.type === 'quiz' ? (
+                          <CircleHelp className="w-3 h-3" aria-hidden="true" />
+                        ) : (
+                          <FileText className="w-3 h-3" aria-hidden="true" />
+                        );
 
                       // Resolve icon based on status to avoid nested ternary
                       let statusIcon;
@@ -803,6 +886,10 @@ export function LessonViewerPage() {
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                 {Math.floor(lesson.durationSeconds / 60)} min
+                              </span>
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                {typeIcon}
+                                <span>{typeLabel}</span>
                               </span>
                               {lesson.isFreePreview && !isEnrolled && (
                                 <span className="text-[10px] bg-green-500/10 text-green-600 px-1.5 py-0.5 rounded font-medium">

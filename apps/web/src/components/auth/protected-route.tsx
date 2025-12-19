@@ -62,6 +62,9 @@ export function ProtectedRoute({
   }
 
   if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
+    if (user.role === 'admin') {
+      return <Navigate to="/admin" replace />;
+    }
     return (
       <div className="min-h-screen flex items-center justify-center gradient-hero p-4">
         <div className="text-center max-w-md animate-fade-in">

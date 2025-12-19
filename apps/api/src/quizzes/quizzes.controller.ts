@@ -32,7 +32,7 @@ export class QuizzesController {
   constructor(private readonly quizzesService: QuizzesService) {}
 
   @Patch(':id/reorder-questions')
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   async reorderQuestions(
     @Param('id') id: string,
     @Body() body: { questionIds: string[] },
@@ -42,7 +42,7 @@ export class QuizzesController {
   }
 
   @Post()
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   async createQuiz(
     @Body() createDto: CreateQuizDto,
     @CurrentUser() user: User,
@@ -51,7 +51,7 @@ export class QuizzesController {
   }
 
   @Post(':id/questions')
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   async createQuestion(
     @Param('id') quizId: string,
     @Body() createDto: CreateQuestionDto,
@@ -69,7 +69,7 @@ export class QuizzesController {
   }
 
   @Get('my-quizzes')
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   async getMyQuizzes(@CurrentUser() user: User): Promise<Quiz[]> {
     return this.quizzesService.findByInstructor(user.id);
   }
@@ -80,13 +80,13 @@ export class QuizzesController {
   }
 
   @Patch(':id/approve')
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   async approveQuiz(@Param('id') id: string): Promise<Quiz> {
     return this.quizzesService.approveQuiz(id);
   }
 
   @Patch('questions/:questionId')
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   async updateQuestion(
     @Param('questionId') questionId: string,
     @Body() updateDto: UpdateQuestionDto,
@@ -95,7 +95,7 @@ export class QuizzesController {
   }
 
   @Delete('questions/:questionId')
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   async deleteQuestion(
     @Param('questionId') questionId: string,
   ): Promise<{ message: string }> {
@@ -104,7 +104,7 @@ export class QuizzesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateQuizDto,
@@ -113,6 +113,7 @@ export class QuizzesController {
   }
 
   @Post(':id/save-progress')
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   async saveProgress(
     @Param('id') id: string,
     @Body() submitDto: SubmitQuizDto,
@@ -121,6 +122,7 @@ export class QuizzesController {
     return this.quizzesService.saveProgress(user.id, id, submitDto.answers);
   }
   @Post(':id/submit')
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   async submitQuiz(
     @Param('id') id: string,
     @Body() submitDto: SubmitQuizDto,
@@ -130,6 +132,7 @@ export class QuizzesController {
   }
 
   @Get(':id/submission')
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   async getSubmission(
     @Param('id') id: string,
     @CurrentUser() user: User,

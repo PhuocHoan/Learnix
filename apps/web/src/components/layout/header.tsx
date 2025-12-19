@@ -107,23 +107,17 @@ const authenticatedNavItems: NavItem[] = [
     icon: LayoutDashboard,
     label: 'Dashboard',
     href: '/dashboard',
-    roles: ['student', 'instructor', 'admin'],
+    roles: ['student', 'instructor'],
   },
   {
     icon: Library,
     label: 'My Learning',
     href: '/my-learning',
-    roles: ['student', 'admin'],
+    roles: ['student', 'instructor'],
   },
 ];
 
 const additionalDropdownItems: NavItem[] = [
-  {
-    icon: Library,
-    label: 'My Learning',
-    href: '/my-learning',
-    roles: ['instructor'],
-  },
   {
     icon: BookOpen,
     label: 'Browse Courses',
@@ -137,7 +131,7 @@ const instructorNavItems: NavItem[] = [
     icon: BookOpen,
     label: 'My Courses',
     href: '/instructor/courses',
-    roles: ['instructor', 'admin'],
+    roles: ['instructor'],
   },
 ];
 
@@ -571,29 +565,6 @@ export function Header() {
                           </Link>
                         );
                       })}
-                      <div className="my-1.5 border-t border-border" />
-                      <p className="px-3 py-1.5 text-xs text-muted-foreground uppercase tracking-wider">
-                        Course Content
-                      </p>
-                      <Link
-                        to="/instructor/courses"
-                        className={cn(
-                          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
-                          isActive('/instructor/courses')
-                            ? 'bg-primary/10 text-primary'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-                        )}
-                      >
-                        <Library className="w-4 h-4" />
-                        My Courses
-                      </Link>
-                      <Link
-                        to="/instructor/courses/new"
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Create New Course
-                      </Link>
                     </div>
                   </div>
                 </div>
@@ -933,36 +904,6 @@ export function Header() {
                               </Link>
                             );
                           },
-                        )}
-
-                        {/* Instructor Items */}
-                        {getVisibleNavItems(instructorNavItems).length > 0 && (
-                          <>
-                            <div className="my-2 border-t border-border" />
-                            <p className="px-3 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                              Instructor Tools
-                            </p>
-                            {getVisibleNavItems(instructorNavItems).map(
-                              (item) => {
-                                const Icon = item.icon;
-                                return (
-                                  <Link
-                                    key={item.href}
-                                    to={item.href}
-                                    className={cn(
-                                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-                                      isActive(item.href)
-                                        ? 'bg-primary/10 text-primary'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-                                    )}
-                                  >
-                                    <Icon className="w-4 h-4" />
-                                    {item.label}
-                                  </Link>
-                                );
-                              },
-                            )}
-                          </>
                         )}
 
                         {/* Admin Items */}

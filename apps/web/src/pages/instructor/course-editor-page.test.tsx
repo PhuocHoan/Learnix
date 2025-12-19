@@ -110,5 +110,12 @@ describe('CourseEditorPage', () => {
     await waitFor(() => {
       expect(coursesApi.createCourse).toHaveBeenCalled();
     });
+
+    expect(coursesApi.createCourse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        thumbnailUrl: expect.stringContaining('placehold.co/600x400'),
+      }),
+      expect.anything(),
+    );
   });
 });

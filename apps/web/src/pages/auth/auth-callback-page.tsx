@@ -59,7 +59,8 @@ export function AuthCallbackPage() {
         if (!user?.role) {
           window.location.href = '/select-role';
         } else {
-          window.location.href = '/dashboard';
+          window.location.href =
+            user.role === 'admin' ? '/admin' : '/dashboard';
         }
       } catch {
         setError('Authentication failed. Please try again.');

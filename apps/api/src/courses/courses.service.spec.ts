@@ -558,6 +558,7 @@ describe('CoursesService', () => {
       courseRepository.findOne.mockResolvedValue({
         id: 'course-1',
         instructorId: 'instructor-1',
+        status: CourseStatus.PUBLISHED,
         sections: [],
       });
 
@@ -568,14 +569,16 @@ describe('CoursesService', () => {
 
       expect(result.isEnrolled).toBe(true);
       expect(result.isInstructor).toBe(false);
+      expect(result.hasAccess).toBe(true);
       expect(result.enrollment).toEqual(enrollment);
     });
 
-    it('should return isEnrolled=true when user is the instructor', async () => {
+    it('should return hasAccess=true and isEnrolled=false when user is the instructor', async () => {
       mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
       courseRepository.findOne.mockResolvedValue({
         id: 'course-1',
         instructorId: 'instructor-1',
+        status: CourseStatus.PUBLISHED,
         sections: [],
       });
 
@@ -584,16 +587,18 @@ describe('CoursesService', () => {
         'course-1',
       );
 
-      expect(result.isEnrolled).toBe(true);
+      expect(result.isEnrolled).toBe(false);
       expect(result.isInstructor).toBe(true);
+      expect(result.hasAccess).toBe(true);
       expect(result.enrollment).toBeNull();
     });
 
-    it('should return isEnrolled=false when user is neither enrolled nor instructor', async () => {
+    it('should return hasAccess=false when user is neither enrolled nor instructor', async () => {
       mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
       courseRepository.findOne.mockResolvedValue({
         id: 'course-1',
         instructorId: 'instructor-1',
+        status: CourseStatus.PUBLISHED,
         sections: [],
       });
 
@@ -604,7 +609,47 @@ describe('CoursesService', () => {
 
       expect(result.isEnrolled).toBe(false);
       expect(result.isInstructor).toBe(false);
+      expect(result.hasAccess).toBe(false);
       expect(result.enrollment).toBeNull();
+    });
+
+    it('should return hasAccess=true for admin on published course', async () => {
+      mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
+      courseRepository.findOne.mockResolvedValue({
+        id: 'course-1',
+        instructorId: 'instructor-1',
+        status: CourseStatus.PUBLISHED,
+        sections: [],
+      });
+
+      const result = await service.checkCourseAccess(
+        { id: 'admin-1', role: UserRole.ADMIN } as User,
+        'course-1',
+      );
+
+      expect(result.isEnrolled).toBe(false);
+      expect(result.isInstructor).toBe(false);
+      expect(result.isAdmin).toBe(true);
+      expect(result.hasAccess).toBe(true);
+      expect(result.enrollment).toBeNull();
+    });
+
+    it('should return hasAccess=true for admin on draft course', async () => {
+      mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
+      courseRepository.findOne.mockResolvedValue({
+        id: 'course-1',
+        instructorId: 'instructor-1',
+        status: CourseStatus.DRAFT,
+        sections: [],
+      });
+
+      const result = await service.checkCourseAccess(
+        { id: 'admin-1', role: UserRole.ADMIN } as User,
+        'course-1',
+      );
+
+      expect(result.isAdmin).toBe(true);
+      expect(result.hasAccess).toBe(true);
     });
   });
 
@@ -801,6 +846,56 @@ describe('CoursesService', () => {
 
       const result = await service.getLessonWithAccessControl(
         { id: 'student-1', role: UserRole.STUDENT } as User,
+        'course-1',
+        'lesson-1',
+      );
+
+      expect(result.lesson).toEqual(lesson);
+      expect(result.hasAccess).toBe(true);
+    });
+
+    it('should return lesson for admin on published course', async () => {
+      const lesson = {
+        id: 'lesson-1',
+        isFreePreview: false,
+        section: {
+          course: {
+            id: 'course-1',
+            instructorId: 'instructor-1',
+            status: CourseStatus.PUBLISHED,
+          },
+        },
+      };
+      mockLessonRepositoryValue.findOne.mockResolvedValue(lesson);
+      mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
+
+      const result = await service.getLessonWithAccessControl(
+        { id: 'admin-1', role: UserRole.ADMIN } as User,
+        'course-1',
+        'lesson-1',
+      );
+
+      expect(result.lesson).toEqual(lesson);
+      expect(result.hasAccess).toBe(true);
+    });
+
+    it('should return lesson for admin on draft course', async () => {
+      const lesson = {
+        id: 'lesson-1',
+        isFreePreview: false,
+        section: {
+          course: {
+            id: 'course-1',
+            instructorId: 'instructor-1',
+            status: CourseStatus.DRAFT,
+          },
+        },
+      };
+      mockLessonRepositoryValue.findOne.mockResolvedValue(lesson);
+      mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
+
+      const result = await service.getLessonWithAccessControl(
+        { id: 'admin-1', role: UserRole.ADMIN } as User,
         'course-1',
         'lesson-1',
       );

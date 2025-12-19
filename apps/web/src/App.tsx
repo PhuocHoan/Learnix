@@ -140,7 +140,7 @@ function App() {
                 <Route
                   path="/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['student', 'instructor']}>
                       <DashboardPage />
                     </ProtectedRoute>
                   }
@@ -153,7 +153,7 @@ function App() {
                 <Route
                   path="/my-learning"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['student', 'instructor']}>
                       <MyLearningPage />
                     </ProtectedRoute>
                   }
@@ -205,7 +205,7 @@ function App() {
                 <Route
                   path="/instructor/courses"
                   element={
-                    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+                    <ProtectedRoute allowedRoles={['instructor']}>
                       <InstructorCoursesPage />
                     </ProtectedRoute>
                   }
@@ -213,7 +213,7 @@ function App() {
                 <Route
                   path="/instructor/courses/new"
                   element={
-                    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+                    <ProtectedRoute allowedRoles={['instructor']}>
                       <CourseEditorPage />
                     </ProtectedRoute>
                   }
@@ -221,7 +221,7 @@ function App() {
                 <Route
                   path="/instructor/courses/:courseId/edit"
                   element={
-                    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+                    <ProtectedRoute allowedRoles={['instructor']}>
                       <CourseEditorPage />
                     </ProtectedRoute>
                   }
@@ -229,7 +229,7 @@ function App() {
                 <Route
                   path="/instructor/courses/:courseId/quizzes/:lessonId/edit"
                   element={
-                    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+                    <ProtectedRoute allowedRoles={['instructor']}>
                       <QuizEditorPage />
                     </ProtectedRoute>
                   }

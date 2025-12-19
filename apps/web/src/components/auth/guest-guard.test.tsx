@@ -18,6 +18,10 @@ function DashboardComponent() {
   return <div data-testid="dashboard">Dashboard</div>;
 }
 
+function AdminComponent() {
+  return <div data-testid="admin">Admin</div>;
+}
+
 function renderWithRouter(initialRoute = '/login') {
   return render(
     <MemoryRouter initialEntries={[initialRoute]}>
@@ -31,6 +35,7 @@ function renderWithRouter(initialRoute = '/login') {
           }
         />
         <Route path="/dashboard" element={<DashboardComponent />} />
+        <Route path="/admin" element={<AdminComponent />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -56,11 +61,25 @@ describe('GuestGuard', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
+      user: { role: 'student' },
     });
 
     renderWithRouter();
 
     expect(screen.getByTestId('dashboard')).toBeInTheDocument();
+    expect(screen.queryByTestId('guest-content')).not.toBeInTheDocument();
+  });
+
+  it('redirects to admin when authenticated user is admin', () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: { role: 'admin' },
+    });
+
+    renderWithRouter();
+
+    expect(screen.getByTestId('admin')).toBeInTheDocument();
     expect(screen.queryByTestId('guest-content')).not.toBeInTheDocument();
   });
 

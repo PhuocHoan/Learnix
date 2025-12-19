@@ -32,7 +32,7 @@ export function LoginForm() {
       if (!user?.role) {
         void navigate('/select-role');
       } else {
-        void navigate('/dashboard');
+        void navigate(user.role === 'admin' ? '/admin' : '/dashboard');
       }
     } catch (err: unknown) {
       console.error('Login error:', err);

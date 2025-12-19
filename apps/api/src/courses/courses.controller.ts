@@ -63,7 +63,8 @@ export class CoursesController {
    * Get enrolled courses for the current user (My Learning)
    */
   @Get('enrolled')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   getEnrolledCourses(
     @CurrentUser() user: User,
     @Query('archived') archived?: string,
@@ -77,7 +78,7 @@ export class CoursesController {
 
   @Get('instructor/my-courses')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   getMyCourses(@CurrentUser() user: User): Promise<Course[]> {
     return this.coursesService.findInstructorCourses(user.id);
   }
@@ -121,7 +122,8 @@ export class CoursesController {
   }
 
   @Post(':id/enroll')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   async enroll(
     @Param('id') id: string,
     @CurrentUser() user: User,
@@ -138,6 +140,7 @@ export class CoursesController {
     isEnrolled: boolean;
     isInstructor: boolean;
     isAdmin: boolean;
+    hasAccess: boolean;
     progress: Enrollment | null;
   }> {
     const accessInfo = await this.coursesService.checkCourseAccess(user, id);
@@ -145,6 +148,7 @@ export class CoursesController {
       isEnrolled: accessInfo.isEnrolled,
       isInstructor: accessInfo.isInstructor,
       isAdmin: accessInfo.isAdmin,
+      hasAccess: accessInfo.hasAccess,
       progress: accessInfo.enrollment,
     };
   }
@@ -168,7 +172,8 @@ export class CoursesController {
   }
 
   @Post(':id/lessons/:lessonId/complete')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   async completeLesson(
     @Param('id') courseId: string,
     @Param('lessonId') lessonId: string,
@@ -181,7 +186,8 @@ export class CoursesController {
    * Archive a course (hide from main list, preserve progress)
    */
   @Patch(':id/archive')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   async archiveCourse(
     @Param('id') id: string,
     @CurrentUser() user: User,
@@ -194,7 +200,8 @@ export class CoursesController {
    * Unarchive a course (restore to main list)
    */
   @Patch(':id/unarchive')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   async unarchiveCourse(
     @Param('id') id: string,
     @CurrentUser() user: User,
@@ -205,7 +212,7 @@ export class CoursesController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   create(
     @Body() createCourseDto: CreateCourseDto,
     @CurrentUser() user: User,
@@ -215,7 +222,7 @@ export class CoursesController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   update(
     @Param('id') id: string,
     @Body() updateCourseDto: UpdateCourseDto,
@@ -226,7 +233,7 @@ export class CoursesController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   remove(@Param('id') id: string, @CurrentUser() user: User): Promise<void> {
     return this.coursesService.remove(id, user.id);
   }
@@ -235,7 +242,7 @@ export class CoursesController {
 
   @Post(':id/sections')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   createSection(
     @Param('id') courseId: string,
     @Body() dto: CreateSectionDto,
@@ -246,7 +253,7 @@ export class CoursesController {
 
   @Delete('sections/:sectionId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   deleteSection(
     @Param('sectionId') sectionId: string,
     @CurrentUser() user: User,
@@ -256,7 +263,7 @@ export class CoursesController {
 
   @Post('sections/:sectionId/lessons')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   createLesson(
     @Param('sectionId') sectionId: string,
     @Body() dto: CreateLessonDto,
@@ -267,7 +274,7 @@ export class CoursesController {
 
   @Patch('lessons/:lessonId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   updateLesson(
     @Param('lessonId') lessonId: string,
     @Body() dto: UpdateLessonDto,
@@ -278,7 +285,7 @@ export class CoursesController {
 
   @Delete('lessons/:lessonId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   deleteLesson(
     @Param('lessonId') lessonId: string,
     @CurrentUser() user: User,
@@ -288,7 +295,7 @@ export class CoursesController {
 
   @Post(':id/sections/reorder')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   reorderSections(
     @Param('id') courseId: string,
     @Body('sectionIds') sectionIds: string[],
@@ -299,7 +306,7 @@ export class CoursesController {
 
   @Post('sections/:sectionId/lessons/reorder')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   reorderLessons(
     @Param('sectionId') sectionId: string,
     @Body('lessonIds') lessonIds: string[],
@@ -323,7 +330,7 @@ export class CoursesController {
 
   @Post(':id/sections/:sectionId/generate-quiz-preview')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @Roles(UserRole.INSTRUCTOR)
   async generateQuiz(
     @Body() dto: GenerateQuizPreviewDto,
   ): Promise<{ title: string; questions: GeneratedQuestion[] }> {

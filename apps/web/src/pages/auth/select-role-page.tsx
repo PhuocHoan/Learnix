@@ -83,7 +83,8 @@ export function SelectRolePage() {
       // Verify role was updated successfully
       if (updatedUser?.role) {
         // Use window.location to ensure proper redirect after role update
-        window.location.href = '/dashboard';
+        window.location.href =
+          updatedUser.role === 'admin' ? '/admin' : '/dashboard';
       } else {
         throw new Error('Role update failed');
       }

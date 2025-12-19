@@ -14,7 +14,7 @@ interface GuestGuardProps {
  * Redirects authenticated users to the dashboard.
  */
 export function GuestGuard({ children }: GuestGuardProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
   // Show loading state while checking authentication
@@ -41,7 +41,8 @@ export function GuestGuard({ children }: GuestGuardProps) {
   if (isAuthenticated) {
     const from = (location.state as { from?: { pathname: string } })?.from
       ?.pathname;
-    const redirectTo = from ?? '/dashboard';
+    const defaultRedirect = user?.role === 'admin' ? '/admin' : '/dashboard';
+    const redirectTo = from ?? defaultRedirect;
     return <Navigate to={redirectTo} replace />;
   }
 

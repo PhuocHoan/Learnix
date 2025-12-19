@@ -45,7 +45,9 @@ export function RoleSelectionGuard({ children }: RoleSelectionGuardProps) {
 
   // Redirect users who already have a role to dashboard
   if (user?.role) {
-    return <Navigate to="/dashboard" replace />;
+    return (
+      <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace />
+    );
   }
 
   // Allow authenticated users without a role to access the page

@@ -64,6 +64,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   coursesApi,
   type Course,
+  type CreateCourseData,
   type Lesson,
   type CreateLessonData,
   type LessonBlock,
@@ -339,7 +340,17 @@ function CourseDetailsForm({
 
   const updateMutation = useMutation({
     mutationFn: (data: CourseFormData) =>
-      coursesApi.updateCourse(course?.id ?? '', { ...data, tags }),
+      coursesApi.updateCourse(course?.id ?? '', {
+        title: data.title,
+        description: data.description,
+        level: data.level,
+        price: data.price,
+        tags,
+        thumbnailUrl: data.thumbnailUrl?.trim()
+          ? data.thumbnailUrl.trim()
+          : DEFAULT_THUMBNAIL_URL,
+        isPublished: data.isPublished,
+      }),
     onSuccess: () => {
       toast.success('Course updated successfully');
       void queryClient.invalidateQueries({ queryKey: ['course', course?.id] });
@@ -351,11 +362,15 @@ function CourseDetailsForm({
   });
 
   const onSubmit = (data: CourseFormData) => {
-    // Explicitly construct the payload to match API types and avoid 'any'
-    const cleanData = {
-      ...data,
-      thumbnailUrl: data.thumbnailUrl ?? DEFAULT_THUMBNAIL_URL,
+    const cleanData: CreateCourseData = {
+      title: data.title,
+      description: data.description,
+      level: data.level,
+      price: data.price,
       tags,
+      thumbnailUrl: data.thumbnailUrl?.trim()
+        ? data.thumbnailUrl.trim()
+        : DEFAULT_THUMBNAIL_URL,
     };
 
     if (isNew) {

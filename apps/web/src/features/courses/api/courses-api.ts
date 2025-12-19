@@ -59,6 +59,7 @@ export interface EnrollmentResponse {
   isEnrolled: boolean;
   isInstructor: boolean;
   isAdmin: boolean;
+  hasAccess: boolean;
   progress: {
     id: string;
     completedLessonIds: string[];
@@ -101,7 +102,7 @@ export interface RecommendedCourse {
 export interface CreateCourseData {
   title: string;
   description: string;
-  level: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
   price: number;
   tags?: string[];
   thumbnailUrl?: string;

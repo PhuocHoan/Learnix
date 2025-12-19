@@ -98,11 +98,26 @@ export class QuizzesService {
   }
 
   async findByLesson(lessonId: string): Promise<Quiz | null> {
+    // Prefer the newest quiz that actually has questions.
+    // This avoids returning an empty draft quiz (0 questions) in learner view.
+    const quizWithQuestions = await this.quizzesRepository
+      .createQueryBuilder('quiz')
+      .innerJoinAndSelect('quiz.questions', 'question')
+      .where('quiz.lessonId = :lessonId', { lessonId })
+      .orderBy('quiz.createdAt', 'DESC')
+      .addOrderBy('question.position', 'ASC')
+      .getOne();
+
+    if (quizWithQuestions) {
+      return quizWithQuestions;
+    }
+
+    // Fallback: return latest quiz even if it has no questions.
     return this.quizzesRepository.findOne({
       where: { lessonId },
       relations: ['questions'],
       order: {
-        createdAt: 'DESC', // For the quiz itself
+        createdAt: 'DESC',
         questions: {
           position: 'ASC',
         },
