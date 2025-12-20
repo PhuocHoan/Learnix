@@ -32,6 +32,9 @@ on:
         type: string
         default: 'pnpm test'
 
+permissions:
+  contents: read
+
 jobs:
   typecheck:
     name: Typecheck

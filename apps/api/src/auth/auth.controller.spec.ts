@@ -195,8 +195,9 @@ describe('AuthController', () => {
       await controller.googleAuthRedirect(req, res);
 
       expect(authService.validateOAuthLogin).toHaveBeenCalled();
+      // Token is now encrypted in cookie, not in URL
       expect(res.redirect).toHaveBeenCalledWith(
-        'http://localhost:5173/auth/callback?token=jwt-token',
+        'http://localhost:5173/auth/callback',
       );
     });
   });
@@ -221,8 +222,9 @@ describe('AuthController', () => {
       await controller.githubAuthRedirect(req, res);
 
       expect(authService.validateOAuthLogin).toHaveBeenCalled();
+      // Token is now encrypted in cookie, not in URL
       expect(res.redirect).toHaveBeenCalledWith(
-        'http://localhost:5173/auth/callback?token=jwt-token',
+        'http://localhost:5173/auth/callback',
       );
     });
   });

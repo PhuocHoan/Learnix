@@ -32,4 +32,5 @@ pre:
 	pnpm precommit
 
 e2e:
+	-fuser -k 3000/tcp 5173/tcp 2>/dev/null || true
 	pnpm test:e2e

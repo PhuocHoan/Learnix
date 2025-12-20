@@ -30,6 +30,9 @@ on:
       - '.github/workflows/reusable-ci.yml'
       - '.github/actions/**'
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true

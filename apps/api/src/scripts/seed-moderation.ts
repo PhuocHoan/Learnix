@@ -16,10 +16,10 @@ async function bootstrap(): Promise<void> {
   const instructorEmail = 'instructor_mod_js@example.com';
   const instructorPass = 'Password123!';
 
-  let instructor = await usersService.findByEmail(instructorEmail);
+  const instructor = await usersService.findByEmail(instructorEmail);
   if (!instructor) {
     console.warn('Creating instructor...');
-    instructor = await usersService.create({
+    await usersService.create({
       email: instructorEmail,
       password: instructorPass,
       fullName: 'Test Instructor JS',

@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 import {
   Controller,
   Post,
@@ -39,7 +41,6 @@ import type {
   SafeUser,
 } from './auth.service';
 import type { Response, Request, CookieOptions } from 'express';
-import * as crypto from 'crypto';
 
 // Cookie configuration for secure token storage
 // In monorepo deployment, frontend and API are on the same domain,
@@ -53,7 +54,8 @@ import * as crypto from 'crypto';
  */
 function encryptTokenForCookie(token: string, secret: string): string {
   const iv = crypto.randomBytes(12); // 96-bit IV recommended for GCM
-  const key = crypto.createHash('sha256').update(secret, 'utf8').digest(); // 32 bytes
+  // Use PBKDF2 for secure key derivation instead of simple hashing
+  const key = crypto.pbkdf2Sync(secret, '', 100000, 32, 'sha256'); // 32 bytes
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   const ciphertext = Buffer.concat([
     cipher.update(token, 'utf8'),
@@ -95,8 +97,19 @@ export class AuthController {
   ): Promise<{ user: SafeUser; message: string }> {
     const result = await this.authService.login(loginDto);
 
-    // Set JWT token in HTTP-only cookie
-    res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
+    // Encrypt JWT token before storing in HTTP-only cookie
+    const tokenEncryptionSecret = this.configService.get<string>(
+      'OAUTH_TOKEN_COOKIE_SECRET',
+    );
+    if (tokenEncryptionSecret) {
+      const encryptedAccessToken = encryptTokenForCookie(
+        result.access_token,
+        tokenEncryptionSecret,
+      );
+      res.cookie('access_token', encryptedAccessToken, COOKIE_OPTIONS);
+    } else {
+      res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
+    }
 
     // Return user data without token (token is in cookie)
     return { user: result.user, message: 'Login successful' };
@@ -155,11 +168,22 @@ export class AuthController {
         profile,
       );
 
-      // Set HTTP-only cookie with the access token
-      res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
+      // Encrypt JWT token before storing in HTTP-only cookie
+      const tokenEncryptionSecret = this.configService.get<string>(
+        'OAUTH_TOKEN_COOKIE_SECRET',
+      );
+      if (tokenEncryptionSecret) {
+        const encryptedAccessToken = encryptTokenForCookie(
+          result.access_token,
+          tokenEncryptionSecret,
+        );
+        res.cookie('access_token', encryptedAccessToken, COOKIE_OPTIONS);
+      } else {
+        res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
+      }
 
-      // Redirect to frontend callback page
-      res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
+      // Redirect to frontend callback page (token is in encrypted cookie, not in URL)
+      res.redirect(`${frontendUrl}/auth/callback`);
     } catch (error) {
       if (
         error instanceof UnauthorizedException &&
@@ -194,8 +218,9 @@ export class AuthController {
       );
 
       // Set HTTP-only cookie - in monorepo deployment, this cookie works directly
-      const tokenEncryptionSecret =
-        this.configService.get<string>('OAUTH_TOKEN_COOKIE_SECRET');
+      const tokenEncryptionSecret = this.configService.get<string>(
+        'OAUTH_TOKEN_COOKIE_SECRET',
+      );
       if (!tokenEncryptionSecret) {
         // Fallback: do not set the cookie if no secret is configured
         // (avoids storing sensitive data in clear text).
@@ -207,8 +232,8 @@ export class AuthController {
         res.cookie('access_token', encryptedAccessToken, COOKIE_OPTIONS);
       }
 
-      // Redirect to frontend callback page
-      res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
+      // Redirect to frontend callback page (token is in encrypted cookie, not in URL)
+      res.redirect(`${frontendUrl}/auth/callback`);
     } catch (error) {
       if (
         error instanceof UnauthorizedException &&

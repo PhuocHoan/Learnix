@@ -38,7 +38,6 @@ test.describe('Accessibility - Keyboard Navigation', () => {
 
     // Tab through form elements
     const emailInput = page.getByLabel(/Email/i);
-    const passwordInput = page.getByLabel(/Password/i);
 
     await emailInput.focus();
     await expect(emailInput).toBeFocused();

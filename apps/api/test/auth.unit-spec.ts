@@ -128,11 +128,15 @@ describe('Auth unit tests (mocked DB)', () => {
     const loginDto: LoginDto = { email: 'c@example.com', password: 'x' };
     const returnVal = await controller.signIn(loginDto, fakeRes as Response);
 
+    // Token should be encrypted in cookie (not plain text)
     expect(fakeRes.cookie).toHaveBeenCalledWith(
       'access_token',
-      'signed-jwt-token',
+      expect.any(String), // Encrypted token
       expect.any(Object),
     );
+    // Verify that the value is not the plain JWT token
+    const callArgs = (fakeRes.cookie as jest.Mock).mock.calls[0];
+    expect(callArgs[1]).not.toBe('signed-jwt-token');
     expect(returnVal).toEqual({ user: fakeUser, message: 'Login successful' });
   });
 
