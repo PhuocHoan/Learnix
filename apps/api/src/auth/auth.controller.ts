@@ -39,9 +39,30 @@ import type {
   SafeUser,
 } from './auth.service';
 import type { Response, Request, CookieOptions } from 'express';
+import * as crypto from 'crypto';
 
 // Cookie configuration for secure token storage
 // In monorepo deployment, frontend and API are on the same domain,
+
+/**
+ * Encrypt a token value for storage in a cookie using AES-256-GCM.
+ * The secret should come from configuration (e.g., OAUTH_TOKEN_COOKIE_SECRET).
+ *
+ * The output format is base64-encoded concatenation of IV, authTag and ciphertext:
+ *   base64( iv || authTag || ciphertext )
+ */
+function encryptTokenForCookie(token: string, secret: string): string {
+  const iv = crypto.randomBytes(12); // 96-bit IV recommended for GCM
+  const key = crypto.createHash('sha256').update(secret, 'utf8').digest(); // 32 bytes
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const ciphertext = Buffer.concat([
+    cipher.update(token, 'utf8'),
+    cipher.final(),
+  ]);
+  const authTag = cipher.getAuthTag();
+  const combined = Buffer.concat([iv, authTag, ciphertext]);
+  return combined.toString('base64');
+}
 // so we can use 'lax' for better security
 const getCookieOptions = (): CookieOptions => {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -175,7 +196,18 @@ export class AuthController {
       );
 
       // Set HTTP-only cookie - in monorepo deployment, this cookie works directly
-      res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
+      const tokenEncryptionSecret =
+        this.configService.get<string>('OAUTH_TOKEN_COOKIE_SECRET');
+      if (!tokenEncryptionSecret) {
+        // Fallback: do not set the cookie if no secret is configured
+        // (avoids storing sensitive data in clear text).
+      } else {
+        const encryptedAccessToken = encryptTokenForCookie(
+          result.access_token,
+          tokenEncryptionSecret,
+        );
+        res.cookie('access_token', encryptedAccessToken, COOKIE_OPTIONS);
+      }
 
       // Redirect to frontend callback page
       res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
