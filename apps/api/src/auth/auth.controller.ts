@@ -1,5 +1,3 @@
-import * as crypto from 'crypto';
-
 import {
   Controller,
   Post,
@@ -29,6 +27,7 @@ import { AuthProvider } from './entities/external-auth.entity';
 import { GithubAuthGuard } from './guards/github-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { encryptTokenForCookie } from './utils/token-encryption';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UpdateProfileDto } from '../users/dto/update-profile.dto';
 import { User } from '../users/entities/user.entity';
@@ -42,29 +41,6 @@ import type {
 } from './auth.service';
 import type { Response, Request, CookieOptions } from 'express';
 
-// Cookie configuration for secure token storage
-// In monorepo deployment, frontend and API are on the same domain,
-
-/**
- * Encrypt a token value for storage in a cookie using AES-256-GCM.
- * The secret should come from configuration (e.g., OAUTH_TOKEN_COOKIE_SECRET).
- *
- * The output format is base64-encoded concatenation of IV, authTag and ciphertext:
- *   base64( iv || authTag || ciphertext )
- */
-function encryptTokenForCookie(token: string, secret: string): string {
-  const iv = crypto.randomBytes(12); // 96-bit IV recommended for GCM
-  // Use PBKDF2 for secure key derivation instead of simple hashing
-  const key = crypto.pbkdf2Sync(secret, '', 100000, 32, 'sha256'); // 32 bytes
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-  const ciphertext = Buffer.concat([
-    cipher.update(token, 'utf8'),
-    cipher.final(),
-  ]);
-  const authTag = cipher.getAuthTag();
-  const combined = Buffer.concat([iv, authTag, ciphertext]);
-  return combined.toString('base64');
-}
 // so we can use 'lax' for better security
 const getCookieOptions = (): CookieOptions => {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -98,18 +74,16 @@ export class AuthController {
     const result = await this.authService.login(loginDto);
 
     // Encrypt JWT token before storing in HTTP-only cookie
-    const tokenEncryptionSecret = this.configService.get<string>(
-      'OAUTH_TOKEN_COOKIE_SECRET',
+    const tokenEncryptionSecret =
+      this.configService.get<string>('OAUTH_TOKEN_COOKIE_SECRET') ??
+      this.configService.get<string>('JWT_SECRET') ??
+      'dev-secret-key';
+
+    const encryptedAccessToken = encryptTokenForCookie(
+      result.access_token,
+      tokenEncryptionSecret,
     );
-    if (tokenEncryptionSecret) {
-      const encryptedAccessToken = encryptTokenForCookie(
-        result.access_token,
-        tokenEncryptionSecret,
-      );
-      res.cookie('access_token', encryptedAccessToken, COOKIE_OPTIONS);
-    } else {
-      res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
-    }
+    res.cookie('access_token', encryptedAccessToken, COOKIE_OPTIONS);
 
     // Return user data without token (token is in cookie)
     return { user: result.user, message: 'Login successful' };
@@ -169,18 +143,16 @@ export class AuthController {
       );
 
       // Encrypt JWT token before storing in HTTP-only cookie
-      const tokenEncryptionSecret = this.configService.get<string>(
-        'OAUTH_TOKEN_COOKIE_SECRET',
+      const tokenEncryptionSecret =
+        this.configService.get<string>('OAUTH_TOKEN_COOKIE_SECRET') ??
+        this.configService.get<string>('JWT_SECRET') ??
+        'dev-secret-key';
+
+      const encryptedAccessToken = encryptTokenForCookie(
+        result.access_token,
+        tokenEncryptionSecret,
       );
-      if (tokenEncryptionSecret) {
-        const encryptedAccessToken = encryptTokenForCookie(
-          result.access_token,
-          tokenEncryptionSecret,
-        );
-        res.cookie('access_token', encryptedAccessToken, COOKIE_OPTIONS);
-      } else {
-        res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
-      }
+      res.cookie('access_token', encryptedAccessToken, COOKIE_OPTIONS);
 
       // Redirect to frontend callback page (token is in encrypted cookie, not in URL)
       res.redirect(`${frontendUrl}/auth/callback`);
@@ -218,19 +190,16 @@ export class AuthController {
       );
 
       // Set HTTP-only cookie - in monorepo deployment, this cookie works directly
-      const tokenEncryptionSecret = this.configService.get<string>(
-        'OAUTH_TOKEN_COOKIE_SECRET',
+      const tokenEncryptionSecret =
+        this.configService.get<string>('OAUTH_TOKEN_COOKIE_SECRET') ??
+        this.configService.get<string>('JWT_SECRET') ??
+        'dev-secret-key';
+
+      const encryptedAccessToken = encryptTokenForCookie(
+        result.access_token,
+        tokenEncryptionSecret,
       );
-      if (!tokenEncryptionSecret) {
-        // Fallback: do not set the cookie if no secret is configured
-        // (avoids storing sensitive data in clear text).
-      } else {
-        const encryptedAccessToken = encryptTokenForCookie(
-          result.access_token,
-          tokenEncryptionSecret,
-        );
-        res.cookie('access_token', encryptedAccessToken, COOKIE_OPTIONS);
-      }
+      res.cookie('access_token', encryptedAccessToken, COOKIE_OPTIONS);
 
       // Redirect to frontend callback page (token is in encrypted cookie, not in URL)
       res.redirect(`${frontendUrl}/auth/callback`);
@@ -281,12 +250,24 @@ export class AuthController {
     };
     const accessToken = this.authService.signToken(payload);
 
+    // Encrypt new token before storing in HTTP-only cookie
+    const tokenEncryptionSecret =
+      this.configService.get<string>('OAUTH_TOKEN_COOKIE_SECRET') ??
+      this.configService.get<string>('JWT_SECRET') ??
+      'dev-secret-key';
+
+    const encryptedAccessToken = encryptTokenForCookie(
+      accessToken,
+      tokenEncryptionSecret,
+    );
+
     // Set new token in HTTP-only cookie
-    res.cookie('access_token', accessToken, {
+    res.cookie('access_token', encryptedAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
     });
 
     const {

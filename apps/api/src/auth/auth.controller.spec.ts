@@ -103,7 +103,7 @@ describe('AuthController', () => {
       });
       expect(res.cookie).toHaveBeenCalledWith(
         'access_token',
-        'jwt-token',
+        expect.any(String),
         expect.objectContaining({ httpOnly: true, path: '/' }),
       );
       expect(result.user).toEqual(mockUser);
@@ -266,7 +266,7 @@ describe('AuthController', () => {
       });
       expect(mockResponse.cookie).toHaveBeenCalledWith(
         'access_token',
-        mockToken,
+        expect.any(String),
         expect.objectContaining({
           httpOnly: true,
           sameSite: 'lax',
