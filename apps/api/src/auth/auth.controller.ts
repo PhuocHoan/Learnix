@@ -134,13 +134,13 @@ export class AuthController {
         profile,
       );
 
-      // Set HTTP-only cookie - in monorepo deployment, this cookie works directly
-      // since frontend and API are on the same domain
-      res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
+      // Set HTTP-only cookie with an opaque session identifier instead of the raw access token.
+      // The session identifier should be mapped server-side to the actual access token.
+      res.cookie('access_token', result.sessionId, COOKIE_OPTIONS);
 
       // Redirect to frontend callback page
-      // Token in URL is kept for backward compatibility and as fallback
-      res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
+      // Session identifier in URL is kept for backward compatibility and as fallback
+      res.redirect(`${frontendUrl}/auth/callback?token=${result.sessionId}`);
     } catch (error) {
       if (
         error instanceof UnauthorizedException &&
