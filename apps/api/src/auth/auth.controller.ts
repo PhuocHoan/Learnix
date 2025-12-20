@@ -155,13 +155,11 @@ export class AuthController {
         profile,
       );
 
-      // Set HTTP-only cookie with an opaque session identifier instead of the raw access token.
-      // The session identifier should be mapped server-side to the actual access token.
-      res.cookie('access_token', result.sessionId, COOKIE_OPTIONS);
+      // Set HTTP-only cookie with the access token
+      res.cookie('access_token', result.access_token, COOKIE_OPTIONS);
 
       // Redirect to frontend callback page
-      // Session identifier in URL is kept for backward compatibility and as fallback
-      res.redirect(`${frontendUrl}/auth/callback?token=${result.sessionId}`);
+      res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
     } catch (error) {
       if (
         error instanceof UnauthorizedException &&
