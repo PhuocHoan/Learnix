@@ -170,7 +170,8 @@ export function getVimeoId(url: string): string | null {
   }
   try {
     const urlObj = new URL(url);
-    if (!urlObj.hostname.includes('vimeo.com')) {
+    const allowedHosts = ['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'];
+    if (!allowedHosts.includes(urlObj.hostname)) {
       return null;
     }
     const parts = urlObj.pathname.split('/');
