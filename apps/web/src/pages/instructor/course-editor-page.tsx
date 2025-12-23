@@ -108,7 +108,7 @@ const lessonSchema = z.object({
           language: z.string(),
           initialCode: z.string(),
           expectedOutput: z.string().optional(),
-        })
+        }),
       ),
       defaultLanguage: z.string(),
       instructions: z.string().optional(),
@@ -207,17 +207,17 @@ export default function CourseEditorPage() {
             {(course.status === 'draft' ||
               course.status === 'rejected' ||
               !course.status) && (
-                <Button
-                  variant="primary"
-                  onClick={() => setShowSubmitConfirm(true)}
-                  disabled={submitMutation.isPending}
-                >
-                  {submitMutation.isPending && (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  )}
-                  Submit for Approval
-                </Button>
-              )}
+              <Button
+                variant="primary"
+                onClick={() => setShowSubmitConfirm(true)}
+                disabled={submitMutation.isPending}
+              >
+                {submitMutation.isPending && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                Submit for Approval
+              </Button>
+            )}
 
             {course.status === 'pending' && (
               <Button variant="outline" disabled>
@@ -1198,13 +1198,20 @@ function LessonItem({
 
 const getDefaultCode = (lang: string) => {
   switch (lang) {
-    case 'javascript': return '// Write your code here\nconsole.log("Hello World");';
-    case 'python': return '# Write your code here\nprint("Hello World")';
-    case 'java': return '// Write your code here\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello World");\n    }\n}';
-    case 'cpp': return '// Write your code here\n#include <iostream>\n\nint main() {\n    std::cout << "Hello World" << std::endl;\n    return 0;\n}';
-    case 'go': return '// Write your code here\npackage main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello World")\n}';
-    case 'rust': return '// Write your code here\nfn main() {\n    println!("Hello World");\n}';
-    default: return '';
+    case 'javascript':
+      return '// Write your code here\nconsole.log("Hello World");';
+    case 'python':
+      return '# Write your code here\nprint("Hello World")';
+    case 'java':
+      return '// Write your code here\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello World");\n    }\n}';
+    case 'cpp':
+      return '// Write your code here\n#include <iostream>\n\nint main() {\n    std::cout << "Hello World" << std::endl;\n    return 0;\n}';
+    case 'go':
+      return '// Write your code here\npackage main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello World")\n}';
+    case 'rust':
+      return '// Write your code here\nfn main() {\n    println!("Hello World");\n}';
+    default:
+      return '';
   }
 };
 
@@ -1242,12 +1249,18 @@ function AddLessonDialog({
   const durationInMinutes = Math.round((durationSeconds ?? 0) / 60);
   const watchedContent = useWatch({ control: form.control, name: 'content' });
   // Multi-language state
-  const [enableIde, setEnableIde] = useState(Boolean(existingLesson?.ideConfig));
+  const [enableIde, setEnableIde] = useState(
+    Boolean(existingLesson?.ideConfig),
+  );
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [defaultLanguage, setDefaultLanguage] = useState<string>('javascript');
   const [editingLanguage, setEditingLanguage] = useState<string>('javascript');
-  const [codeTemplates, setCodeTemplates] = useState<Record<string, string>>({});
-  const [expectedOutputs, setExpectedOutputs] = useState<Record<string, string>>({});
+  const [codeTemplates, setCodeTemplates] = useState<Record<string, string>>(
+    {},
+  );
+  const [expectedOutputs, setExpectedOutputs] = useState<
+    Record<string, string>
+  >({});
 
   // Initialize state from existing lesson
   useEffect(() => {
@@ -1267,14 +1280,14 @@ function AddLessonDialog({
 
       if (config) {
         // Hydrate from existing config
-        const langs = config.allowedLanguages.map(l => l.language);
+        const langs = config.allowedLanguages.map((l) => l.language);
         setSelectedLanguages(langs);
         setDefaultLanguage(config.defaultLanguage);
         setEditingLanguage(config.defaultLanguage); // Start editing default
 
         const templates: Record<string, string> = {};
         const outputs: Record<string, string> = {};
-        config.allowedLanguages.forEach(l => {
+        config.allowedLanguages.forEach((l) => {
           templates[l.language] = l.initialCode;
           if (l.expectedOutput) {
             outputs[l.language] = l.expectedOutput;
@@ -1296,27 +1309,40 @@ function AddLessonDialog({
   // Sync state to form
   useEffect(() => {
     if (enableIde) {
-      const allowedLanguages = selectedLanguages.map(lang => ({
+      const allowedLanguages = selectedLanguages.map((lang) => ({
         language: lang,
         // eslint-disable-next-line security/detect-object-injection
         initialCode: codeTemplates[lang] || getDefaultCode(lang),
         // eslint-disable-next-line security/detect-object-injection
-        expectedOutput: expectedOutputs[lang]
+        expectedOutput: expectedOutputs[lang],
       }));
 
       // Ensure default language is in selected
-      const validDefault = selectedLanguages.includes(defaultLanguage) ? defaultLanguage : selectedLanguages[0] || 'javascript';
+      const validDefault = selectedLanguages.includes(defaultLanguage)
+        ? defaultLanguage
+        : selectedLanguages[0] || 'javascript';
 
       if (allowedLanguages.length > 0) {
-        form.setValue('ideConfig', {
-          allowedLanguages,
-          defaultLanguage: validDefault,
-        }, { shouldDirty: true, shouldValidate: true });
+        form.setValue(
+          'ideConfig',
+          {
+            allowedLanguages,
+            defaultLanguage: validDefault,
+          },
+          { shouldDirty: true, shouldValidate: true },
+        );
       }
     } else {
       form.setValue('ideConfig', null, { shouldDirty: true });
     }
-  }, [enableIde, selectedLanguages, defaultLanguage, codeTemplates, expectedOutputs, form]);
+  }, [
+    enableIde,
+    selectedLanguages,
+    defaultLanguage,
+    codeTemplates,
+    expectedOutputs,
+    form,
+  ]);
 
   const [isBlocksValid, setIsBlocksValid] = useState(true);
 
@@ -1421,8 +1447,15 @@ function AddLessonDialog({
           <div className="space-y-4 pt-4 border-t border-border">
             <div className="flex items-center justify-between p-4 border border-border rounded-xl bg-card">
               <div className="space-y-0.5">
-                <label htmlFor="enable-ide" className="text-base font-semibold cursor-pointer">Code Exercise</label>
-                <p className="text-sm text-muted-foreground">Enable an embedded IDE for students to solve coding problems.</p>
+                <label
+                  htmlFor="enable-ide"
+                  className="text-base font-semibold cursor-pointer"
+                >
+                  Code Exercise
+                </label>
+                <p className="text-sm text-muted-foreground">
+                  Enable an embedded IDE for students to solve coding problems.
+                </p>
               </div>
               <Switch
                 id="enable-ide"
@@ -1432,40 +1465,59 @@ function AddLessonDialog({
             </div>
             {enableIde && (
               <div className="space-y-6 p-4 border border-border rounded-xl bg-muted/20 animate-in fade-in zoom-in-95 duration-200">
-
                 {/* Language Selection */}
                 <div className="space-y-3">
-                  <span className="text-sm font-medium">Supported Languages</span>
+                  <span className="text-sm font-medium">
+                    Supported Languages
+                  </span>
                   <div className="flex flex-wrap gap-2">
-                    {['javascript', 'python', 'java', 'cpp', 'go', 'rust', 'typescript'].map(lang => (
+                    {[
+                      'javascript',
+                      'python',
+                      'java',
+                      'cpp',
+                      'go',
+                      'rust',
+                      'typescript',
+                    ].map((lang) => (
                       <button
                         key={lang}
                         type="button"
                         onClick={() => {
                           if (selectedLanguages.includes(lang)) {
                             if (selectedLanguages.length > 1) {
-                              setSelectedLanguages(prev => prev.filter(l => l !== lang));
+                              setSelectedLanguages((prev) =>
+                                prev.filter((l) => l !== lang),
+                              );
                               if (editingLanguage === lang) {
-                                const newLang = selectedLanguages.find(l => l !== lang);
+                                const newLang = selectedLanguages.find(
+                                  (l) => l !== lang,
+                                );
                                 if (newLang) {
                                   setEditingLanguage(newLang);
                                 }
                               }
                             } else {
-                              toast.error("At least one language must be selected");
+                              toast.error(
+                                'At least one language must be selected',
+                              );
                             }
                           } else {
-                            setSelectedLanguages(prev => [...prev, lang]);
+                            setSelectedLanguages((prev) => [...prev, lang]);
                             // Initialize template if not exists
                             if (!codeTemplates[lang]) {
-                              setCodeTemplates(prev => ({ ...prev, [lang]: getDefaultCode(lang) }));
+                              setCodeTemplates((prev) => ({
+                                ...prev,
+                                [lang]: getDefaultCode(lang),
+                              }));
                             }
                           }
                         }}
-                        className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${selectedLanguages.includes(lang)
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background hover:bg-muted border-border'
-                          }`}
+                        className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${
+                          selectedLanguages.includes(lang)
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background hover:bg-muted border-border'
+                        }`}
                       >
                         {lang}
                       </button>
@@ -1476,30 +1528,44 @@ function AddLessonDialog({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Editing Language Selector */}
                   <div className="space-y-2">
-                    <label htmlFor="edit-language-select" className="text-sm font-medium">Configure Template For</label>
+                    <label
+                      htmlFor="edit-language-select"
+                      className="text-sm font-medium"
+                    >
+                      Configure Template For
+                    </label>
                     <select
                       id="edit-language-select"
                       className="w-full p-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                       value={editingLanguage}
                       onChange={(e) => setEditingLanguage(e.target.value)}
                     >
-                      {selectedLanguages.map(lang => (
-                        <option key={lang} value={lang}>{lang}</option>
+                      {selectedLanguages.map((lang) => (
+                        <option key={lang} value={lang}>
+                          {lang}
+                        </option>
                       ))}
                     </select>
                   </div>
 
                   {/* Default Language Selector */}
                   <div className="space-y-2">
-                    <label htmlFor="default-language-select" className="text-sm font-medium">Default Language for Student</label>
+                    <label
+                      htmlFor="default-language-select"
+                      className="text-sm font-medium"
+                    >
+                      Default Language for Student
+                    </label>
                     <select
                       id="default-language-select"
                       className="w-full p-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                       value={defaultLanguage}
                       onChange={(e) => setDefaultLanguage(e.target.value)}
                     >
-                      {selectedLanguages.map(lang => (
-                        <option key={lang} value={lang}>{lang}</option>
+                      {selectedLanguages.map((lang) => (
+                        <option key={lang} value={lang}>
+                          {lang}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -1507,28 +1573,49 @@ function AddLessonDialog({
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Initial Code Template ({editingLanguage})</label>
+                    <label className="text-sm font-medium">
+                      Initial Code Template ({editingLanguage})
+                    </label>
                   </div>
                   <div className="h-[300px] border border-border rounded-xl overflow-hidden">
                     <CodeEditor
                       language={editingLanguage}
-                      initialValue={codeTemplates[editingLanguage] || getDefaultCode(editingLanguage)}
-                      onChange={(value) => setCodeTemplates(prev => ({ ...prev, [editingLanguage]: value ?? '' }))}
+                      initialValue={
+                        codeTemplates[editingLanguage] ||
+                        getDefaultCode(editingLanguage)
+                      }
+                      onChange={(value) =>
+                        setCodeTemplates((prev) => ({
+                          ...prev,
+                          [editingLanguage]: value ?? '',
+                        }))
+                      }
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="expected-output-input" className="text-sm font-medium">Expected Output (Optional)</label>
+                  <label
+                    htmlFor="expected-output-input"
+                    className="text-sm font-medium"
+                  >
+                    Expected Output (Optional)
+                  </label>
                   <Input
                     id="expected-output-input"
                     placeholder="e.g. Hello World"
                     // eslint-disable-next-line security/detect-object-injection
                     value={expectedOutputs[editingLanguage] || ''}
-                    onChange={(e) => setExpectedOutputs(prev => ({ ...prev, [editingLanguage]: e.target.value }))}
+                    onChange={(e) =>
+                      setExpectedOutputs((prev) => ({
+                        ...prev,
+                        [editingLanguage]: e.target.value,
+                      }))
+                    }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Matches exact string output for auto-grading {editingLanguage} submissions.
+                    Matches exact string output for auto-grading{' '}
+                    {editingLanguage} submissions.
                   </p>
                 </div>
               </div>
