@@ -10,6 +10,16 @@ import { CodeEditor } from './code-editor';
 
 const STORAGE_KEY_PREFIX = 'ide_progress_';
 
+const STDIN_INSTRUCTIONS: Record<string, string> = {
+  python: 'Tip: input() reads one line at a time.',
+  javascript: "Tip: Use 'fs.readFileSync(0, 'utf-8')' to read all input.",
+  typescript: "Tip: Use 'fs.readFileSync(0, 'utf-8')' to read all input.",
+  java: 'Tip: Scanner(System.in) reads token-by-token (space/newline separated).',
+  cpp: 'Tip: std::cin >> var reads token-by-token.',
+  go: 'Tip: fmt.Scan(&var) reads space-separated values.',
+  rust: 'Tip: std::io::stdin() reads input.',
+};
+
 interface IdePanelProps {
   allowedLanguages: {
     language: string;
@@ -84,19 +94,24 @@ export function IdePanel({
   const [executionResult, setExecutionResult] = useState<
     'success' | 'error' | null
   >(null);
+  const [stdin, setStdin] = useState('');
+  const [activeTab, setActiveTab] = useState<'output' | 'input'>('output');
 
   const handleRun = async () => {
     setIsRunning(true);
     setExecutionResult(null);
     setOutput('');
+    // Switch to output tab on run
+    setActiveTab('output');
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const resultData = await exercisesApi.execute(currentLanguage, code);
+      const resultData = await exercisesApi.execute(
+        currentLanguage,
+        code,
+        stdin,
+      );
       // Safe access assuming structure
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
       const result = resultData.run;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const combinedOutput = (
         String(result.stdout ?? '') + String(result.stderr ?? '')
       ).trim();
@@ -111,9 +126,8 @@ export function IdePanel({
           setExecutionResult('error');
           toast.warning('Output does not match expected result.');
         }
-      }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      else if (result.code === 0) {
+      } else if (result.code === 0) {
+        // Fallback or explicit Unit Test logic relies on exit code if no string match is set
         setExecutionResult('success');
       } else {
         setExecutionResult('error');
@@ -136,6 +150,7 @@ export function IdePanel({
     );
     setOutput('');
     setExecutionResult(null);
+    setStdin('');
   };
 
   return (
@@ -198,28 +213,68 @@ export function IdePanel({
           />
         </div>
 
-        <div className="h-48 border-t border-border flex flex-col bg-black text-white font-mono text-sm">
-          <div className="flex items-center justify-between px-3 py-1.5 bg-white/10 border-b border-white/10 text-xs text-muted-foreground">
-            <span>Console Output</span>
-            {executionResult && (
+        <div className="h-48 border-t border-border flex flex-col bg-black font-mono text-sm">
+          {/* Tabs Header */}
+          <div className="flex items-center px-2 bg-white/10 border-b border-white/10">
+            <button
+              onClick={() => setActiveTab('output')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${activeTab === 'output'
+                ? 'text-white border-b-2 border-primary'
+                : 'text-white/50 hover:text-white'
+                }`}
+            >
+              Console Output
+            </button>
+            <button
+              onClick={() => setActiveTab('input')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${activeTab === 'input'
+                ? 'text-white border-b-2 border-primary'
+                : 'text-white/50 hover:text-white'
+                }`}
+            >
+              Input (Stdin)
+            </button>
+
+            <div className="flex-1" />
+
+            {executionResult && activeTab === 'output' && (
               <span
-                className={
-                  executionResult === 'success'
-                    ? 'text-green-400'
-                    : 'text-red-400'
-                }
+                className={`text-xs px-2 ${executionResult === 'success'
+                  ? 'text-green-400'
+                  : 'text-red-400'
+                  }`}
               >
                 {executionResult === 'success' ? '✓ Success' : '✕ Failed'}
               </span>
             )}
           </div>
-          <pre className="flex-1 p-3 overflow-auto">
-            {output || (
-              <span className="text-white/30 italic">
-                Run code to see output...
-              </span>
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-auto relative flex flex-col">
+            {activeTab === 'output' ? (
+              <pre className="p-3 text-white h-full w-full">
+                {output || (
+                  <span className="text-white/30 italic">
+                    Run code to see output...
+                  </span>
+                )}
+              </pre>
+            ) : (
+              <div className="flex flex-col h-full">
+                <div className="text-[10px] text-white/50 px-3 py-1 border-b border-white/10 bg-white/5">
+                  {/* eslint-disable-next-line security/detect-object-injection */}
+                  {STDIN_INSTRUCTIONS[currentLanguage] ||
+                    'Enter standard input here...'}
+                </div>
+                <textarea
+                  className="w-full h-full bg-transparent text-white p-3 outline-none resize-none placeholder:text-white/30 font-mono text-xs"
+                  placeholder="Input data..."
+                  value={stdin}
+                  onChange={(e) => setStdin(e.target.value)}
+                />
+              </div>
             )}
-          </pre>
+          </div>
         </div>
       </div>
     </div>

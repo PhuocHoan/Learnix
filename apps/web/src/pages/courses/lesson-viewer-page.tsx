@@ -670,7 +670,7 @@ export function LessonViewerPage() {
             className={cn(
               'flex-1 overflow-y-auto bg-background scroll-smooth',
               currentLesson?.ideConfig &&
-                'grid lg:grid-cols-2 gap-0 overflow-hidden',
+              'grid lg:grid-cols-2 gap-0 overflow-hidden',
             )}
           >
             {/* If IDE enabled, wrap content in a div that scrolls independently or fits in grid */}
@@ -678,7 +678,7 @@ export function LessonViewerPage() {
               className={cn(
                 'max-w-4xl mx-auto p-6 md:p-10 w-full',
                 currentLesson?.ideConfig &&
-                  'overflow-y-auto h-full max-w-none p-6',
+                'overflow-y-auto h-full max-w-none p-6',
               )}
             >
               {currentLesson ? (
@@ -733,7 +733,7 @@ export function LessonViewerPage() {
                               className={cn(
                                 'font-bold',
                                 isLessonCompleted &&
-                                  'text-green-700 border-green-400 bg-green-100/50',
+                                'text-green-700 border-green-400 bg-green-100/50',
                               )}
                             >
                               {isLessonCompleted ? (
@@ -768,7 +768,7 @@ export function LessonViewerPage() {
 
                   {/* Render the Block Content */}
                   {currentLesson.type === 'quiz' &&
-                  (currentLesson.content?.length ?? 0) === 0 ? null : (
+                    (currentLesson.content?.length ?? 0) === 0 ? null : (
                     <LessonContent blocks={currentLesson.content} />
                   )}
                 </>
@@ -787,25 +787,27 @@ export function LessonViewerPage() {
                 return null;
               }
 
+
               // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
               const normalizedConfig = ideConfig.allowedLanguages
-                ? ideConfig
+                ?
+                (ideConfig)
                 : {
-                    allowedLanguages: [
-                      {
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/prefer-nullish-coalescing
-                        language: ideConfig.language || 'javascript',
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/prefer-nullish-coalescing
-                        initialCode: ideConfig.initialCode || '',
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                        expectedOutput: ideConfig.expectedOutput,
-                      },
-                    ],
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/prefer-nullish-coalescing
-                    defaultLanguage: ideConfig.language || 'javascript',
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                    instructions: ideConfig.instructions,
-                  };
+                  allowedLanguages: [
+                    {
+                      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                      language: (ideConfig.language as string) ?? 'javascript',
+                      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                      initialCode: (ideConfig.initialCode as string) ?? '',
+                      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                      expectedOutput: ideConfig.expectedOutput as string | undefined,
+                    },
+                  ],
+                  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                  defaultLanguage: (ideConfig.language as string) ?? 'javascript',
+                  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                  instructions: ideConfig.instructions as string | undefined,
+                };
 
               return (
                 <div className="hidden lg:block h-full border-l border-border overflow-hidden">
@@ -814,7 +816,7 @@ export function LessonViewerPage() {
                     allowedLanguages={normalizedConfig.allowedLanguages}
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
                     defaultLanguage={normalizedConfig.defaultLanguage}
-                    lessonId={currentLesson?.id || 'preview'}
+                    lessonId={currentLesson?.id ?? 'preview'}
                     onSuccess={() => {
                       if (!isLessonCompleted && currentLesson) {
                         completeLessonMutation.mutate({
@@ -845,7 +847,7 @@ export function LessonViewerPage() {
                         (acc, s) => acc + s.lessons.length,
                         0,
                       ) ?? 1)) *
-                      100,
+                    100,
                   )}
                   % complete
                 </span>
@@ -919,7 +921,7 @@ export function LessonViewerPage() {
                               ? 'bg-primary/5 border-primary'
                               : 'border-transparent hover:bg-muted/50',
                             isLocked &&
-                              'opacity-60 cursor-not-allowed bg-muted/10',
+                            'opacity-60 cursor-not-allowed bg-muted/10',
                           )}
                         >
                           <div

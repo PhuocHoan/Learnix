@@ -10,9 +10,13 @@ export class ExercisesController {
   @Post('execute')
   // @UseGuards(JwtAuthGuard) // Optional: restrict to logged in users to prevent abuse
   async execute(
-    @Body() body: { language: string; code: string },
+    @Body() body: { language: string; code: string; stdin?: string },
   ): Promise<ExecutionResult> {
-    return this.exercisesService.executeCode(body.language, body.code);
+    return this.exercisesService.executeCode(
+      body.language,
+      body.code,
+      body.stdin,
+    );
   }
 
   @Post('submit')
@@ -22,13 +26,15 @@ export class ExercisesController {
     body: {
       language: string;
       code: string;
-      expectedOutput: string;
+      expectedOutput?: string;
+      testCode?: string;
     },
   ): Promise<{ success: boolean; output: string }> {
     return this.exercisesService.validateSubmission(
       body.language,
       body.code,
       body.expectedOutput,
+      body.testCode,
     );
   }
 }

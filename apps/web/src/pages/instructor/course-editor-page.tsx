@@ -97,10 +97,10 @@ const sectionSchema = z.object({
 });
 
 const lessonSchema = z.object({
-  title: z.string().min(2, 'Title must be at least 2 characters'),
-  isFreePreview: z.boolean(),
-  durationSeconds: z.number(),
-  content: z.array(z.any()),
+  title: z.string().min(1, 'Title is required'),
+  isFreePreview: z.boolean().default(false),
+  durationSeconds: z.coerce.number().min(0),
+  content: z.array(z.any()), // Validated by sub-components
   ideConfig: z
     .object({
       allowedLanguages: z.array(
@@ -108,13 +108,13 @@ const lessonSchema = z.object({
           language: z.string(),
           initialCode: z.string(),
           expectedOutput: z.string().optional(),
+          testCode: z.string().optional(),
         }),
       ),
       defaultLanguage: z.string(),
       instructions: z.string().optional(),
     })
-    .nullable()
-    .optional(),
+    .nullable(),
 });
 
 type CourseFormData = z.infer<typeof courseSchema>;
@@ -207,17 +207,17 @@ export default function CourseEditorPage() {
             {(course.status === 'draft' ||
               course.status === 'rejected' ||
               !course.status) && (
-              <Button
-                variant="primary"
-                onClick={() => setShowSubmitConfirm(true)}
-                disabled={submitMutation.isPending}
-              >
-                {submitMutation.isPending && (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                )}
-                Submit for Approval
-              </Button>
-            )}
+                <Button
+                  variant="primary"
+                  onClick={() => setShowSubmitConfirm(true)}
+                  disabled={submitMutation.isPending}
+                >
+                  {submitMutation.isPending && (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  )}
+                  Submit for Approval
+                </Button>
+              )}
 
             {course.status === 'pending' && (
               <Button variant="outline" disabled>
@@ -981,7 +981,11 @@ function SortableSectionItem({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <AddLessonDialog courseId={course.id} sectionId={section.id} />
+            <AddLessonDialog
+              courseId={course.id}
+              sectionId={section.id}
+              defaultOrderIndex={section.lessons?.length ?? 0}
+            />
             <QuizCreationDialog
               sectionId={section.id}
               courseId={course.id}
@@ -1108,20 +1112,23 @@ function LessonItem({
           <div
             className={cn(
               'w-10 h-10 rounded-xl shrink-0 flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md',
-              lesson.type === 'quiz'
-                ? 'bg-orange-500/10 text-orange-600 border border-orange-200/50 group-hover:bg-orange-500 group-hover:text-white'
-                : lesson.ideConfig
-                  ? 'bg-blue-500/10 text-blue-600 border border-blue-200/50 group-hover:bg-blue-500 group-hover:text-white'
-                  : 'bg-primary/10 text-primary border border-primary/20 group-hover:bg-primary group-hover:text-white',
+              (() => {
+                if (lesson.type === 'quiz') {
+                  return 'bg-orange-500/10 text-orange-600 border border-orange-200/50 group-hover:bg-orange-500 group-hover:text-white';
+                }
+                if (lesson.ideConfig) {
+                  return 'bg-blue-500/10 text-blue-600 border border-blue-200/50 group-hover:bg-blue-500 group-hover:text-white';
+                }
+                // Default Standard
+                return 'bg-primary/10 text-primary border border-primary/20 group-hover:bg-primary group-hover:text-white';
+              })(),
             )}
           >
-            {lesson.type === 'quiz' ? (
-              <FileQuestion className="w-5 h-5" />
-            ) : lesson.ideConfig ? (
-              <Code className="w-5 h-5" />
-            ) : (
-              <LayoutList className="w-5 h-5" />
-            )}
+            {(() => {
+              if (lesson.type === 'quiz') { return <FileQuestion className="w-5 h-5" />; }
+              if (lesson.ideConfig) { return <Code className="w-5 h-5" />; }
+              return <LayoutList className="w-5 h-5" />;
+            })()}
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-bold truncate text-foreground/80 group-hover:text-foreground transition-colors">
@@ -1131,18 +1138,18 @@ function LessonItem({
               <span
                 className={cn(
                   'text-[9px] uppercase font-black tracking-widest',
-                  lesson.type === 'quiz'
-                    ? 'text-orange-600/80'
-                    : lesson.ideConfig
-                      ? 'text-blue-600/80'
-                      : 'text-primary/80',
+                  (() => {
+                    if (lesson.type === 'quiz') { return 'text-orange-600/80'; }
+                    if (lesson.ideConfig) { return 'text-blue-600/80'; }
+                    return 'text-primary/80';
+                  })(),
                 )}
               >
-                {lesson.type === 'quiz'
-                  ? 'Interactive Quiz'
-                  : lesson.ideConfig
-                    ? 'Code Exercise'
-                    : 'Lesson'}
+                {(() => {
+                  if (lesson.type === 'quiz') { return 'Interactive Quiz'; }
+                  if (lesson.ideConfig) { return 'Code Exercise'; }
+                  return 'Lesson';
+                })()}
               </span>
               {lesson.isFreePreview && (
                 <Badge className="h-3.5 px-1 text-[8px] bg-green-500/5 text-green-600 border-green-500/20">
@@ -1199,17 +1206,40 @@ function LessonItem({
 const getDefaultCode = (lang: string) => {
   switch (lang) {
     case 'javascript':
-      return '// Write your code here\nconsole.log("Hello World");';
+      return '// Write your code here\nfunction solution(a, b) {\n    return a + b;\n}\n\n// console.log(solution(1, 2));';
+    case 'typescript':
+      return '// Write your code here\nfunction solution(a: number, b: number): number {\n    return a + b;\n}\n\n// console.log(solution(1, 2));';
     case 'python':
-      return '# Write your code here\nprint("Hello World")';
+      return '# Write your code here\ndef solution(a, b):\n    return a + b\n\n# print(solution(1, 2))';
     case 'java':
-      return '// Write your code here\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello World");\n    }\n}';
+      return '// Write your code here\npublic class Main {\n    public static int solution(int a, int b) {\n        return a + b;\n    }\n\n    public static void main(String[] args) {\n        System.out.println(solution(1, 2));\n    }\n}';
     case 'cpp':
-      return '// Write your code here\n#include <iostream>\n\nint main() {\n    std::cout << "Hello World" << std::endl;\n    return 0;\n}';
+      return '// Write your code here\n#include <iostream>\n\nint solution(int a, int b) {\n    return a + b;\n}\n\nint main() {\n    std::cout << solution(1, 2) << std::endl;\n    return 0;\n}';
     case 'go':
-      return '// Write your code here\npackage main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello World")\n}';
+      return '// Write your code here\npackage main\n\nimport "fmt"\n\nfunc solution(a int, b int) int {\n    return a + b\n}\n\nfunc main() {\n    fmt.Println(solution(1, 2))\n}';
     case 'rust':
-      return '// Write your code here\nfn main() {\n    println!("Hello World");\n}';
+      return '// Write your code here\nfn solution(a: i32, b: i32) -> i32 {\n    a + b\n}\n\nfn main() {\n    println!("{}", solution(1, 2));\n}';
+    default:
+      return '';
+  }
+};
+
+const getDefaultTestCode = (lang: string) => {
+  switch (lang) {
+    case 'javascript':
+      return '// Logic Test (Concatenated to end)\nif (solution(2, 2) !== 4) throw new Error("Fail: 2+2 should be 4");\nif (solution(5, 5) !== 10) throw new Error("Fail: 5+5 should be 10");';
+    case 'typescript':
+      return '// Logic Test (Concatenated to end)\nif (solution(2, 2) !== 4) throw new Error("Fail: 2+2 should be 4");';
+    case 'python':
+      return '# Logic Test (Concatenated to end)\nimport sys\nif solution(2, 2) != 4:\n    print("Fail: 2+2 != 4", file=sys.stderr)\n    sys.exit(1)';
+    case 'java':
+      return '// Logic Test (Concatenated to end)\n// For Java, simplistic concatenation requires care with Main/Entry points.\n// Ideally, remove main() from student code if using this.\nclass Test {\n    static { \n       if (Main.solution(2, 2) != 4) throw new RuntimeException("Fail");\n    }\n}';
+    case 'cpp':
+      return '// Logic Test\n// Note: Student code should NOT satisfy linking main() if you add one here.\n// However, simple concat often fails for C++ due to multiple mains.\n// Recommended: Use Standard Output Matching for compiled languages unless you use a custom runner.';
+    case 'go':
+      return '// Logic Test\n// Go does not allow multiple main functions or package redeclarations.\n// Recommended: Use Standard Output Matching.';
+    case 'rust':
+      return '// Logic Test\n// Rust does not allow multiple main functions.\n// Recommended: Use Standard Output Matching.';
     default:
       return '';
   }
@@ -1220,17 +1250,19 @@ function AddLessonDialog({
   courseId,
   existingLesson,
   trigger,
+  defaultOrderIndex = 0,
 }: {
   sectionId: string;
   courseId: string;
   existingLesson?: Lesson;
   trigger?: React.ReactNode;
+  defaultOrderIndex?: number;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const checkboxId = useId();
 
-  const form = useForm<LessonFormData>({
+  const form = useForm({
     resolver: zodResolver(lessonSchema),
     defaultValues: {
       title: existingLesson?.title ?? '',
@@ -1246,7 +1278,7 @@ function AddLessonDialog({
     control: form.control,
     name: 'durationSeconds',
   });
-  const durationInMinutes = Math.round((durationSeconds ?? 0) / 60);
+  const durationInMinutes = Math.round((Number(durationSeconds) || 0) / 60);
   const watchedContent = useWatch({ control: form.control, name: 'content' });
   // Multi-language state
   const [enableIde, setEnableIde] = useState(
@@ -1261,6 +1293,7 @@ function AddLessonDialog({
   const [expectedOutputs, setExpectedOutputs] = useState<
     Record<string, string>
   >({});
+  const [testCodes, setTestCodes] = useState<Record<string, string>>({});
 
   // Initialize state from existing lesson
   useEffect(() => {
@@ -1287,14 +1320,23 @@ function AddLessonDialog({
 
         const templates: Record<string, string> = {};
         const outputs: Record<string, string> = {};
+        const tests: Record<string, string> = {};
+
         config.allowedLanguages.forEach((l) => {
           templates[l.language] = l.initialCode;
           if (l.expectedOutput) {
             outputs[l.language] = l.expectedOutput;
           }
+          // Safely check for testCode property as it might not be in legacy types yet
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+          if ((l as any).testCode) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+            tests[l.language] = (l as any).testCode;
+          }
         });
         setCodeTemplates(templates);
         setExpectedOutputs(outputs);
+        setTestCodes(tests);
       } else {
         // Default clean state
         setSelectedLanguages(['javascript']);
@@ -1302,6 +1344,7 @@ function AddLessonDialog({
         setEditingLanguage('javascript');
         setCodeTemplates({ javascript: getDefaultCode('javascript') });
         setExpectedOutputs({});
+        setTestCodes({});
       }
     }
   }, [open, existingLesson, form]);
@@ -1315,6 +1358,11 @@ function AddLessonDialog({
         initialCode: codeTemplates[lang] || getDefaultCode(lang),
         // eslint-disable-next-line security/detect-object-injection
         expectedOutput: expectedOutputs[lang],
+        // eslint-disable-next-line security/detect-object-injection
+        testCode: testCodes[lang] || undefined,
+        // Note: We don't force default test code into the value sent to DB if empty, 
+        // because empty means "Standard Grading". Only if user types something do we send it.
+        // But the UI editor should show the template if empty so they can start typing.
       }));
 
       // Ensure default language is in selected
@@ -1341,6 +1389,7 @@ function AddLessonDialog({
     defaultLanguage,
     codeTemplates,
     expectedOutputs,
+    testCodes,
     form,
   ]);
 
@@ -1367,7 +1416,7 @@ function AddLessonDialog({
     mutation.mutate({
       ...data,
       content,
-      orderIndex: existingLesson?.orderIndex ?? 0,
+      orderIndex: existingLesson?.orderIndex ?? defaultOrderIndex,
     } as CreateLessonData);
   };
 
@@ -1505,6 +1554,7 @@ function AddLessonDialog({
                           } else {
                             setSelectedLanguages((prev) => [...prev, lang]);
                             // Initialize template if not exists
+                            // eslint-disable-next-line security/detect-object-injection
                             if (!codeTemplates[lang]) {
                               setCodeTemplates((prev) => ({
                                 ...prev,
@@ -1513,11 +1563,10 @@ function AddLessonDialog({
                             }
                           }
                         }}
-                        className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${
-                          selectedLanguages.includes(lang)
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-background hover:bg-muted border-border'
-                        }`}
+                        className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${selectedLanguages.includes(lang)
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background hover:bg-muted border-border'
+                          }`}
                       >
                         {lang}
                       </button>
@@ -1581,6 +1630,7 @@ function AddLessonDialog({
                     <CodeEditor
                       language={editingLanguage}
                       initialValue={
+                        // eslint-disable-next-line security/detect-object-injection
                         codeTemplates[editingLanguage] ||
                         getDefaultCode(editingLanguage)
                       }
@@ -1594,29 +1644,73 @@ function AddLessonDialog({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label
-                    htmlFor="expected-output-input"
-                    className="text-sm font-medium"
-                  >
-                    Expected Output (Optional)
-                  </label>
-                  <Input
-                    id="expected-output-input"
-                    placeholder="e.g. Hello World"
-                    // eslint-disable-next-line security/detect-object-injection
-                    value={expectedOutputs[editingLanguage] || ''}
-                    onChange={(e) =>
-                      setExpectedOutputs((prev) => ({
-                        ...prev,
-                        [editingLanguage]: e.target.value,
-                      }))
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Matches exact string output for auto-grading{' '}
-                    {editingLanguage} submissions.
-                  </p>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="expected-output-input"
+                      className="text-sm font-medium"
+                    >
+                      Expected Output (Standard Method)
+                    </label>
+                    <Input
+                      id="expected-output-input"
+                      placeholder="e.g. Hello World"
+                      // eslint-disable-next-line security/detect-object-injection
+                      value={expectedOutputs[editingLanguage] || ''}
+                      onChange={(e) =>
+                        setExpectedOutputs((prev) => ({
+                          ...prev,
+                          [editingLanguage]: e.target.value,
+                        }))
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Matches exact string output for auto-grading{' '}
+                      {editingLanguage} submissions.
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-muted/20 px-2 text-muted-foreground">
+                        OR Advanced Grading
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label
+                        className="text-sm font-medium"
+                        htmlFor="unit-test-editor"
+                      >
+                        Unit Test Code (Hidden)
+                      </label>
+                      <Badge variant="secondary" className="text-[10px]">
+                        Advanced
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Appended to student code. Throw an error or exit with non-zero code to fail the test.
+                      Example: <code>if (add(2,2) !== 4) throw new Error("Fail");</code>
+                    </p>
+                    <div className="h-[200px] border border-border rounded-xl overflow-hidden">
+                      <CodeEditor
+                        // eslint-disable-next-line security/detect-object-injection
+                        initialValue={testCodes[editingLanguage] || getDefaultTestCode(editingLanguage)}
+                        language={editingLanguage}
+                        onChange={(value) =>
+                          setTestCodes((prev) => ({
+                            ...prev,
+                            [editingLanguage]: value ?? '',
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
