@@ -23,6 +23,7 @@ import {
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 
+import { IdePanel } from '@/components/ide/ide-panel';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/use-auth';
 import { AuthRequiredModal } from '@/features/auth/components/auth-required-modal';
@@ -666,9 +667,16 @@ export function LessonViewerPage() {
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto bg-background scroll-smooth"
+            className={cn(
+              "flex-1 overflow-y-auto bg-background scroll-smooth",
+              currentLesson?.ideConfig && "grid lg:grid-cols-2 gap-0 overflow-hidden"
+            )}
           >
-            <div className="max-w-4xl mx-auto p-6 md:p-10">
+            {/* If IDE enabled, wrap content in a div that scrolls independently or fits in grid */}
+            <div className={cn(
+              "max-w-4xl mx-auto p-6 md:p-10 w-full",
+              currentLesson?.ideConfig && "overflow-y-auto h-full max-w-none p-6"
+            )}>
               {currentLesson ? (
                 <>
                   <div className="mb-8 border-b border-border pb-6">
@@ -721,7 +729,7 @@ export function LessonViewerPage() {
                               className={cn(
                                 'font-bold',
                                 isLessonCompleted &&
-                                  'text-green-700 border-green-400 bg-green-100/50',
+                                'text-green-700 border-green-400 bg-green-100/50',
                               )}
                             >
                               {isLessonCompleted ? (
@@ -756,7 +764,7 @@ export function LessonViewerPage() {
 
                   {/* Render the Block Content */}
                   {currentLesson.type === 'quiz' &&
-                  (currentLesson.content?.length ?? 0) === 0 ? null : (
+                    (currentLesson.content?.length ?? 0) === 0 ? null : (
                     <LessonContent blocks={currentLesson.content} />
                   )}
                 </>
@@ -767,6 +775,49 @@ export function LessonViewerPage() {
                 </div>
               )}
             </div>
+
+            {(() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+              const ideConfig = currentLesson?.ideConfig as any;
+              if (!ideConfig) {
+                return null;
+              }
+
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+              const normalizedConfig = ideConfig.allowedLanguages
+                ? ideConfig
+                : {
+                  allowedLanguages: [{
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/prefer-nullish-coalescing
+                    language: ideConfig.language || 'javascript',
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/prefer-nullish-coalescing
+                    initialCode: ideConfig.initialCode || '',
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                    expectedOutput: ideConfig.expectedOutput
+                  }],
+                  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/prefer-nullish-coalescing
+                  defaultLanguage: ideConfig.language || 'javascript',
+                  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                  instructions: ideConfig.instructions
+                };
+
+              return (
+                <div className="hidden lg:block h-full border-l border-border overflow-hidden">
+                  <IdePanel
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+                    allowedLanguages={normalizedConfig.allowedLanguages}
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+                    defaultLanguage={normalizedConfig.defaultLanguage}
+                    lessonId={currentLesson?.id || 'preview'}
+                    onSuccess={() => {
+                      if (!isLessonCompleted && currentLesson) {
+                        completeLessonMutation.mutate({ lessonId: currentLesson.id });
+                      }
+                    }}
+                  />
+                </div>
+              );
+            })()}
           </div>
 
           {/* Sidebar Navigation */}
@@ -786,7 +837,7 @@ export function LessonViewerPage() {
                         (acc, s) => acc + s.lessons.length,
                         0,
                       ) ?? 1)) *
-                      100,
+                    100,
                   )}
                   % complete
                 </span>
@@ -860,7 +911,7 @@ export function LessonViewerPage() {
                               ? 'bg-primary/5 border-primary'
                               : 'border-transparent hover:bg-muted/50',
                             isLocked &&
-                              'opacity-60 cursor-not-allowed bg-muted/10',
+                            'opacity-60 cursor-not-allowed bg-muted/10',
                           )}
                         >
                           <div

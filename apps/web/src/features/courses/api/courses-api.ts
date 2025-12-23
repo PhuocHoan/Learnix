@@ -6,6 +6,15 @@ export interface Lesson {
   title: string;
   type: 'standard' | 'quiz';
   content: LessonBlock[]; // Now an array of blocks
+  ideConfig?: {
+    allowedLanguages: {
+      language: string;
+      initialCode: string;
+      expectedOutput?: string;
+    }[];
+    defaultLanguage: string;
+    instructions?: string;
+  };
   durationSeconds: number;
   isFreePreview: boolean;
   orderIndex: number;

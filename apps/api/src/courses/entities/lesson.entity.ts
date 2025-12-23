@@ -46,6 +46,17 @@ export class Lesson {
   @Column({ type: 'json', nullable: true })
   content: LessonBlock[]; // Stores the array of blocks
 
+  @Column({ type: 'json', nullable: true })
+  ideConfig: {
+    allowedLanguages: {
+      language: string;
+      initialCode: string;
+      expectedOutput?: string;
+    }[];
+    defaultLanguage: string;
+    instructions?: string;
+  } | null;
+
   @Column({ default: 0 })
   durationSeconds: number;
 

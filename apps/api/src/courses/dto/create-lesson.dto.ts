@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsBoolean,
   IsArray,
+  IsObject,
 } from 'class-validator';
 
 import { LessonBlock } from '../entities/lesson.entity';
@@ -31,6 +32,18 @@ export class CreateLessonDto {
   @IsBoolean()
   @IsOptional()
   isFreePreview?: boolean;
+
+  @IsOptional()
+  @IsObject()
+  ideConfig?: {
+    allowedLanguages: {
+      language: string;
+      initialCode: string;
+      expectedOutput?: string;
+    }[];
+    defaultLanguage: string;
+    instructions?: string;
+  };
 
   @IsNumber()
   orderIndex: number;
