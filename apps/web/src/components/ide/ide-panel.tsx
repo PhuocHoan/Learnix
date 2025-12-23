@@ -218,19 +218,21 @@ export function IdePanel({
           <div className="flex items-center px-2 bg-white/10 border-b border-white/10">
             <button
               onClick={() => setActiveTab('output')}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${activeTab === 'output'
-                ? 'text-white border-b-2 border-primary'
-                : 'text-white/50 hover:text-white'
-                }`}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                activeTab === 'output'
+                  ? 'text-white border-b-2 border-primary'
+                  : 'text-white/50 hover:text-white'
+              }`}
             >
               Console Output
             </button>
             <button
               onClick={() => setActiveTab('input')}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${activeTab === 'input'
-                ? 'text-white border-b-2 border-primary'
-                : 'text-white/50 hover:text-white'
-                }`}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                activeTab === 'input'
+                  ? 'text-white border-b-2 border-primary'
+                  : 'text-white/50 hover:text-white'
+              }`}
             >
               Input (Stdin)
             </button>
@@ -239,10 +241,11 @@ export function IdePanel({
 
             {executionResult && activeTab === 'output' && (
               <span
-                className={`text-xs px-2 ${executionResult === 'success'
-                  ? 'text-green-400'
-                  : 'text-red-400'
-                  }`}
+                className={`text-xs px-2 ${
+                  executionResult === 'success'
+                    ? 'text-green-400'
+                    : 'text-red-400'
+                }`}
               >
                 {executionResult === 'success' ? '✓ Success' : '✕ Failed'}
               </span>

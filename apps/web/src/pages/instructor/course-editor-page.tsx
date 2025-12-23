@@ -207,17 +207,17 @@ export default function CourseEditorPage() {
             {(course.status === 'draft' ||
               course.status === 'rejected' ||
               !course.status) && (
-                <Button
-                  variant="primary"
-                  onClick={() => setShowSubmitConfirm(true)}
-                  disabled={submitMutation.isPending}
-                >
-                  {submitMutation.isPending && (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  )}
-                  Submit for Approval
-                </Button>
-              )}
+              <Button
+                variant="primary"
+                onClick={() => setShowSubmitConfirm(true)}
+                disabled={submitMutation.isPending}
+              >
+                {submitMutation.isPending && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                Submit for Approval
+              </Button>
+            )}
 
             {course.status === 'pending' && (
               <Button variant="outline" disabled>
@@ -1125,8 +1125,12 @@ function LessonItem({
             )}
           >
             {(() => {
-              if (lesson.type === 'quiz') { return <FileQuestion className="w-5 h-5" />; }
-              if (lesson.ideConfig) { return <Code className="w-5 h-5" />; }
+              if (lesson.type === 'quiz') {
+                return <FileQuestion className="w-5 h-5" />;
+              }
+              if (lesson.ideConfig) {
+                return <Code className="w-5 h-5" />;
+              }
               return <LayoutList className="w-5 h-5" />;
             })()}
           </div>
@@ -1139,15 +1143,23 @@ function LessonItem({
                 className={cn(
                   'text-[9px] uppercase font-black tracking-widest',
                   (() => {
-                    if (lesson.type === 'quiz') { return 'text-orange-600/80'; }
-                    if (lesson.ideConfig) { return 'text-blue-600/80'; }
+                    if (lesson.type === 'quiz') {
+                      return 'text-orange-600/80';
+                    }
+                    if (lesson.ideConfig) {
+                      return 'text-blue-600/80';
+                    }
                     return 'text-primary/80';
                   })(),
                 )}
               >
                 {(() => {
-                  if (lesson.type === 'quiz') { return 'Interactive Quiz'; }
-                  if (lesson.ideConfig) { return 'Code Exercise'; }
+                  if (lesson.type === 'quiz') {
+                    return 'Interactive Quiz';
+                  }
+                  if (lesson.ideConfig) {
+                    return 'Code Exercise';
+                  }
                   return 'Lesson';
                 })()}
               </span>
@@ -1360,7 +1372,7 @@ function AddLessonDialog({
         expectedOutput: expectedOutputs[lang],
         // eslint-disable-next-line security/detect-object-injection
         testCode: testCodes[lang] || undefined,
-        // Note: We don't force default test code into the value sent to DB if empty, 
+        // Note: We don't force default test code into the value sent to DB if empty,
         // because empty means "Standard Grading". Only if user types something do we send it.
         // But the UI editor should show the template if empty so they can start typing.
       }));
@@ -1563,10 +1575,11 @@ function AddLessonDialog({
                             }
                           }
                         }}
-                        className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${selectedLanguages.includes(lang)
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background hover:bg-muted border-border'
-                          }`}
+                        className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${
+                          selectedLanguages.includes(lang)
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background hover:bg-muted border-border'
+                        }`}
                       >
                         {lang}
                       </button>
@@ -1694,13 +1707,17 @@ function AddLessonDialog({
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Appended to student code. Throw an error or exit with non-zero code to fail the test.
-                      Example: <code>if (add(2,2) !== 4) throw new Error("Fail");</code>
+                      Appended to student code. Throw an error or exit with
+                      non-zero code to fail the test. Example:{' '}
+                      <code>if (add(2,2) !== 4) throw new Error("Fail");</code>
                     </p>
                     <div className="h-[200px] border border-border rounded-xl overflow-hidden">
                       <CodeEditor
                         // eslint-disable-next-line security/detect-object-injection
-                        initialValue={testCodes[editingLanguage] || getDefaultTestCode(editingLanguage)}
+                        initialValue={
+                          testCodes[editingLanguage] ||
+                          getDefaultTestCode(editingLanguage)
+                        }
                         language={editingLanguage}
                         onChange={(value) =>
                           setTestCodes((prev) => ({
