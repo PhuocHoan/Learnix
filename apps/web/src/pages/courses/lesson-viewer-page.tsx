@@ -32,9 +32,11 @@ import {
   type Lesson,
   type LessonBlock,
 } from '@/features/courses/api/courses-api';
+import { LessonResources } from '@/features/courses/components/lesson-resources';
 import { quizzesApi } from '@/features/quizzes/api/quizzes-api';
 import { QuizPlayer } from '@/features/quizzes/components/quiz-player';
 import { cn, getYoutubeId, getVimeoId } from '@/lib/utils';
+import { NotFoundPage } from '@/pages/not-found-page';
 
 // --- Block Renderers ---
 
@@ -430,10 +432,20 @@ export function LessonViewerPage() {
   const lessonIdFromUrl = searchParams.get('lesson');
 
   // Fetch Course
-  const { data: course, isLoading: isLoadingCourse } = useQuery({
+  const {
+    data: course,
+    isLoading: isLoadingCourse,
+    error: courseError,
+  } = useQuery({
     queryKey: ['course', id],
     queryFn: () => coursesApi.getCourse(id),
     enabled: Boolean(id),
+    retry: (failureCount, error) => {
+      if (isAxiosError(error) && error.response?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 
   // Fetch Enrollment
@@ -602,6 +614,14 @@ export function LessonViewerPage() {
   });
 
   // Handle Loading States
+  if (
+    isAxiosError(courseError) &&
+    (courseError.response?.status === 404 ||
+      courseError.response?.status === 400)
+  ) {
+    return <NotFoundPage />;
+  }
+
   if (isLoadingCourse || (isAuthenticated && isLoadingEnrollment) || !course) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -771,6 +791,13 @@ export function LessonViewerPage() {
                   (currentLesson.content?.length ?? 0) === 0 ? null : (
                     <LessonContent blocks={currentLesson.content} />
                   )}
+
+                  <LessonResources
+                    courseId={id}
+                    lessonId={currentLesson.id}
+                    resources={currentLesson.resources ?? []}
+                    isInstructor={isInstructor}
+                  />
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -793,8 +820,8 @@ export function LessonViewerPage() {
                 : {
                     allowedLanguages: [
                       {
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                         language:
+                          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                           (ideConfig.language as string) ?? 'javascript',
                         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                         initialCode: (ideConfig.initialCode as string) ?? '',
@@ -804,8 +831,8 @@ export function LessonViewerPage() {
                           | undefined,
                       },
                     ],
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                     defaultLanguage:
+                      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                       (ideConfig.language as string) ?? 'javascript',
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                     instructions: ideConfig.instructions as string | undefined,

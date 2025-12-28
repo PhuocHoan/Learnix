@@ -71,8 +71,10 @@ import {
   type Lesson,
   type CreateLessonData,
   type LessonBlock,
+  type LessonResource,
   type CourseSection as Section,
 } from '@/features/courses/api/courses-api';
+import { LessonResources } from '@/features/courses/components/lesson-resources';
 import {
   quizzesApi,
   type CreateQuestionData,
@@ -1307,6 +1309,11 @@ function AddLessonDialog({
   >({});
   const [testCodes, setTestCodes] = useState<Record<string, string>>({});
 
+  // Pending resources for new lessons
+  const [pendingResources, setPendingResources] = useState<LessonResource[]>(
+    [],
+  );
+
   // Initialize state from existing lesson
   useEffect(() => {
     if (open) {
@@ -1357,6 +1364,7 @@ function AddLessonDialog({
         setCodeTemplates({ javascript: getDefaultCode('javascript') });
         setExpectedOutputs({});
         setTestCodes({});
+        setPendingResources([]);
       }
     }
   }, [open, existingLesson, form]);
@@ -1412,12 +1420,36 @@ function AddLessonDialog({
       if (existingLesson) {
         return coursesApi.updateLesson(existingLesson.id, data);
       }
-      return coursesApi.createLesson(sectionId, data);
+      return coursesApi.createLesson(sectionId, data).then(async (lesson) => {
+        if (pendingResources.length > 0) {
+          await Promise.all(
+            pendingResources.map((r) =>
+              coursesApi.addResource(lesson.id, {
+                title: r.title,
+                type: r.type,
+                url: r.url,
+                fileSize: r.fileSize,
+              }),
+            ),
+          );
+        }
+        return lesson;
+      });
     },
     onSuccess: () => {
       toast.success(`Lesson ${existingLesson ? 'updated' : 'added'}`);
+
+      // If we have pending resources (only for new lessons), save them now
+      if (!existingLesson && pendingResources.length > 0) {
+        // We need the ID of the newly created lesson.
+        // But mutation.data might not be easily accessible here if we don't return it or handle onSuccess data.
+        // Let's rely on the fact that for createLesson, we should get the created lesson back.
+        // Actually react-query onSuccess passes data as first arg.
+      }
+
       setOpen(false);
       form.reset();
+      setPendingResources([]);
       void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
     },
   });
@@ -1713,8 +1745,8 @@ function AddLessonDialog({
                     </p>
                     <div className="h-[200px] border border-border rounded-xl overflow-hidden">
                       <CodeEditor
-                        // eslint-disable-next-line security/detect-object-injection
                         initialValue={
+                          // eslint-disable-next-line security/detect-object-injection
                           testCodes[editingLanguage] ||
                           getDefaultTestCode(editingLanguage)
                         }
@@ -1767,6 +1799,40 @@ function AddLessonDialog({
             </Button>
           </DialogFooter>
         </form>
+
+        {existingLesson && (
+          <div className="mt-8">
+            <LessonResources
+              courseId={courseId}
+              lessonId={existingLesson.id}
+              resources={existingLesson.resources ?? []}
+              isInstructor={true}
+            />
+          </div>
+        )}
+        {!existingLesson && (
+          <div className="mt-8">
+            <LessonResources
+              courseId={courseId}
+              lessonId="" // Not needed for draft
+              resources={pendingResources}
+              isInstructor={true}
+              onAddResource={(newRes) => {
+                const res: LessonResource = {
+                  ...newRes,
+                  id: crypto.randomUUID(), // Temp ID
+                  lessonId: '',
+                };
+                setPendingResources([...pendingResources, res]);
+              }}
+              onRemoveResource={(resId) => {
+                setPendingResources(
+                  pendingResources.filter((r) => r.id !== resId),
+                );
+              }}
+            />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

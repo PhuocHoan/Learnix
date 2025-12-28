@@ -7,11 +7,18 @@ import { QuizzesModule } from '../quizzes/quizzes.module';
 import { CourseSection } from './entities/course-section.entity';
 import { Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
+import { LessonResource } from './entities/lesson-resource.entity';
 import { Lesson } from './entities/lesson.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Course, CourseSection, Lesson, Enrollment]),
+    TypeOrmModule.forFeature([
+      Course,
+      CourseSection,
+      Lesson,
+      Enrollment,
+      LessonResource,
+    ]),
     QuizzesModule,
   ],
   controllers: [CoursesController],

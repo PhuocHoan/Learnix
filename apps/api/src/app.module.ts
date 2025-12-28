@@ -9,6 +9,7 @@ import { CoursesModule } from './courses/courses.module';
 import { CourseSection } from './courses/entities/course-section.entity';
 import { Course } from './courses/entities/course.entity';
 import { Enrollment } from './courses/entities/enrollment.entity';
+import { LessonResource } from './courses/entities/lesson-resource.entity';
 import { Lesson } from './courses/entities/lesson.entity';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ExercisesModule } from './exercises/exercises.module';
@@ -53,6 +54,7 @@ import { UsersModule } from './users/users.module';
               Course,
               CourseSection,
               Lesson,
+              LessonResource,
               QuizSubmission,
             ],
             synchronize: !isProduction,
@@ -96,6 +98,7 @@ import { UsersModule } from './users/users.module';
             Course,
             CourseSection,
             Lesson,
+            LessonResource,
             QuizSubmission,
           ],
           synchronize: !isProduction,

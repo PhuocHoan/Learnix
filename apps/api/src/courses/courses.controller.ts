@@ -8,6 +8,7 @@ import {
   Query,
   Body,
   Delete,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 
 import {
@@ -18,6 +19,7 @@ import {
 } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { CreateLessonDto } from './dto/create-lesson.dto';
+import { CreateResourceDto } from './dto/create-resource.dto';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { GenerateQuizPreviewDto } from './dto/generate-quiz-preview.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -25,6 +27,7 @@ import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { CourseSection } from './entities/course-section.entity';
 import { CourseLevel, Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
+import { LessonResource } from './entities/lesson-resource.entity';
 import { Lesson } from './entities/lesson.entity';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -115,7 +118,7 @@ export class CoursesController {
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
   findOne(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user?: User,
   ): Promise<Course> {
     return this.coursesService.findOne(id, user);
@@ -125,7 +128,7 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   async enroll(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: User,
   ): Promise<Enrollment> {
     return this.coursesService.enroll(user.id, id);
@@ -134,7 +137,7 @@ export class CoursesController {
   @Get(':id/enrollment')
   @UseGuards(JwtAuthGuard)
   async checkEnrollment(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: User,
   ): Promise<{
     isEnrolled: boolean;
@@ -160,8 +163,8 @@ export class CoursesController {
   @Get(':id/lessons/:lessonId')
   @UseGuards(JwtAuthGuard)
   async getLesson(
-    @Param('id') courseId: string,
-    @Param('lessonId') lessonId: string,
+    @Param('id', ParseUUIDPipe) courseId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @CurrentUser() user: User,
   ): Promise<{ lesson: Lesson; hasAccess: boolean }> {
     return this.coursesService.getLessonWithAccessControl(
@@ -175,8 +178,8 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   async completeLesson(
-    @Param('id') courseId: string,
-    @Param('lessonId') lessonId: string,
+    @Param('id', ParseUUIDPipe) courseId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @CurrentUser() user: User,
   ): Promise<Enrollment | null> {
     return this.coursesService.completeLesson(user, courseId, lessonId);
@@ -189,7 +192,7 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   async archiveCourse(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: User,
   ): Promise<{ success: boolean; message: string }> {
     await this.coursesService.archiveCourse(user.id, id);
@@ -203,7 +206,7 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
   async unarchiveCourse(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: User,
   ): Promise<{ success: boolean; message: string }> {
     await this.coursesService.unarchiveCourse(user.id, id);
@@ -224,7 +227,7 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateCourseDto: UpdateCourseDto,
     @CurrentUser() user: User,
   ): Promise<Course> {
@@ -234,7 +237,10 @@ export class CoursesController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
-  remove(@Param('id') id: string, @CurrentUser() user: User): Promise<void> {
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: User,
+  ): Promise<void> {
     return this.coursesService.remove(id, user.id);
   }
 
@@ -244,7 +250,7 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
   createSection(
-    @Param('id') courseId: string,
+    @Param('id', ParseUUIDPipe) courseId: string,
     @Body() dto: CreateSectionDto,
     @CurrentUser() user: User,
   ): Promise<CourseSection> {
@@ -255,7 +261,7 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
   deleteSection(
-    @Param('sectionId') sectionId: string,
+    @Param('sectionId', ParseUUIDPipe) sectionId: string,
     @CurrentUser() user: User,
   ): Promise<void> {
     return this.coursesService.removeSection(sectionId, user.id);
@@ -265,7 +271,7 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
   createLesson(
-    @Param('sectionId') sectionId: string,
+    @Param('sectionId', ParseUUIDPipe) sectionId: string,
     @Body() dto: CreateLessonDto,
     @CurrentUser() user: User,
   ): Promise<Lesson> {
@@ -276,7 +282,7 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
   updateLesson(
-    @Param('lessonId') lessonId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Body() dto: UpdateLessonDto,
     @CurrentUser() user: User,
   ): Promise<Lesson> {
@@ -287,17 +293,38 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
   deleteLesson(
-    @Param('lessonId') lessonId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @CurrentUser() user: User,
   ): Promise<void> {
     return this.coursesService.removeLesson(lessonId, user.id);
+  }
+
+  @Post(':id/lessons/:lessonId/resources')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR)
+  async addResource(
+    @Param('lessonId') lessonId: string,
+    @Body() dto: CreateResourceDto,
+    @CurrentUser() user: User,
+  ): Promise<LessonResource> {
+    return this.coursesService.addResource(lessonId, dto, user.id);
+  }
+
+  @Delete('lessons/resources/:resourceId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.INSTRUCTOR)
+  async removeResource(
+    @Param('resourceId') resourceId: string,
+    @CurrentUser() user: User,
+  ): Promise<void> {
+    return this.coursesService.removeResource(resourceId, user.id);
   }
 
   @Post(':id/sections/reorder')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
   reorderSections(
-    @Param('id') courseId: string,
+    @Param('id', ParseUUIDPipe) courseId: string,
     @Body('sectionIds') sectionIds: string[],
     @CurrentUser() user: User,
   ): Promise<void> {
@@ -308,7 +335,7 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
   reorderLessons(
-    @Param('sectionId') sectionId: string,
+    @Param('sectionId', ParseUUIDPipe) sectionId: string,
     @Body('lessonIds') lessonIds: string[],
     @CurrentUser() user: User,
   ): Promise<void> {
@@ -317,14 +344,17 @@ export class CoursesController {
   @Patch(':id/submit')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
-  submit(@Param('id') id: string, @CurrentUser() user: User): Promise<Course> {
-    return this.coursesService.submitForApproval(id, user.id);
+  submit(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() _user: User,
+  ): Promise<Course> {
+    return this.coursesService.submitForApproval(id);
   }
 
   @Patch(':id/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  approve(@Param('id') id: string): Promise<Course> {
+  approve(@Param('id', ParseUUIDPipe) id: string): Promise<Course> {
     return this.coursesService.approveCourse(id);
   }
 
@@ -340,7 +370,10 @@ export class CoursesController {
   @Patch(':id/reject')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  reject(@Param('id') id: string): Promise<Course> {
-    return this.coursesService.rejectCourse(id);
+  reject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('reason') reason: string,
+  ): Promise<Course> {
+    return this.coursesService.rejectCourse(id, reason);
   }
 }

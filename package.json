@@ -29,6 +29,7 @@
     "@tiptap/react": "^3.14.0",
     "@tiptap/starter-kit": "^3.14.0",
     "cookie-parser": "^1.4.7",
+    "cross-env": "^10.1.0",
     "react-markdown": "^10.1.0",
     "reflect-metadata": "^0.2.2",
     "remark-gfm": "^4.0.1",

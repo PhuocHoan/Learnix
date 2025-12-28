@@ -18,6 +18,23 @@ export interface Lesson {
   durationSeconds: number;
   isFreePreview: boolean;
   orderIndex: number;
+  resources: LessonResource[];
+}
+
+export interface LessonResource {
+  id: string;
+  title: string;
+  type: 'file' | 'link';
+  url: string;
+  fileSize?: number;
+  lessonId: string;
+}
+
+export interface CreateResourceData {
+  title: string;
+  type: 'file' | 'link';
+  url: string;
+  fileSize?: number;
 }
 
 export interface CourseSection {
@@ -322,5 +339,20 @@ export const coursesApi = {
   submitForApproval: async (id: string): Promise<Course> => {
     const response = await api.patch<Course>(`/courses/${id}/submit`);
     return response.data;
+  },
+
+  addResource: async (
+    lessonId: string,
+    data: CreateResourceData,
+  ): Promise<LessonResource> => {
+    const response = await api.post<LessonResource>(
+      `/courses/lessons/${lessonId}/resources`,
+      data,
+    );
+    return response.data;
+  },
+
+  removeResource: async (resourceId: string): Promise<void> => {
+    await api.delete(`/courses/lessons/resources/${resourceId}`);
   },
 };

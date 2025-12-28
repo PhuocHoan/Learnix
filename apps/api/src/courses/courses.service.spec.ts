@@ -10,6 +10,7 @@ import { CoursesService } from './courses.service';
 import { CourseSection } from './entities/course-section.entity';
 import { Course, CourseLevel } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
+import { LessonResource } from './entities/lesson-resource.entity';
 import { Lesson } from './entities/lesson.entity';
 import { CourseStatus } from './enums/course-status.enum';
 import { AiQuizGeneratorService } from '../quizzes/services/ai-quiz-generator.service';
@@ -52,6 +53,20 @@ interface MockCourseSectionRepository {
 }
 
 const mockCourseSectionRepositoryValue: MockCourseSectionRepository = {
+  findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+  remove: jest.fn(),
+};
+
+interface MockResourceRepository {
+  findOne: jest.Mock;
+  create: jest.Mock;
+  save: jest.Mock;
+  remove: jest.Mock;
+}
+
+const mockResourceRepositoryValue: MockResourceRepository = {
   findOne: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
@@ -146,6 +161,10 @@ describe('CoursesService', () => {
         {
           provide: getRepositoryToken(CourseSection),
           useValue: mockCourseSectionRepositoryValue,
+        },
+        {
+          provide: getRepositoryToken(LessonResource),
+          useValue: mockResourceRepositoryValue,
         },
         {
           provide: AiQuizGeneratorService,

@@ -65,6 +65,7 @@ const mockCourse = {
           title: 'Introduction',
           type: 'standard' as 'standard' | 'quiz',
           content: [],
+          resources: [],
           durationSeconds: 600,
           isFreePreview: true,
           orderIndex: 0,
@@ -74,6 +75,7 @@ const mockCourse = {
           title: 'Setting Up',
           type: 'standard' as 'standard' | 'quiz',
           content: [],
+          resources: [],
           durationSeconds: 300,
           isFreePreview: false,
           orderIndex: 1,
@@ -364,7 +366,7 @@ describe('CourseDetailPage', () => {
 
   it('shows loading state while fetching', () => {
     vi.mocked(coursesApi.getCourse).mockImplementation(
-      () => new Promise(() => {}),
+      () => new Promise(() => { }),
     ); // Never resolves
     renderWithProviders();
 
@@ -376,8 +378,8 @@ describe('CourseDetailPage', () => {
       null as unknown as ReturnType<
         typeof coursesApi.getCourse
       > extends Promise<infer T>
-        ? T
-        : never,
+      ? T
+      : never,
     );
     renderWithProviders();
 

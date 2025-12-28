@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
@@ -10,6 +11,7 @@ import { Repository, Brackets } from 'typeorm';
 
 import { CreateCourseDto } from './dto/create-course.dto';
 import { CreateLessonDto } from './dto/create-lesson.dto';
+import { CreateResourceDto } from './dto/create-resource.dto';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { CourseFilterOptions } from './dto/filter-course.dto';
 import { GenerateQuizPreviewDto } from './dto/generate-quiz-preview.dto';
@@ -18,6 +20,7 @@ import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { CourseSection } from './entities/course-section.entity';
 import { Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
+import { LessonResource } from './entities/lesson-resource.entity';
 import { Lesson } from './entities/lesson.entity';
 import { CourseStatus } from './enums/course-status.enum';
 import {
@@ -78,6 +81,8 @@ export class CoursesService {
     private lessonRepository: Repository<Lesson>,
     @InjectRepository(CourseSection)
     private sectionRepository: Repository<CourseSection>,
+    @InjectRepository(LessonResource)
+    private resourceRepository: Repository<LessonResource>,
     private aiQuizService: AiQuizGeneratorService,
   ) {}
 
@@ -354,7 +359,7 @@ export class CoursesService {
     // Find the lesson
     const lesson = await this.lessonRepository.findOne({
       where: { id: lessonId },
-      relations: ['section', 'section.course'],
+      relations: ['section', 'section.course', 'resources'],
     });
 
     if (!lesson) {
@@ -799,6 +804,55 @@ export class CoursesService {
     });
   }
 
+  // --- Instructor: Resource Management ---
+
+  async addResource(
+    lessonId: string,
+    dto: CreateResourceDto,
+    instructorId: string,
+  ): Promise<LessonResource> {
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: lessonId },
+      relations: ['section', 'section.course'],
+    });
+
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+
+    if (lesson.section.course.instructorId !== instructorId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const resource = this.resourceRepository.create({
+      ...dto,
+      type: dto.type,
+      lessonId,
+    });
+
+    return this.resourceRepository.save(resource);
+  }
+
+  async removeResource(
+    resourceId: string,
+    instructorId: string,
+  ): Promise<void> {
+    const resource = await this.resourceRepository.findOne({
+      where: { id: resourceId },
+      relations: ['lesson', 'lesson.section', 'lesson.section.course'],
+    });
+
+    if (!resource) {
+      throw new NotFoundException('Resource not found');
+    }
+
+    if (resource.lesson.section.course.instructorId !== instructorId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    await this.resourceRepository.remove(resource);
+  }
+
   async reorderLessons(
     sectionId: string,
     lessonIds: string[],
@@ -817,6 +871,25 @@ export class CoursesService {
       throw new ForbiddenException('Access denied');
     }
 
+    // Validate that all lessons belong to the section
+    const lessons = await this.lessonRepository.find({
+      where: lessonIds.map((id) => ({ id })),
+    });
+
+    const lessonMap = new Map(lessons.map((l) => [l.id, l]));
+
+    for (const id of lessonIds) {
+      const lesson = lessonMap.get(id);
+      if (!lesson) {
+        throw new BadRequestException(`Lesson ${id} not found`);
+      }
+      if (lesson.sectionId !== sectionId) {
+        throw new BadRequestException(
+          `Lesson ${id} does not belong to section ${sectionId}`,
+        );
+      }
+    }
+
     await this.lessonRepository.manager.transaction(async (manager) => {
       for (const [index, lessonId] of lessonIds.entries()) {
         await manager.update(Lesson, lessonId, { orderIndex: index });
@@ -824,11 +897,11 @@ export class CoursesService {
     });
   }
 
-  // --- Statistics ---
-
   async count(): Promise<number> {
     return this.coursesRepository.count();
   }
+
+  // --- Statistics ---
 
   async countEnrollments(): Promise<number> {
     return this.enrollmentRepository.count();
@@ -836,28 +909,35 @@ export class CoursesService {
 
   // --- Moderation ---
 
-  async submitForApproval(id: string, userId: string): Promise<Course> {
-    const course = await this.findOne(id, { id: userId });
-    if (course.instructorId !== userId) {
-      throw new ForbiddenException(
-        'Only the instructor can submit this course',
-      );
+  async submitForApproval(id: string): Promise<Course> {
+    const course = await this.findOne(id);
+    if (course.status !== CourseStatus.DRAFT) {
+      throw new BadRequestException('Only draft courses can be submitted');
     }
+
     course.status = CourseStatus.PENDING;
     return this.coursesRepository.save(course);
   }
 
   async approveCourse(id: string): Promise<Course> {
-    const course = await this.findOne(id, { role: UserRole.ADMIN });
+    const course = await this.findOne(id);
+    if (course.status !== CourseStatus.PENDING) {
+      throw new BadRequestException('Course is not pending approval');
+    }
+
     course.status = CourseStatus.PUBLISHED;
     course.isPublished = true;
     return this.coursesRepository.save(course);
   }
 
-  async rejectCourse(id: string): Promise<Course> {
-    const course = await this.findOne(id, { role: UserRole.ADMIN });
+  async rejectCourse(id: string, _reason: string): Promise<Course> {
+    const course = await this.findOne(id);
+    if (course.status !== CourseStatus.PENDING) {
+      throw new BadRequestException('Course is not pending approval');
+    }
+
     course.status = CourseStatus.REJECTED;
-    course.isPublished = false;
+    // course.rejectionReason = reason; // Assuming we add this field later
     return this.coursesRepository.save(course);
   }
 
@@ -872,13 +952,8 @@ export class CoursesService {
   async generateQuizPreview(
     dto: GenerateQuizPreviewDto,
   ): Promise<{ title: string; questions: GeneratedQuestion[] }> {
-    const { lessonIds, count = 5, topic } = dto;
+    const { lessonIds, count, topic, preferredTypes } = dto;
 
-    if (lessonIds.length === 0) {
-      throw new ConflictException('No lessons selected');
-    }
-
-    // Fetch lessons with content
     const lessons = await this.lessonRepository.find({
       where: lessonIds.map((id) => ({ id })),
     });
@@ -916,7 +991,7 @@ export class CoursesService {
     return this.aiQuizService.generateQuizFromText(
       combinedText,
       count,
-      dto.preferredTypes,
+      preferredTypes,
     );
   }
 }

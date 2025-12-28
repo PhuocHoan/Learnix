@@ -6,9 +6,12 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 
 import { CourseSection } from './course-section.entity';
+
+import type { LessonResource } from './lesson-resource.entity';
 
 // Define the types of blocks we support
 export type BlockType = 'text' | 'video' | 'image' | 'code' | 'file';
@@ -74,6 +77,11 @@ export class Lesson {
   })
   @JoinColumn({ name: 'section_id' })
   section: CourseSection;
+
+  @OneToMany('LessonResource', (resource: LessonResource) => resource.lesson, {
+    cascade: true,
+  })
+  resources: LessonResource[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
