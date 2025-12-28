@@ -366,7 +366,7 @@ describe('CourseDetailPage', () => {
 
   it('shows loading state while fetching', () => {
     vi.mocked(coursesApi.getCourse).mockImplementation(
-      () => new Promise(() => { }),
+      () => new Promise(() => {}),
     ); // Never resolves
     renderWithProviders();
 
@@ -378,8 +378,8 @@ describe('CourseDetailPage', () => {
       null as unknown as ReturnType<
         typeof coursesApi.getCourse
       > extends Promise<infer T>
-      ? T
-      : never,
+        ? T
+        : never,
     );
     renderWithProviders();
 
