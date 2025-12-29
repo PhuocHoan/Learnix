@@ -94,7 +94,7 @@ export function RegisterForm() {
         <p className="text-muted-foreground">{success}</p>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <p className="text-sm text-muted-foreground">
-          Didn't receive the email? Check your spam folder or{' '}
+          Didn&apos;t receive the email? Check your spam folder or{' '}
           <button
             onClick={() => void handleResendActivation()}
             disabled={isResending}
@@ -111,7 +111,10 @@ export function RegisterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form
+      onSubmit={(e) => void handleSubmit(onSubmit)(e)}
+      className="space-y-4"
+    >
       {error && (
         <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-xl border border-destructive/20">
           <AlertCircle className="w-4 h-4 shrink-0" />

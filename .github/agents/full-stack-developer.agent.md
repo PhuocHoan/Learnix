@@ -41,7 +41,6 @@ You are an expert Full Stack Developer specializing in the Learnix stack: **Reac
 - **Build**: Vite 7.
 - **Styling**: Tailwind CSS v4 (CSS-first configuration).
 - **State/Data**: TanStack Query v5.
-- **UI Library**: Shadcn UI.
 - **Testing**: Vitest.
 - **Deployment**: Vercel (static hosting).
 - **Reference**: Follow `.github/instructions/frontend.instructions.md`.

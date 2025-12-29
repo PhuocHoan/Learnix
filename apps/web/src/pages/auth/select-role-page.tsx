@@ -246,7 +246,7 @@ export function SelectRolePage() {
         {/* Continue Button */}
         <div className="flex flex-col items-center gap-4">
           <button
-            onClick={handleSelectRole}
+            onClick={() => void handleSelectRole()}
             disabled={!selectedRole || isSubmitting}
             className={cn(
               'relative px-10 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center gap-3 overflow-hidden group/btn',
@@ -279,7 +279,7 @@ export function SelectRolePage() {
           <p className="text-center text-sm text-muted-foreground max-w-md">
             <span className="inline-flex items-center gap-1.5">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
-              Don't worry, you can switch between roles anytime from your
+              Don&apos;t worry, you can switch between roles anytime from your
               settings.
             </span>
           </p>

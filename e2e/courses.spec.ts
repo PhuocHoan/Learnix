@@ -46,11 +46,13 @@ test.describe('Courses Browsing Page', () => {
     }
 
     // Select beginner level - should work regardless of course availability
-    const levelSelect = page.locator('select').first();
-    await levelSelect.selectOption('beginner');
+    // Radix UI Select interaction
+    const levelSelect = page.getByRole('combobox').first();
+    await levelSelect.click();
+    await page.getByRole('option', { name: 'Beginner' }).click();
 
-    // Verify the filter is applied
-    await expect(levelSelect).toHaveValue('beginner');
+    // Verify the filter is applied - trigger shows selected text
+    await expect(levelSelect).toHaveText(/Beginner/i);
   });
 
   test('should add and remove tags', async ({ page }) => {
@@ -99,11 +101,13 @@ test.describe('Courses Browsing Page', () => {
     }
 
     // Change sort order - should work regardless of course availability
-    const sortSelect = page.locator('select').nth(1);
-    await sortSelect.selectOption('price-ASC');
+    // Change sort order
+    const sortSelect = page.getByRole('combobox').nth(1);
+    await sortSelect.click();
+    await page.getByRole('option', { name: 'Price: Low to High' }).click();
 
     // Verify sort is applied
-    await expect(sortSelect).toHaveValue('price-ASC');
+    await expect(sortSelect).toHaveText(/Price: Low to High/i);
   });
 
   test('should handle URL search params from external navigation', async ({

@@ -64,6 +64,8 @@ export function QuizPlayer({ quiz, onComplete }: QuizPlayerProps) {
       void queryClient.invalidateQueries({
         queryKey: ['quiz-submission', quiz.id],
       });
+      // Force refresh notifications to show the new notification immediately
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
       setIsRetaking(false);
       if (onComplete) {
         onComplete();
@@ -76,7 +78,7 @@ export function QuizPlayer({ quiz, onComplete }: QuizPlayerProps) {
     },
   });
 
-  // Resume quiz from saved responses if not completed
+  // Resume quiz from saved responses if uncompleted
   if (
     submission &&
     !submission.completedAt &&

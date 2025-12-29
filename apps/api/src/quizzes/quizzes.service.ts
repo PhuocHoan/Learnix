@@ -1,7 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-
 import { Repository, IsNull } from 'typeorm';
+
+import { CourseSection } from '../courses/entities/course-section.entity';
+import { Lesson } from '../courses/entities/lesson.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { CreateQuizDto } from './dto/create-quiz.dto';
@@ -11,8 +14,10 @@ import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { Question } from './entities/question.entity';
 import { QuizSubmission } from './entities/quiz-submission.entity';
 import { Quiz, QuizStatus } from './entities/quiz.entity';
-import { AiQuizGeneratorService } from './services/ai-quiz-generator.service';
-import { Lesson } from '../courses/entities/lesson.entity';
+import {
+  AiQuizGeneratorService,
+  GeneratedQuestion,
+} from './services/ai-quiz-generator.service';
 
 @Injectable()
 export class QuizzesService {
@@ -26,6 +31,7 @@ export class QuizzesService {
     @InjectRepository(Lesson)
     private lessonsRepository: Repository<Lesson>,
     private aiQuizGenerator: AiQuizGeneratorService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async create(createDto: CreateQuizDto, instructorId: string): Promise<Quiz> {
@@ -57,7 +63,19 @@ export class QuizzesService {
       await this.questionsRepository.save(questionEntities);
     }
 
-    return this.findOne(savedQuiz.id);
+    return await this.findOne(savedQuiz.id);
+  }
+
+  async generateQuiz(
+    lessonText: string,
+    count: number,
+    types: string[],
+  ): Promise<{ title: string; questions: GeneratedQuestion[] }> {
+    return await this.aiQuizGenerator.generateQuizFromText(
+      lessonText,
+      count,
+      types,
+    );
   }
 
   async update(id: string, updateDto: UpdateQuizDto): Promise<Quiz> {
@@ -73,7 +91,7 @@ export class QuizzesService {
       await this.lessonsRepository.update(quiz.lessonId, { title: data.title });
     }
 
-    return this.quizzesRepository.save(quiz);
+    return await this.quizzesRepository.save(quiz);
   }
 
   async createQuestion(
@@ -94,7 +112,7 @@ export class QuizzesService {
     });
     question.position = (lastQuestion?.position ?? 0) + 1;
 
-    return this.questionsRepository.save(question);
+    return await this.questionsRepository.save(question);
   }
 
   async findByLesson(lessonId: string): Promise<Quiz | null> {
@@ -113,7 +131,7 @@ export class QuizzesService {
     }
 
     // Fallback: return latest quiz even if it has no questions.
-    return this.quizzesRepository.findOne({
+    return await this.quizzesRepository.findOne({
       where: { lessonId },
       relations: ['questions'],
       order: {
@@ -156,7 +174,7 @@ export class QuizzesService {
     }
 
     Object.assign(question, updateDto);
-    return this.questionsRepository.save(question);
+    return await this.questionsRepository.save(question);
   }
 
   async deleteQuestion(questionId: string): Promise<void> {
@@ -169,11 +187,11 @@ export class QuizzesService {
   async approveQuiz(quizId: string): Promise<Quiz> {
     const quiz = await this.findOne(quizId);
     quiz.status = QuizStatus.APPROVED;
-    return this.quizzesRepository.save(quiz);
+    return await this.quizzesRepository.save(quiz);
   }
 
   async findByInstructor(instructorId: string): Promise<Quiz[]> {
-    return this.quizzesRepository.find({
+    return await this.quizzesRepository.find({
       where: { createdBy: instructorId },
       relations: ['questions'],
       order: { createdAt: 'DESC' },
@@ -220,7 +238,7 @@ export class QuizzesService {
       submission.responses = { ...submission.responses, ...answers };
     }
 
-    return this.submissionRepository.save(submission);
+    return await this.submissionRepository.save(submission);
   }
 
   async submitQuiz(
@@ -229,6 +247,25 @@ export class QuizzesService {
     submitDto: SubmitQuizDto,
   ): Promise<QuizSubmission> {
     const quiz = await this.findOne(quizId);
+
+    // Resolve courseId if missing (often missing on quizzes attached to lessons)
+    if (!quiz.courseId && quiz.lessonId) {
+      const lesson = await this.lessonsRepository.findOne({
+        where: { id: quiz.lessonId },
+        relations: ['section'],
+      });
+      if (lesson?.section?.courseId) {
+        quiz.courseId = lesson.section.courseId;
+      } else if (lesson?.sectionId) {
+        // Fallback: try to find section directly
+        const section = await this.lessonsRepository.manager
+          .getRepository(CourseSection)
+          .findOne({ where: { id: lesson.sectionId } });
+        if (section?.courseId) {
+          quiz.courseId = section.courseId;
+        }
+      }
+    }
 
     let score = 0;
     let totalPoints = 0;
@@ -295,7 +332,19 @@ export class QuizzesService {
       });
     }
 
-    return this.submissionRepository.save(submission);
+    const savedSubmission = await this.submissionRepository.save(submission);
+
+    // Notify user of quiz completion
+    await this.notificationsService.notifyQuizSubmitted(
+      userId,
+      quiz.title,
+      score,
+      percentage,
+      quiz.courseId,
+      quiz.lessonId,
+    );
+
+    return savedSubmission;
   }
 
   async getSubmission(
@@ -304,7 +353,7 @@ export class QuizzesService {
   ): Promise<QuizSubmission | null> {
     // Return the latest submission, regardless of completion status.
     // Frontend handles distinguishing incomplete/complete.
-    return this.submissionRepository.findOne({
+    return await this.submissionRepository.findOne({
       where: { userId, quizId },
       order: { completedAt: 'DESC' },
     });

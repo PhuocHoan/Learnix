@@ -3,7 +3,6 @@ import { Readable } from 'stream';
 
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
 import {
   v2 as cloudinary,
   UploadApiResponse,
@@ -60,6 +59,7 @@ export class CloudinaryService {
       publicId?: string;
       resourceType?: 'image' | 'video' | 'raw' | 'auto';
       transformation?: Record<string, unknown>;
+      originalFilename?: string;
     } = {},
   ): Promise<CloudinaryUploadResult> {
     if (!this.isConfigured) {
@@ -76,11 +76,30 @@ export class CloudinaryService {
 
     if (!publicId) {
       const hash = createHash('md5').update(buffer).digest('hex');
-      publicId = hash;
+
+      // Append extension if original filename is provided (crucial for raw files)
+      let extension = '';
+
+      // Only append extension for 'raw' resource type
+      // For 'image', 'video' and 'auto' (which resolves to these), Cloudinary adds extension to URL
+      // so if we add it to publicId, we get double extension (e.g. file.pdf.pdf)
+      const isRawFile = options.resourceType === 'raw';
+
+      if (isRawFile && options.originalFilename) {
+        const parts = options.originalFilename.split('.');
+        if (parts.length > 1) {
+          const ext = parts.pop();
+          if (ext) {
+            extension = `.${ext}`;
+          }
+        }
+      }
+
+      publicId = `${hash}${extension}`;
       overwrite = false; // Do not overwrite if we are using content hash (deduplication)
     }
 
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: options.folder ?? 'learnix',
@@ -154,12 +173,22 @@ export class CloudinaryService {
         resourceType = 'image';
       } else if (file.mimetype.startsWith('video/')) {
         resourceType = 'video';
+      } else if (file.mimetype === 'application/pdf') {
+        // Force PDF to be 'image' to allow previews, transformations (fl_attachment),
+        // and consistent extension handling (Cloudinary adds .pdf to URL automatically).
+        // 'auto' is risky as it might resolve to 'raw' which breaks fl_attachment and extension logic.
+        resourceType = 'image';
+      } else {
+        // Default to raw for other files (docs, zips) to avoid auto-detection fails
+        // and to ensure they are stored as-is with original extension behaviors.
+        resourceType = 'raw';
       }
     }
 
-    return this.uploadBuffer(buffer, {
+    return await this.uploadBuffer(buffer, {
       ...options,
       resourceType,
+      originalFilename: file.originalname,
     });
   }
 
@@ -169,7 +198,7 @@ export class CloudinaryService {
   async uploadAvatar(
     file: Express.Multer.File,
   ): Promise<CloudinaryUploadResult> {
-    return this.uploadFile(file, {
+    return await this.uploadFile(file, {
       folder: 'learnix/avatars',
       transformation: {
         width: 400,
@@ -188,7 +217,7 @@ export class CloudinaryService {
   async uploadGeneralImage(
     file: Express.Multer.File,
   ): Promise<CloudinaryUploadResult> {
-    return this.uploadFile(file, {
+    return await this.uploadFile(file, {
       folder: 'learnix/images',
       transformation: {
         width: 1920,
@@ -206,7 +235,7 @@ export class CloudinaryService {
   async uploadCourseImage(
     file: Express.Multer.File,
   ): Promise<CloudinaryUploadResult> {
-    return this.uploadFile(file, {
+    return await this.uploadFile(file, {
       folder: 'learnix/courses',
       transformation: {
         width: 1200,
@@ -224,7 +253,7 @@ export class CloudinaryService {
   async uploadVideo(
     file: Express.Multer.File,
   ): Promise<CloudinaryUploadResult> {
-    return this.uploadFile(file, {
+    return await this.uploadFile(file, {
       folder: 'learnix/videos',
       // Transformations on upload can cause "Video file corrupt" errors for some formats/sizes
       // It is safer to apply transformations on delivery

@@ -1,11 +1,12 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 
+import { type User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
+
 import { type Question } from './entities/question.entity';
 import { type Quiz, QuizStatus } from './entities/quiz.entity';
 import { QuizzesController } from './quizzes.controller';
 import { QuizzesService } from './quizzes.service';
-import { type User } from '../users/entities/user.entity';
-import { UserRole } from '../users/enums/user-role.enum';
 
 describe('QuizzesController', () => {
   let controller: QuizzesController;

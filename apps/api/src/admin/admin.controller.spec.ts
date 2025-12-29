@@ -1,9 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 
-import { AdminController } from './admin.controller';
-import { AdminService } from './admin.service';
 import { UserRole } from '../users/enums/user-role.enum';
 import { UsersService } from '../users/users.service';
+
+import { AdminController } from './admin.controller';
+import { AdminService } from './admin.service';
 
 import type { User } from '../users/entities/user.entity';
 

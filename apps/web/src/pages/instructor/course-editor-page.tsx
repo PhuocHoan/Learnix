@@ -33,8 +33,9 @@ import {
   BrainCircuit,
   X,
   Check,
+  RefreshCw,
 } from 'lucide-react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -62,6 +63,13 @@ import {
 } from '@/components/ui/dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -172,7 +180,7 @@ export default function CourseEditorPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/instructor/courses')}
+            onClick={() => void navigate('/instructor/courses')}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
@@ -271,7 +279,7 @@ export default function CourseEditorPage() {
             <DialogTitle>Submit for Approval</DialogTitle>
             <DialogDescription>
               Are you sure you want to submit this course for admin approval?
-              You won't be able to make changes until it's reviewed.
+              You won&apos;t be able to make changes until it&apos;s reviewed.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -349,8 +357,7 @@ function CourseDetailsForm({
       toast.success('Course created successfully');
       onSuccess(data.id);
     },
-    onError: (error) => {
-      console.error(error);
+    onError: () => {
       toast.error(
         'Unable to create course. Please check your information and try again.',
       );
@@ -374,8 +381,7 @@ function CourseDetailsForm({
       toast.success('Course updated successfully');
       void queryClient.invalidateQueries({ queryKey: ['course', course?.id] });
     },
-    onError: (error) => {
-      console.error(error);
+    onError: () => {
       toast.error('Unable to save changes. Please try again.');
     },
   });
@@ -428,7 +434,10 @@ function CourseDetailsForm({
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+    <form
+      onSubmit={(e) => void form.handleSubmit(onSubmit)(e)}
+      className="space-y-8"
+    >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <Card>
@@ -480,15 +489,27 @@ function CourseDetailsForm({
                   <label htmlFor="course-level" className="text-sm font-medium">
                     Level
                   </label>
-                  <select
-                    id="course-level"
-                    {...form.register('level')}
-                    className="w-full p-2.5 rounded-xl border border-input bg-background"
-                  >
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
+                  <Controller
+                    control={form.control}
+                    name="level"
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <SelectTrigger id="course-level">
+                          <SelectValue placeholder="Select level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="beginner">Beginner</SelectItem>
+                          <SelectItem value="intermediate">
+                            Intermediate
+                          </SelectItem>
+                          <SelectItem value="advanced">Advanced</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="course-price" className="text-sm font-medium">
@@ -544,86 +565,85 @@ function CourseDetailsForm({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="relative">
-                <label
-                  htmlFor="course-tags"
-                  className="text-sm font-medium mb-1 block"
-                >
+              <div className="space-y-2">
+                <label htmlFor="course-tags" className="text-sm font-medium">
                   Tags
                 </label>
-                <Input
-                  id="course-tags"
-                  value={tagInput}
-                  onChange={(e) => {
-                    setTagInput(e.target.value);
-                    setShowTagSuggestions(true);
-                  }}
-                  onKeyDown={handleTagInputKeyDown}
-                  onFocus={() => setShowTagSuggestions(true)}
-                  onBlur={() => {
-                    setTimeout(() => setShowTagSuggestions(false), 200);
-                  }}
-                  placeholder="Type to search or create tags..."
-                  className="pr-20"
-                />
-                {tagInput && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7"
-                    onClick={() => handleAddTag()}
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-1" />
-                    Add
-                  </Button>
-                )}
+                <div className="relative">
+                  <Input
+                    id="course-tags"
+                    value={tagInput}
+                    onChange={(e) => {
+                      setTagInput(e.target.value);
+                      setShowTagSuggestions(true);
+                    }}
+                    onKeyDown={handleTagInputKeyDown}
+                    onFocus={() => setShowTagSuggestions(true)}
+                    onBlur={() => {
+                      setTimeout(() => setShowTagSuggestions(false), 200);
+                    }}
+                    placeholder="Type to search or create tags..."
+                    className="pr-20"
+                  />
+                  {tagInput && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7"
+                      onClick={() => handleAddTag()}
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1" />
+                      Add
+                    </Button>
+                  )}
 
-                {showTagSuggestions &&
-                  tagInput &&
-                  (tagSuggestions.length > 0 || tagInput.trim()) && (
-                    <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg overflow-hidden max-h-64 overflow-y-auto">
-                      {tagSuggestions.length > 0 && (
-                        <>
-                          <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted sticky top-0">
-                            Existing tags
-                          </div>
-                          {tagSuggestions.map((tag) => (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() => handleAddTag(tag)}
-                              className="w-full px-3 py-2 text-left hover:bg-accent transition-colors flex items-center justify-between group"
-                            >
-                              <span className="text-sm">{tag}</span>
-                              <Plus className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
-                            </button>
-                          ))}
-                        </>
-                      )}
-                      {tagInput.trim() &&
-                        !availableTags.includes(tagInput.trim()) && (
+                  {showTagSuggestions &&
+                    tagInput &&
+                    (tagSuggestions.length > 0 || tagInput.trim()) && (
+                      <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg overflow-hidden max-h-64 overflow-y-auto">
+                        {tagSuggestions.length > 0 && (
                           <>
-                            {tagSuggestions.length > 0 && (
-                              <div className="h-px bg-border" />
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleAddTag()}
-                              className="w-full px-3 py-2 text-left hover:bg-accent transition-colors flex items-center justify-between group"
-                            >
-                              <span className="text-sm">
-                                Create{' '}
-                                <span className="font-medium">
-                                  &quot;{tagInput.trim()}&quot;
-                                </span>
-                              </span>
-                              <Plus className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
-                            </button>
+                            <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted sticky top-0">
+                              Existing tags
+                            </div>
+                            {tagSuggestions.map((tag) => (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => handleAddTag(tag)}
+                                className="w-full px-3 py-2 text-left hover:bg-accent transition-colors flex items-center justify-between group"
+                              >
+                                <span className="text-sm">{tag}</span>
+                                <Plus className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
+                              </button>
+                            ))}
                           </>
                         )}
-                    </div>
-                  )}
+                        {tagInput.trim() &&
+                          !availableTags.includes(tagInput.trim()) && (
+                            <>
+                              {tagSuggestions.length > 0 && (
+                                <div className="h-px bg-border" />
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleAddTag()}
+                                className="w-full px-3 py-2 text-left hover:bg-accent transition-colors flex items-center justify-between group"
+                              >
+                                <span className="text-sm">
+                                  Create{' '}
+                                  <span className="font-medium">
+                                    &quot;{tagInput.trim()}&quot;
+                                  </span>
+                                </span>
+                                <Plus className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
+                              </button>
+                            </>
+                          )}
+                      </div>
+                    )}
+                </div>
               </div>
 
               {tags.length > 0 && (
@@ -663,7 +683,7 @@ function CourseDetailsForm({
           type="button"
           variant="outline"
           size="lg"
-          onClick={() => navigate('/instructor/courses')}
+          onClick={() => void navigate('/instructor/courses')}
         >
           Cancel
         </Button>
@@ -748,8 +768,7 @@ function CurriculumEditor({ course }: { course: Course }) {
         sections: reordered,
       });
 
-      void coursesApi.reorderSections(course.id, sectionIds).catch((err) => {
-        console.error('Failed to reorder sections:', err);
+      void coursesApi.reorderSections(course.id, sectionIds).catch(() => {
         toast.error('Failed to save section order');
         void queryClient.invalidateQueries({ queryKey: ['course', course.id] });
       });
@@ -773,9 +792,11 @@ function CurriculumEditor({ course }: { course: Course }) {
         <Card className="border-primary/50 bg-primary/5">
           <CardContent className="p-4">
             <form
-              onSubmit={sectionForm.handleSubmit((data) =>
-                addSectionMutation.mutate(data),
-              )}
+              onSubmit={(e) =>
+                void sectionForm.handleSubmit((data) =>
+                  addSectionMutation.mutate(data),
+                )(e)
+              }
               className="flex gap-3 items-start"
             >
               <div className="flex-1">
@@ -944,8 +965,7 @@ function SortableSectionItem({
         ),
       });
 
-      void coursesApi.reorderLessons(section.id, lessonIds).catch((err) => {
-        console.error('Failed to reorder lessons:', err);
+      void coursesApi.reorderLessons(section.id, lessonIds).catch(() => {
         toast.error('Failed to save lesson order');
         void queryClient.invalidateQueries({ queryKey: ['course', course.id] });
       });
@@ -1181,7 +1201,7 @@ function LessonItem({
             size="sm"
             className="h-9 w-9 p-0 rounded-lg hover:bg-orange-500/10 hover:text-orange-600"
             onClick={() =>
-              navigate(
+              void navigate(
                 `/instructor/courses/${courseId}/quizzes/${lesson.id}/edit`,
               )
             }
@@ -1220,19 +1240,151 @@ function LessonItem({
 const getDefaultCode = (lang: string) => {
   switch (lang) {
     case 'javascript':
-      return '// Write your code here\nfunction solution(a, b) {\n    return a + b;\n}\n\n// console.log(solution(1, 2));';
+      return `// Write your code here
+function solution(a, b) {
+    return a + b;
+}
+
+// Input Example:
+// const n = parseInt(readline());      // Read an integer
+// const arr = readline().split(' ');   // Read an array string
+// print(arr);
+
+print(solution(1, 2));`;
+
     case 'typescript':
-      return '// Write your code here\nfunction solution(a: number, b: number): number {\n    return a + b;\n}\n\n// console.log(solution(1, 2));';
+      return `// Write your code here
+function solution(a: number, b: number): number {
+    return a + b;
+}
+
+// Input Example:
+// const n = parseInt(readline());      // Read an integer
+// const arr = readline().split(' ');   // Read an array string
+// print(arr);
+
+print(solution(1, 2));`;
+
     case 'python':
-      return '# Write your code here\ndef solution(a, b):\n    return a + b\n\n# print(solution(1, 2))';
+      return `# Write your code here
+def solution(a, b):
+    return a + b
+
+if __name__ == '__main__':
+    # Input Example:
+    # n = int(input())              # Read an integer
+    # arr = list(map(int, input().split())) # Read an array
+    
+    print(solution(1, 2))`;
+
     case 'java':
-      return '// Write your code here\npublic class Main {\n    public static int solution(int a, int b) {\n        return a + b;\n    }\n\n    public static void main(String[] args) {\n        System.out.println(solution(1, 2));\n    }\n}';
+      return `// Write your code here
+import java.util.*;
+import java.io.*;
+
+public class Main {
+    public static int solution(int a, int b) {
+        return a + b;
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        
+        // Input Example:
+        // int n = scanner.nextInt();       // Read an integer
+        // String s = scanner.next();       // Read a string token
+        // scanner.nextLine();              // Consume newline
+        
+        System.out.println(solution(1, 2));
+    }
+}`;
+
     case 'cpp':
-      return '// Write your code here\n#include <iostream>\n\nint solution(int a, int b) {\n    return a + b;\n}\n\nint main() {\n    std::cout << solution(1, 2) << std::endl;\n    return 0;\n}';
+      return `// Write your code here
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+int solution(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    // Input Example:
+    // int n;
+    // cin >> n;                  // Read an integer
+    // string s;
+    // cin >> s;                  // Read a string
+    
+    cout << solution(1, 2) << endl;
+    return 0;
+}`;
+
     case 'go':
-      return '// Write your code here\npackage main\n\nimport "fmt"\n\nfunc solution(a int, b int) int {\n    return a + b\n}\n\nfunc main() {\n    fmt.Println(solution(1, 2))\n}';
+      return `// Write your code here
+package main
+
+import (
+    "fmt"
+    "bufio"
+    "os"
+    "strings"
+    "strconv"
+)
+
+func solution(a int, b int) int {
+    return a + b
+}
+
+func main() {
+    // Input Example:
+    // scanner := bufio.NewScanner(os.Stdin)
+    // scanner.Scan()             // Read next token/line
+    // input := scanner.Text()
+    
+    fmt.Println(solution(1, 2))
+}`;
+
     case 'rust':
-      return '// Write your code here\nfn solution(a: i32, b: i32) -> i32 {\n    a + b\n}\n\nfn main() {\n    println!("{}", solution(1, 2));\n}';
+      return `// Write your code here
+use std::io::{self, Read, BufRead};
+
+fn solution(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+fn main() {
+    // Input Example:
+    // let stdin = io::stdin();
+    // let mut lines = stdin.lock().lines();
+    // let n: i32 = lines.next().unwrap().unwrap().parse().unwrap();
+    
+    println!("{}", solution(1, 2));
+}`;
+
+    case 'csharp':
+      return `// Write your code here
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+public class Program {
+    public static int Solution(int a, int b) {
+        return a + b;
+    }
+
+    public static void Main() {
+        // Input Example:
+        // string line = Console.ReadLine();      // Read a line
+        // int n = int.Parse(line);               // Parse integer
+        
+        Console.WriteLine(Solution(1, 2));
+    }
+}`;
+
     default:
       return '';
   }
@@ -1243,17 +1395,35 @@ const getDefaultTestCode = (lang: string) => {
     case 'javascript':
       return '// Logic Test (Concatenated to end)\nif (solution(2, 2) !== 4) throw new Error("Fail: 2+2 should be 4");\nif (solution(5, 5) !== 10) throw new Error("Fail: 5+5 should be 10");';
     case 'typescript':
-      return '// Logic Test (Concatenated to end)\nif (solution(2, 2) !== 4) throw new Error("Fail: 2+2 should be 4");';
+      return '// Logic Test (Concatenated to end)\n// Use "import * as fs from \\"fs\\";" if you need Stdin in TS\nif (solution(2, 2) !== 4) throw new Error("Fail: 2+2 should be 4");';
     case 'python':
-      return '# Logic Test (Concatenated to end)\nimport sys\nif solution(2, 2) != 4:\n    print("Fail: 2+2 != 4", file=sys.stderr)\n    sys.exit(1)';
+      return '# Logic Test (Concatenated to end)\nimport sys\ntry:\n    if solution(2, 2) != 4:\n        raise ValueError("Fail: 2+2 != 4")\n    print("All tests passed!")\nexcept Exception as e:\n    print(f"Test Failed: {e}", file=sys.stderr)\n    sys.exit(1)';
     case 'java':
-      return '// Logic Test (Concatenated to end)\n// For Java, simplistic concatenation requires care with Main/Entry points.\n// Ideally, remove main() from student code if using this.\nclass Test {\n    static { \n       if (Main.solution(2, 2) != 4) throw new RuntimeException("Fail");\n    }\n}';
+      return '// Logic Test (Concatenated to end)\n// NOTE: If using this, remove main() from student initial code.\nclass TestRunner {\n    public static void main(String[] args) {\n        if (Main.solution(2, 2) != 4) {\n             System.err.println("Fail: 2+2 != 4");\n             System.exit(1);\n        }\n        System.out.println("Success!");\n    }\n}';
     case 'cpp':
-      return '// Logic Test\n// Note: Student code should NOT satisfy linking main() if you add one here.\n// However, simple concat often fails for C++ due to multiple mains.\n// Recommended: Use Standard Output Matching for compiled languages unless you use a custom runner.';
+      return '// Logic Test (Concatenated to end)\n// NOTE: If using this, remove main() from student initial code.\nint main() {\n    if (solution(2, 2) != 4) {\n        std::cerr << "Fail: 2+2 != 4" << std::endl;\n        return 1;\n    }\n    std::cout << "Success!" << std::endl;\n    return 0;\n}';
     case 'go':
-      return '// Logic Test\n// Go does not allow multiple main functions or package redeclarations.\n// Recommended: Use Standard Output Matching.';
+      return '// Logic Test (Concatenated to end)\n// NOTE: Remove main() from student initial code.\nfunc main() {\n    if solution(2, 2) != 4 {\n        panic("Fail: 2+2 != 4")\n    }\n    fmt.Println("Success!")\n}';
     case 'rust':
-      return '// Logic Test\n// Rust does not allow multiple main functions.\n// Recommended: Use Standard Output Matching.';
+      return '// Logic Test (Concatenated to end)\n// NOTE: Remove main() from student initial code.\nfn main() {\n    assert_eq!(solution(2, 2), 4, "Fail: 2+2 != 4");\n    println!("Success!");\n}';
+    case 'csharp':
+      return '// Logic Test (Concatenated to end)\n// NOTE: Remove Main() from Program class in student initial code.\npublic class TestRunner {\n    public static void Main() {\n        if (Program.Solution(2, 2) != 4) {\n            Console.Error.WriteLine("Fail: 2+2 != 4");\n            Environment.Exit(1);\n        }\n        Console.WriteLine("Success!");\n    }\n}';
+    default:
+      return '';
+  }
+};
+
+const getDefaultExpectedOutput = (lang: string) => {
+  switch (lang) {
+    case 'javascript':
+    case 'typescript':
+    case 'python':
+    case 'java':
+    case 'cpp':
+    case 'go':
+    case 'rust':
+    case 'csharp':
+      return '3';
     default:
       return '';
   }
@@ -1301,13 +1471,13 @@ function AddLessonDialog({
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [defaultLanguage, setDefaultLanguage] = useState<string>('javascript');
   const [editingLanguage, setEditingLanguage] = useState<string>('javascript');
-  const [codeTemplates, setCodeTemplates] = useState<Record<string, string>>(
-    {},
+  const [codeTemplates, setCodeTemplates] = useState<Map<string, string>>(
+    new Map(),
   );
-  const [expectedOutputs, setExpectedOutputs] = useState<
-    Record<string, string>
-  >({});
-  const [testCodes, setTestCodes] = useState<Record<string, string>>({});
+  const [expectedOutputs, setExpectedOutputs] = useState<Map<string, string>>(
+    new Map(),
+  );
+  const [testCodes, setTestCodes] = useState<Map<string, string>>(new Map());
 
   // Pending resources for new lessons
   const [pendingResources, setPendingResources] = useState<LessonResource[]>(
@@ -1327,45 +1497,48 @@ function AddLessonDialog({
         ideConfig: config ?? null, // TypeScript might complain if types assumed old structure, but ignore for now
       });
 
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setEnableIde(Boolean(config));
+      // Use setTimeout to avoid 'setState in effect' warning for synchronous updates
+      setTimeout(() => {
+        setEnableIde(Boolean(config));
 
-      if (config) {
-        // Hydrate from existing config
-        const langs = config.allowedLanguages.map((l) => l.language);
-        setSelectedLanguages(langs);
-        setDefaultLanguage(config.defaultLanguage);
-        setEditingLanguage(config.defaultLanguage); // Start editing default
+        if (config) {
+          // Hydrate from existing config
+          const langs = config.allowedLanguages.map((l) => l.language);
+          setSelectedLanguages(langs);
+          setDefaultLanguage(config.defaultLanguage);
+          setEditingLanguage(config.defaultLanguage); // Start editing default
 
-        const templates: Record<string, string> = {};
-        const outputs: Record<string, string> = {};
-        const tests: Record<string, string> = {};
+          const templates = new Map<string, string>();
+          const outputs = new Map<string, string>();
+          const tests = new Map<string, string>();
 
-        config.allowedLanguages.forEach((l) => {
-          templates[l.language] = l.initialCode;
-          if (l.expectedOutput) {
-            outputs[l.language] = l.expectedOutput;
-          }
-          // Safely check for testCode property as it might not be in legacy types yet
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-          if ((l as any).testCode) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-            tests[l.language] = (l as any).testCode;
-          }
-        });
-        setCodeTemplates(templates);
-        setExpectedOutputs(outputs);
-        setTestCodes(tests);
-      } else {
-        // Default clean state
-        setSelectedLanguages(['javascript']);
-        setDefaultLanguage('javascript');
-        setEditingLanguage('javascript');
-        setCodeTemplates({ javascript: getDefaultCode('javascript') });
-        setExpectedOutputs({});
-        setTestCodes({});
-        setPendingResources([]);
-      }
+          config.allowedLanguages.forEach((l) => {
+            templates.set(l.language, l.initialCode);
+            if (l.expectedOutput) {
+              outputs.set(l.language, l.expectedOutput);
+            }
+            if (l.testCode) {
+              tests.set(l.language, l.testCode);
+            }
+          });
+          setCodeTemplates(templates);
+          setExpectedOutputs(outputs);
+          setTestCodes(tests);
+        } else {
+          // Default clean state
+          setSelectedLanguages(['javascript']);
+          setDefaultLanguage('javascript');
+          setEditingLanguage('javascript');
+          setCodeTemplates(
+            new Map([['javascript', getDefaultCode('javascript')]]),
+          );
+          setExpectedOutputs(
+            new Map([['javascript', getDefaultExpectedOutput('javascript')]]),
+          );
+          setTestCodes(new Map());
+          setPendingResources([]);
+        }
+      }, 0);
     }
   }, [open, existingLesson, form]);
 
@@ -1374,12 +1547,9 @@ function AddLessonDialog({
     if (enableIde) {
       const allowedLanguages = selectedLanguages.map((lang) => ({
         language: lang,
-        // eslint-disable-next-line security/detect-object-injection
-        initialCode: codeTemplates[lang] || getDefaultCode(lang),
-        // eslint-disable-next-line security/detect-object-injection
-        expectedOutput: expectedOutputs[lang],
-        // eslint-disable-next-line security/detect-object-injection
-        testCode: testCodes[lang] || undefined,
+        initialCode: codeTemplates.get(lang) ?? getDefaultCode(lang),
+        expectedOutput: expectedOutputs.get(lang),
+        testCode: testCodes.get(lang) ?? undefined,
         // Note: We don't force default test code into the value sent to DB if empty,
         // because empty means "Standard Grading". Only if user types something do we send it.
         // But the UI editor should show the template if empty so they can start typing.
@@ -1483,7 +1653,10 @@ function AddLessonDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form
+          onSubmit={(e) => void form.handleSubmit(onSubmit)(e)}
+          className="space-y-6"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label htmlFor="lesson-title" className="text-sm font-medium">
@@ -1565,103 +1738,80 @@ function AddLessonDialog({
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      'javascript',
-                      'python',
-                      'java',
-                      'cpp',
-                      'go',
-                      'rust',
-                      'typescript',
+                      { id: 'javascript', label: 'JavaScript' },
+                      { id: 'typescript', label: 'TypeScript' },
+                      { id: 'python', label: 'Python' },
+                      { id: 'java', label: 'Java' },
+                      { id: 'csharp', label: 'C#' },
+                      { id: 'cpp', label: 'C++' },
+                      { id: 'go', label: 'Go' },
+                      { id: 'rust', label: 'Rust' },
                     ].map((lang) => (
                       <button
-                        key={lang}
+                        key={lang.id}
                         type="button"
                         onClick={() => {
-                          if (selectedLanguages.includes(lang)) {
-                            if (selectedLanguages.length > 1) {
-                              setSelectedLanguages((prev) =>
-                                prev.filter((l) => l !== lang),
-                              );
-                              if (editingLanguage === lang) {
-                                const newLang = selectedLanguages.find(
-                                  (l) => l !== lang,
-                                );
-                                if (newLang) {
-                                  setEditingLanguage(newLang);
-                                }
-                              }
-                            } else {
-                              toast.error(
-                                'At least one language must be selected',
-                              );
-                            }
-                          } else {
-                            setSelectedLanguages((prev) => [...prev, lang]);
-                            // Initialize template if not exists
-                            // eslint-disable-next-line security/detect-object-injection
-                            if (!codeTemplates[lang]) {
-                              setCodeTemplates((prev) => ({
-                                ...prev,
-                                [lang]: getDefaultCode(lang),
-                              }));
-                            }
+                          const { id } = lang;
+                          setSelectedLanguages([id]);
+                          setDefaultLanguage(id);
+                          setEditingLanguage(id);
+                          if (!codeTemplates.has(id)) {
+                            setCodeTemplates((prev) => {
+                              const next = new Map(prev);
+                              next.set(id, getDefaultCode(id));
+                              return next;
+                            });
+                          }
+                          if (!expectedOutputs.has(id)) {
+                            setExpectedOutputs((prev) => {
+                              const next = new Map(prev);
+                              next.set(id, getDefaultExpectedOutput(id));
+                              return next;
+                            });
+                          }
+                          if (!testCodes.has(id)) {
+                            setTestCodes((prev) => {
+                              const next = new Map(prev);
+                              next.set(id, getDefaultTestCode(id));
+                              return next;
+                            });
                           }
                         }}
-                        className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${
-                          selectedLanguages.includes(lang)
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-background hover:bg-muted border-border'
-                        }`}
+                        className={cn(
+                          'px-4 py-2 rounded-xl border text-sm font-bold transition-all duration-300 flex items-center gap-2 group',
+                          selectedLanguages.includes(lang.id)
+                            ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-105'
+                            : 'bg-background hover:bg-muted border-border text-muted-foreground hover:text-foreground',
+                        )}
                       >
-                        {lang}
+                        <div
+                          className={cn(
+                            'w-2 h-2 rounded-full transition-colors',
+                            selectedLanguages.includes(lang.id)
+                              ? 'bg-white animate-pulse'
+                              : 'bg-muted-foreground/30 group-hover:bg-primary',
+                          )}
+                        />
+                        {lang.label}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Editing Language Selector */}
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="edit-language-select"
-                      className="text-sm font-medium"
-                    >
-                      Configure Template For
-                    </label>
-                    <select
-                      id="edit-language-select"
-                      className="w-full p-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                      value={editingLanguage}
-                      onChange={(e) => setEditingLanguage(e.target.value)}
-                    >
-                      {selectedLanguages.map((lang) => (
-                        <option key={lang} value={lang}>
-                          {lang}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Default Language Selector */}
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="default-language-select"
-                      className="text-sm font-medium"
-                    >
-                      Default Language for Student
-                    </label>
-                    <select
-                      id="default-language-select"
-                      className="w-full p-2.5 rounded-xl border border-input bg-background focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                      value={defaultLanguage}
-                      onChange={(e) => setDefaultLanguage(e.target.value)}
-                    >
-                      {selectedLanguages.map((lang) => (
-                        <option key={lang} value={lang}>
-                          {lang}
-                        </option>
-                      ))}
-                    </select>
+                <div className="flex items-center justify-between p-4 bg-primary/5 rounded-xl border border-primary/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
+                      {selectedLanguages[0]?.substring(0, 2).toUpperCase() ??
+                        'ID'}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold capitalize">
+                        {selectedLanguages[0] ?? 'Select Language'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Active configuration for this lesson
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -1670,20 +1820,41 @@ function AddLessonDialog({
                     <label className="text-sm font-medium">
                       Initial Code Template ({editingLanguage})
                     </label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs text-muted-foreground hover:text-primary px-2"
+                      onClick={() => {
+                        const newCode = getDefaultCode(editingLanguage);
+                        setCodeTemplates((prev) => {
+                          const next = new Map(prev);
+                          next.set(editingLanguage, newCode);
+                          return next;
+                        });
+                        toast.success(
+                          `Reset ${editingLanguage} template to default`,
+                        );
+                      }}
+                    >
+                      <RefreshCw className="w-3 h-3 mr-1" />
+                      Reset to Default
+                    </Button>
                   </div>
                   <div className="h-[300px] border border-border rounded-xl overflow-hidden">
                     <CodeEditor
+                      id="template-editor"
                       language={editingLanguage}
                       initialValue={
-                        // eslint-disable-next-line security/detect-object-injection
-                        codeTemplates[editingLanguage] ||
+                        codeTemplates.get(editingLanguage) ??
                         getDefaultCode(editingLanguage)
                       }
                       onChange={(value) =>
-                        setCodeTemplates((prev) => ({
-                          ...prev,
-                          [editingLanguage]: value ?? '',
-                        }))
+                        setCodeTemplates((prev) => {
+                          const next = new Map(prev);
+                          next.set(editingLanguage, value ?? '');
+                          return next;
+                        })
                       }
                     />
                   </div>
@@ -1700,13 +1871,13 @@ function AddLessonDialog({
                     <Input
                       id="expected-output-input"
                       placeholder="e.g. Hello World"
-                      // eslint-disable-next-line security/detect-object-injection
-                      value={expectedOutputs[editingLanguage] || ''}
+                      value={expectedOutputs.get(editingLanguage) ?? ''}
                       onChange={(e) =>
-                        setExpectedOutputs((prev) => ({
-                          ...prev,
-                          [editingLanguage]: e.target.value,
-                        }))
+                        setExpectedOutputs((prev) => {
+                          const next = new Map(prev);
+                          next.set(editingLanguage, e.target.value);
+                          return next;
+                        })
                       }
                     />
                     <p className="text-xs text-muted-foreground">
@@ -1720,7 +1891,7 @@ function AddLessonDialog({
                       <span className="w-full border-t border-border" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-muted/20 px-2 text-muted-foreground">
+                      <span className="bg-background px-3 text-muted-foreground font-bold tracking-wider">
                         OR Advanced Grading
                       </span>
                     </div>
@@ -1741,21 +1912,24 @@ function AddLessonDialog({
                     <p className="text-xs text-muted-foreground mb-2">
                       Appended to student code. Throw an error or exit with
                       non-zero code to fail the test. Example:{' '}
-                      <code>if (add(2,2) !== 4) throw new Error("Fail");</code>
+                      <code>
+                        if (add(2,2) !== 4) throw new Error(&quot;Fail&quot;);
+                      </code>
                     </p>
                     <div className="h-[200px] border border-border rounded-xl overflow-hidden">
                       <CodeEditor
+                        id="test-editor"
                         initialValue={
-                          // eslint-disable-next-line security/detect-object-injection
-                          testCodes[editingLanguage] ||
+                          testCodes.get(editingLanguage) ??
                           getDefaultTestCode(editingLanguage)
                         }
                         language={editingLanguage}
                         onChange={(value) =>
-                          setTestCodes((prev) => ({
-                            ...prev,
-                            [editingLanguage]: value ?? '',
-                          }))
+                          setTestCodes((prev) => {
+                            const next = new Map(prev);
+                            next.set(editingLanguage, value ?? '');
+                            return next;
+                          })
                         }
                       />
                     </div>
@@ -1892,8 +2066,7 @@ function QuizCreationDialog({
           state: { title: manualTitle.trim() },
         },
       );
-    } catch (err: unknown) {
-      console.error(err);
+    } catch (_err: unknown) {
       toast.error('Unable to create quiz');
     } finally {
       setIsSubmittingManual(false);
@@ -1931,8 +2104,7 @@ function QuizCreationDialog({
       setOpen(false);
       reset();
       void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
-    } catch (err: unknown) {
-      console.error(err);
+    } catch (_err: unknown) {
       toast.error('Failed to save AI quiz');
     }
   };
@@ -2017,7 +2189,10 @@ function QuizCreationDialog({
           )}
 
           {method === 'manual' && (
-            <form onSubmit={handleManualSubmit} className="space-y-4 py-2">
+            <form
+              onSubmit={(e) => void handleManualSubmit(e)}
+              className="space-y-4 py-2"
+            >
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="quiz-title">
                   Quiz Title
@@ -2066,7 +2241,7 @@ function QuizCreationDialog({
         courseId={courseId}
         sectionId={sectionId}
         lessons={lessons.filter((l) => l.type !== 'quiz')}
-        onSave={handleAiSave}
+        onSave={(data) => void handleAiSave(data)}
       />
     </>
   );

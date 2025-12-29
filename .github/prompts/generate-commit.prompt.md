@@ -43,7 +43,7 @@ You are a Git expert. Please analyze the staged changes and generate a well-stru
 | `dashboard` | Dashboard module                   |
 | `db`        | Database/TypeORM changes           |
 | `api`       | API endpoints                      |
-| `ui`        | UI components (Shadcn, Tailwind)   |
+| `ui`        | UI components (Tailwind)           |
 | `deps`      | Dependencies                       |
 | `config`    | Configuration files                |
 | `docker`    | Docker/containerization            |

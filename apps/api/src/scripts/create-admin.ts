@@ -39,6 +39,17 @@ async function bootstrap(): Promise<void> {
   await usersService.updateRole(user.id, UserRole.ADMIN);
   console.warn('Role updated to ADMIN');
 
+  // Force update password to ensure consistency with tests
+  const bcrypt = require('bcrypt');
+  const hashedPassword = await bcrypt.hash(password, 10);
+  await (usersService as any).usersRepository
+    .createQueryBuilder()
+    .update('users')
+    .set({ password: hashedPassword })
+    .where('id = :id', { id: user.id })
+    .execute();
+  console.warn('Password reset');
+
   await usersService.activateUser(user.id);
   console.warn('User activated');
 

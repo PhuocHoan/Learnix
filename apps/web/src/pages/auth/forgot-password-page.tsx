@@ -67,8 +67,9 @@ export function ForgotPasswordPage() {
                 Check Your Email
               </h1>
               <p className="text-muted-foreground mb-6">
-                If an account exists with that email address, we've sent you a
-                link to reset your password. The link will expire in 1 hour.
+                If an account exists with that email address, we&apos;ve sent
+                you a link to reset your password. The link will expire in 1
+                hour.
               </p>
               <div className="space-y-3">
                 <Link to="/login">
@@ -80,7 +81,7 @@ export function ForgotPasswordPage() {
                   onClick={() => setIsSuccess(false)}
                   className="text-sm text-primary hover:text-primary/80 transition-colors"
                 >
-                  Didn't receive an email? Try again
+                  Didn&apos;t receive an email? Try again
                 </button>
               </div>
             </div>
@@ -91,11 +92,15 @@ export function ForgotPasswordPage() {
                   Forgot Password?
                 </h1>
                 <p className="text-muted-foreground">
-                  No worries! Enter your email and we'll send you a reset link.
+                  No worries! Enter your email and we&apos;ll send you a reset
+                  link.
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              <form
+                onSubmit={(e) => void handleSubmit(onSubmit)(e)}
+                className="space-y-5"
+              >
                 <div className="space-y-2">
                   <label
                     htmlFor="email"

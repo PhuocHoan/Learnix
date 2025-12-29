@@ -2,12 +2,14 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
+import { Lesson } from '../courses/entities/lesson.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+
 import { Question } from './entities/question.entity';
 import { QuizSubmission } from './entities/quiz-submission.entity';
 import { Quiz, QuizStatus } from './entities/quiz.entity';
 import { QuizzesService } from './quizzes.service';
 import { AiQuizGeneratorService } from './services/ai-quiz-generator.service';
-import { Lesson } from '../courses/entities/lesson.entity';
 
 import type { Repository, DeleteResult } from 'typeorm';
 
@@ -16,6 +18,7 @@ describe('QuizzesService', () => {
   let quizzesRepository: jest.Mocked<Repository<Quiz>>;
   let questionsRepository: jest.Mocked<Repository<Question>>;
   let submissionRepository: jest.Mocked<Repository<QuizSubmission>>;
+  let aiQuizGeneratorService: AiQuizGeneratorService;
 
   const mockQuiz: Partial<Quiz> = {
     id: 'quiz-1',
@@ -90,6 +93,12 @@ describe('QuizzesService', () => {
             generateQuizFromText: jest.fn(),
           },
         },
+        {
+          provide: NotificationsService,
+          useValue: {
+            notifyQuizSubmitted: jest.fn().mockResolvedValue({}),
+          },
+        },
       ],
     }).compile();
 
@@ -97,6 +106,7 @@ describe('QuizzesService', () => {
     quizzesRepository = module.get(getRepositoryToken(Quiz));
     questionsRepository = module.get(getRepositoryToken(Question));
     submissionRepository = module.get(getRepositoryToken(QuizSubmission));
+    aiQuizGeneratorService = module.get(AiQuizGeneratorService);
   });
 
   afterEach(() => {
@@ -317,6 +327,39 @@ describe('QuizzesService', () => {
           percentage: 40,
         }),
       );
+    });
+  });
+
+  describe('generateQuiz', () => {
+    it('should generate quiz from text', async () => {
+      const generatedQuestions = [
+        {
+          questionText: 'Q1',
+          options: ['A', 'B'],
+          correctAnswer: 'A',
+          type: 'multiple_choice',
+        },
+      ];
+      jest
+        .spyOn(aiQuizGeneratorService, 'generateQuizFromText')
+        .mockResolvedValue({
+          title: 'Gen Quiz',
+          questions: generatedQuestions as any,
+        });
+
+      const result = await service.generateQuiz('some text', 1, [
+        'multiple_choice',
+      ]);
+
+      expect(aiQuizGeneratorService.generateQuizFromText).toHaveBeenCalledWith(
+        'some text',
+        1,
+        ['multiple_choice'],
+      );
+      expect(result).toEqual({
+        title: 'Gen Quiz',
+        questions: generatedQuestions,
+      });
     });
   });
 });

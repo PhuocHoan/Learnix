@@ -29,9 +29,9 @@ export interface Quiz {
 }
 
 export interface GenerateQuizRequest {
-  lessonText: string;
-  numberOfQuestions: number;
-  title: string;
+  text: string;
+  count: number;
+  types: string[];
 }
 
 export interface CreateQuizData {
@@ -89,8 +89,13 @@ export const quizzesApi = {
     return response.data;
   },
 
-  generateQuiz: async (data: GenerateQuizRequest): Promise<Quiz> => {
-    const response = await api.post<Quiz>('/quizzes/generate', data);
+  generateQuiz: async (
+    data: GenerateQuizRequest,
+  ): Promise<{ title: string; questions: CreateQuestionData[] }> => {
+    const response = await api.post<{
+      title: string;
+      questions: CreateQuestionData[];
+    }>('/quizzes/generate', data);
     return response.data;
   },
 

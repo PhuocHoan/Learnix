@@ -11,6 +11,7 @@ export interface Lesson {
       language: string;
       initialCode: string;
       expectedOutput?: string;
+      testCode?: string;
     }[];
     defaultLanguage: string;
     instructions?: string;
@@ -141,6 +142,7 @@ export interface CreateLessonData {
   durationSeconds: number;
   isFreePreview: boolean;
   orderIndex: number;
+  ideConfig?: Lesson['ideConfig'] | null;
 }
 
 export type BlockType = 'text' | 'video' | 'image' | 'code' | 'file';
@@ -354,5 +356,20 @@ export const coursesApi = {
 
   removeResource: async (resourceId: string): Promise<void> => {
     await api.delete(`/courses/lessons/resources/${resourceId}`);
+  },
+
+  uploadFile: async (file: File): Promise<{ url: string; size: number }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post<{ url: string; size: number }>(
+      '/upload/file',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      },
+    );
+    return response.data;
   },
 };

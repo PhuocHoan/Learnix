@@ -76,7 +76,7 @@ export function AuthRequiredModal({
               <Button
                 size="lg"
                 className="w-full group"
-                onClick={() => navigate('/register')}
+                onClick={() => void navigate('/register')}
               >
                 Get Started for Free
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -86,7 +86,7 @@ export function AuthRequiredModal({
                 variant="outline"
                 size="lg"
                 className="w-full"
-                onClick={() => navigate('/login')}
+                onClick={() => void navigate('/login')}
               >
                 Sign In
               </Button>

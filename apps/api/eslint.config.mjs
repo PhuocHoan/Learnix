@@ -1,61 +1,74 @@
-// @ts-check
-import eslint from '@eslint/js';
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
-import importX from 'eslint-plugin-import-x';
-import security from 'eslint-plugin-security';
+import pluginImportX from 'eslint-plugin-import-x';
+import pluginSecurity from 'eslint-plugin-security';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 
-export default tseslint.config(
-  // Global ignores
-  {
-    ignores: [
-      'eslint.config.mjs',
-      'dist/**',
-      'node_modules/**',
-      'coverage/**',
-      '*.js',
-    ],
-  },
+/** @type {import('eslint').Linter.Config[]} */
+export default [
+  // -------------------------------------------------------------------------
+  // Global Ignores
+  // -------------------------------------------------------------------------
+  { ignores: ['dist', 'coverage', 'node_modules'] },
 
-  // Base configurations
-  eslint.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
-  ...tseslint.configs.stylisticTypeChecked,
-  importX.flatConfigs.recommended,
-  importX.flatConfigs.typescript,
+  // -------------------------------------------------------------------------
+  // Base JavaScript Rules
+  // -------------------------------------------------------------------------
+  js.configs.recommended,
+
+  // -------------------------------------------------------------------------
+  // TypeScript Type-Aware Linting (scoped to .ts files for performance)
+  // Using projectService for faster linting vs traditional project config
+  // -------------------------------------------------------------------------
+  ...tseslint.configs.recommendedTypeChecked.map((config) => ({
+    ...config,
+    files: ['**/*.ts'],
+  })),
+  ...tseslint.configs.stylisticTypeChecked.map((config) => ({
+    ...config,
+    files: ['**/*.ts'],
+  })),
+
+  // -------------------------------------------------------------------------
+  // Security Rules
+  // -------------------------------------------------------------------------
+  pluginSecurity.configs.recommended,
+
+  // -------------------------------------------------------------------------
+  // Prettier Integration (must be last to override conflicting rules)
+  // -------------------------------------------------------------------------
   eslintPluginPrettierRecommended,
 
-  // Main configuration
+  // -------------------------------------------------------------------------
+  // Main TypeScript Configuration
+  // -------------------------------------------------------------------------
   {
+    files: ['**/*.ts'],
     languageOptions: {
-      globals: {
-        ...globals.node,
-        ...globals.jest,
-        ...globals.es2025,
-      },
-      sourceType: 'module',
+      ecmaVersion: 'latest',
+      globals: globals.node,
       parserOptions: {
+        // projectService is the modern, performant approach for type-aware linting
+        // It automatically discovers tsconfig.json without manual configuration
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    settings: {
-      'import-x/resolver': {
-        typescript: {
-          alwaysTryTypes: true,
-          project: './tsconfig.json',
-        },
-      },
-    },
     plugins: {
-      security,
+      'import-x': pluginImportX,
     },
     rules: {
-      // ═══════════════════════════════════════════════════════════════════
+      // -----------------------------------------------------------------------
       // TypeScript Best Practices
-      // ═══════════════════════════════════════════════════════════════════
-      '@typescript-eslint/no-explicit-any': 'warn',
+      // -----------------------------------------------------------------------
+      '@typescript-eslint/explicit-function-return-type': 'off', // Inferred types are fine
+      '@typescript-eslint/explicit-module-boundary-types': 'off', // Controllers/services use decorators
+      '@typescript-eslint/no-explicit-any': 'error', // Must use unknown or specific types
+      '@typescript-eslint/no-floating-promises': 'error', // Must handle all promises
+      '@typescript-eslint/require-await': 'error', // Async functions must use await
+      '@typescript-eslint/prefer-promise-reject-errors': 'error', // Reject with Error objects
+      '@typescript-eslint/return-await': ['error', 'always'], // Proper stack traces in try/catch
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -66,101 +79,17 @@ export default tseslint.config(
       ],
       '@typescript-eslint/consistent-type-imports': [
         'error',
-        {
-          prefer: 'type-imports',
-          fixStyle: 'inline-type-imports',
-        },
-      ],
-      '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
-      '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
-      '@typescript-eslint/prefer-optional-chain': 'error',
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'warn',
-      '@typescript-eslint/await-thenable': 'error',
-      '@typescript-eslint/no-unnecessary-condition': 'warn',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/unbound-method': 'off', // NestJS uses method references in decorators
-      '@typescript-eslint/explicit-function-return-type': [
-        'warn',
-        {
-          allowExpressions: true,
-          allowTypedFunctionExpressions: true,
-          allowHigherOrderFunctions: true,
-          allowDirectConstAssertionInArrowFunctions: true,
-        },
-      ],
-      '@typescript-eslint/explicit-member-accessibility': [
-        'error',
-        {
-          accessibility: 'no-public', // NestJS convention: no explicit 'public'
-          overrides: {
-            parameterProperties: 'explicit',
-          },
-        },
-      ],
-      '@typescript-eslint/naming-convention': [
-        'error',
-        {
-          selector: 'interface',
-          format: ['PascalCase'],
-        },
-        {
-          selector: 'typeAlias',
-          format: ['PascalCase'],
-        },
-        {
-          selector: 'enum',
-          format: ['PascalCase'],
-        },
-        {
-          selector: 'enumMember',
-          format: ['UPPER_CASE', 'PascalCase'],
-        },
-        {
-          selector: 'class',
-          format: ['PascalCase'],
-        },
-        {
-          selector: 'method',
-          format: ['camelCase'],
-        },
-        {
-          selector: 'property',
-          format: ['camelCase', 'UPPER_CASE', 'snake_case'], // Allow snake_case for OAuth/API compatibility
-          leadingUnderscore: 'allow',
-        },
-        {
-          selector: 'objectLiteralProperty',
-          format: null, // Allow any format for object literals (API responses)
-        },
-      ],
-      '@typescript-eslint/no-unsafe-argument': 'warn',
-      '@typescript-eslint/no-unsafe-assignment': 'warn',
-      '@typescript-eslint/no-unsafe-member-access': 'warn',
-      '@typescript-eslint/no-unsafe-call': 'warn',
-      '@typescript-eslint/no-unsafe-return': 'warn',
-
-      // ═══════════════════════════════════════════════════════════════════
-      // NestJS Best Practices
-      // ═══════════════════════════════════════════════════════════════════
-      '@typescript-eslint/no-empty-function': [
-        'error',
-        {
-          allow: ['constructors'], // Allow empty constructors for DI
-        },
-      ],
-      '@typescript-eslint/no-inferrable-types': [
-        'error',
-        {
-          ignoreParameters: true, // Allow explicit types on parameters for clarity
-          ignoreProperties: true,
-        },
+        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
       ],
 
-      // ═══════════════════════════════════════════════════════════════════
-      // Import Organization
-      // ═══════════════════════════════════════════════════════════════════
+      // -----------------------------------------------------------------------
+      // General Best Practices
+      // -----------------------------------------------------------------------
+      'no-console': 'error', // Use NestJS Logger instead
+
+      // -----------------------------------------------------------------------
+      // Import Organization (builtin → external → internal → relative → types)
+      // -----------------------------------------------------------------------
       'import-x/order': [
         'error',
         {
@@ -168,8 +97,10 @@ export default tseslint.config(
             'builtin',
             'external',
             'internal',
-            ['parent', 'sibling'],
+            'parent',
+            'sibling',
             'index',
+            'object',
             'type',
           ],
           pathGroups: [
@@ -181,10 +112,8 @@ export default tseslint.config(
             {
               pattern: 'src/**',
               group: 'internal',
-              position: 'before',
             },
           ],
-          pathGroupsExcludedImportTypes: ['@nestjs'],
           'newlines-between': 'always',
           alphabetize: {
             order: 'asc',
@@ -192,141 +121,64 @@ export default tseslint.config(
           },
         },
       ],
-      'import-x/no-duplicates': 'error',
-      'import-x/no-unresolved': 'off', // TypeScript handles this
-      'import-x/no-cycle': 'warn',
-      'import-x/no-self-import': 'error',
-      'import-x/no-useless-path-segments': 'error',
-      'import-x/first': 'error',
-      'import-x/newline-after-import': 'error',
-      'import-x/no-mutable-exports': 'error',
-      'import-x/no-default-export': 'off', // NestJS uses default exports for modules
-
-      // ═══════════════════════════════════════════════════════════════════
-      // Security Best Practices (OWASP)
-      // ═══════════════════════════════════════════════════════════════════
-      'security/detect-object-injection': 'warn',
-      'security/detect-non-literal-regexp': 'warn',
-      'security/detect-unsafe-regex': 'error',
-      'security/detect-buffer-noassert': 'error',
-      'security/detect-eval-with-expression': 'error',
-      'security/detect-no-csrf-before-method-override': 'error',
-      'security/detect-possible-timing-attacks': 'warn',
-      'security/detect-child-process': 'warn',
-      'security/detect-non-literal-fs-filename': 'warn',
-      'security/detect-non-literal-require': 'warn',
-
-      // ═══════════════════════════════════════════════════════════════════
-      // General Best Practices
-      // ═══════════════════════════════════════════════════════════════════
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
-      'no-debugger': 'error',
-      'no-var': 'error',
-      'prefer-const': 'error',
-      'prefer-template': 'error',
-      'prefer-spread': 'error',
-      'prefer-rest-params': 'error',
-      'prefer-arrow-callback': 'error',
-      'arrow-body-style': ['error', 'as-needed'],
-      'no-param-reassign': ['error', { props: false }],
-      'no-nested-ternary': 'warn',
-      'no-unneeded-ternary': 'error',
-      eqeqeq: ['error', 'always', { null: 'ignore' }],
-      curly: ['error', 'all'],
-      'no-else-return': ['error', { allowElseIf: false }],
-      'no-lonely-if': 'warn',
-      'no-useless-return': 'error',
-      'no-useless-concat': 'error',
-      'no-useless-computed-key': 'error',
-      'object-shorthand': 'error',
-      'prefer-destructuring': [
-        'warn',
-        {
-          array: false,
-          object: true,
-        },
-      ],
-      'spaced-comment': ['error', 'always'],
-      'no-implicit-coercion': 'error',
-      'no-return-assign': 'error',
-      'no-throw-literal': 'off', // TypeScript handles this
-      '@typescript-eslint/only-throw-error': 'error',
-      'require-await': 'off',
-      '@typescript-eslint/require-await': 'warn',
-
-      // ═══════════════════════════════════════════════════════════════════
-      // Prettier Integration
-      // ═══════════════════════════════════════════════════════════════════
-      'prettier/prettier': [
-        'error',
-        {
-          endOfLine: 'auto',
-          singleQuote: true,
-          trailingComma: 'all',
-          tabWidth: 2,
-          semi: true,
-          printWidth: 80,
-        },
-      ],
     },
   },
 
-  // Test files configuration (relaxed rules)
+  // -------------------------------------------------------------------------
+  // DTOs & Entities - Allow explicit types for decorators (TypeORM/Swagger)
+  // -------------------------------------------------------------------------
   {
-    files: [
-      '**/*.spec.ts',
-      '**/*.test.ts',
-      '**/*.unit-spec.ts',
-      '**/*.e2e-spec.ts',
-      '**/test/**/*.ts',
-    ],
+    files: ['**/*.dto.ts', '**/*.entity.ts'],
     rules: {
+      '@typescript-eslint/no-inferrable-types': 'off',
+    },
+  },
+
+  // -------------------------------------------------------------------------
+  // Scripts & Seeds - Allow console.log and relax type safety for CLI scripts
+  // Scripts use dynamic requires, type assertions, and patterns unsuitable for strict type-checking
+  // -------------------------------------------------------------------------
+  {
+    files: ['src/scripts/**/*.ts', 'src/seeds/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
-      '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      'security/detect-object-injection': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+    },
+  },
+
+  // -------------------------------------------------------------------------
+  // Upload/Storage Modules - Relax filesystem security where path validation exists
+  // -------------------------------------------------------------------------
+  {
+    files: ['**/upload/**/*.ts', '**/storage/**/*.ts', '**/cloudinary/**/*.ts'],
+    rules: {
       'security/detect-non-literal-fs-filename': 'off',
+    },
+  },
+
+  // -------------------------------------------------------------------------
+  // Test Files - Relax strict rules for testing flexibility
+  // -------------------------------------------------------------------------
+  {
+    files: ['**/*.spec.ts', 'test/**'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/unbound-method': 'off', // Common in Jest mocks
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/require-await': 'off',
+      'security/detect-object-injection': 'off',
       'no-console': 'off',
     },
   },
-
-  // DTO files configuration (special handling for class-validator)
-  {
-    files: ['**/dto/**/*.ts', '**/*.dto.ts'],
-    rules: {
-      '@typescript-eslint/no-inferrable-types': 'off', // Allow explicit types for decorators
-    },
-  },
-
-  // Entity files configuration (special handling for TypeORM)
-  {
-    files: ['**/entities/**/*.ts', '**/*.entity.ts'],
-    rules: {
-      '@typescript-eslint/no-inferrable-types': 'off', // Allow explicit types for decorators
-      'import-x/no-cycle': 'off', // TypeORM entities often have circular references
-    },
-  },
-
-  // Seed and script files configuration (allow console.log for CLI output)
-  {
-    files: ['**/seed.ts', '**/seed/**/*.ts', '**/scripts/**/*.ts'],
-    rules: {
-      'no-console': 'off', // Seed and scripts use console for CLI output
-    },
-  },
-
-  // Upload module files - filesystem access with validated paths
-  // The security plugin cannot understand runtime path validation,
-  // but these files implement proper path traversal prevention
-  {
-    files: ['**/upload/*.ts'],
-    rules: {
-      'security/detect-non-literal-fs-filename': 'off',
-    },
-  },
-);
+];

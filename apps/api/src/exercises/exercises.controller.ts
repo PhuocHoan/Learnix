@@ -1,7 +1,8 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 
-import { ExercisesService, ExecutionResult } from './exercises.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
+import { ExercisesService, ExecutionResult } from './exercises.service';
 
 @Controller('exercises')
 export class ExercisesController {
@@ -12,7 +13,7 @@ export class ExercisesController {
   async execute(
     @Body() body: { language: string; code: string; stdin?: string },
   ): Promise<ExecutionResult> {
-    return this.exercisesService.executeCode(
+    return await this.exercisesService.executeCode(
       body.language,
       body.code,
       body.stdin,
@@ -30,7 +31,7 @@ export class ExercisesController {
       testCode?: string;
     },
   ): Promise<{ success: boolean; output: string }> {
-    return this.exercisesService.validateSubmission(
+    return await this.exercisesService.validateSubmission(
       body.language,
       body.code,
       body.expectedOutput,

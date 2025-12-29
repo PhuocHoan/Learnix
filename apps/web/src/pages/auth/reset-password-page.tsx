@@ -110,7 +110,10 @@ export function ResetPasswordPage() {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              <form
+                onSubmit={(e) => void handleSubmit(onSubmit)(e)}
+                className="space-y-5"
+              >
                 {/* New Password */}
                 <div className="space-y-2">
                   <label

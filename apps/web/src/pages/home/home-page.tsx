@@ -245,7 +245,7 @@ export function HomePage() {
               {tags?.map((tag) => (
                 <button
                   key={tag}
-                  onClick={() => navigate(`/courses?tags=${tag}`)}
+                  onClick={() => void navigate(`/courses?tags=${tag}`)}
                   className="px-6 py-3 rounded-full border border-border bg-card hover:bg-primary/5 hover:border-primary/50 hover:text-primary transition-all duration-300 font-medium capitalize shadow-sm hover:shadow-md hover:-translate-y-0.5"
                 >
                   {tag}

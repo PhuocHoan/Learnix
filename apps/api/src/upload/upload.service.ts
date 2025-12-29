@@ -298,7 +298,7 @@ export class UploadService {
   /**
    * Get the full URL for a file
    */
-  getFileUrl(filename: string, category: string = 'images'): string {
+  getFileUrl(filename: string, category = 'images'): string {
     return `${this.baseUrl}/uploads/${category}/${filename}`;
   }
 }

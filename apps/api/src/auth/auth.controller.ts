@@ -15,6 +15,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { CreateUserDto } from '../users/dto/create-user.dto';
+import { UpdateProfileDto } from '../users/dto/update-profile.dto';
+import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
+
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -28,10 +33,6 @@ import { GithubAuthGuard } from './guards/github-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { encryptTokenForCookie } from './utils/token-encryption';
-import { CreateUserDto } from '../users/dto/create-user.dto';
-import { UpdateProfileDto } from '../users/dto/update-profile.dto';
-import { User } from '../users/entities/user.entity';
-import { UserRole } from '../users/enums/user-role.enum';
 
 import type {
   OAuthProfile,
@@ -101,7 +102,7 @@ export class AuthController {
   async activateAccount(
     @Query('token') token: string,
   ): Promise<ActivationResult> {
-    return this.authService.activateAccount(token);
+    return await this.authService.activateAccount(token);
   }
 
   @Post('resend-activation')
@@ -109,7 +110,7 @@ export class AuthController {
   async resendActivationEmail(
     @Body('email') email: string,
   ): Promise<MessageResult> {
-    return this.authService.resendActivationEmail(email);
+    return await this.authService.resendActivationEmail(email);
   }
 
   @Post('logout')
@@ -294,7 +295,7 @@ export class AuthController {
   async forgotPassword(
     @Body() forgotPasswordDto: ForgotPasswordDto,
   ): Promise<MessageResult> {
-    return this.authService.forgotPassword(forgotPasswordDto.email);
+    return await this.authService.forgotPassword(forgotPasswordDto.email);
   }
 
   @Post('reset-password')
@@ -302,7 +303,7 @@ export class AuthController {
   async resetPassword(
     @Body() resetPasswordDto: ResetPasswordDto,
   ): Promise<MessageResult> {
-    return this.authService.resetPassword(
+    return await this.authService.resetPassword(
       resetPasswordDto.token,
       resetPasswordDto.newPassword,
     );
@@ -315,7 +316,7 @@ export class AuthController {
     @CurrentUser() user: User,
     @Body() changePasswordDto: ChangePasswordDto,
   ): Promise<MessageResult> {
-    return this.authService.changePassword(
+    return await this.authService.changePassword(
       user.id,
       changePasswordDto.currentPassword,
       changePasswordDto.newPassword,

@@ -7,7 +7,6 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 
@@ -42,7 +41,7 @@ export class UsersService {
       isEmailVerified: isOAuthUser,
     });
 
-    return this.usersRepository.save(user);
+    return await this.usersRepository.save(user);
   }
 
   async createWithActivationToken(
@@ -75,7 +74,7 @@ export class UsersService {
 
   async findByActivationToken(token: string): Promise<User | null> {
     // Use query builder to search by activationToken since it has select: false
-    return this.usersRepository
+    return await this.usersRepository
       .createQueryBuilder('user')
       .addSelect('user.activationToken')
       .where('user.activationToken = :token', { token })
@@ -93,7 +92,7 @@ export class UsersService {
     // The token will be cleared by the activationTokenExpiry check after this period
     user.activationTokenExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
 
-    return this.usersRepository.save(user);
+    return await this.usersRepository.save(user);
   }
 
   async regenerateActivationToken(
@@ -116,7 +115,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({
+    return await this.usersRepository.findOne({
       where: { email },
       select: [
         'id',
@@ -135,11 +134,11 @@ export class UsersService {
   }
 
   async findOne(id: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { id } });
+    return await this.usersRepository.findOne({ where: { id } });
   }
 
   async findAll(): Promise<User[]> {
-    return this.usersRepository.find({
+    return await this.usersRepository.find({
       order: { createdAt: 'DESC' },
     });
   }
@@ -150,7 +149,7 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
     user.role = role;
-    return this.usersRepository.save(user);
+    return await this.usersRepository.save(user);
   }
 
   async updateStatus(id: string, isActive: boolean): Promise<User> {
@@ -159,11 +158,18 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
     user.isActive = isActive;
-    return this.usersRepository.save(user);
+    return await this.usersRepository.save(user);
   }
 
   async count(): Promise<number> {
-    return this.usersRepository.count();
+    return await this.usersRepository.count();
+  }
+
+  async findAllAdmins(): Promise<User[]> {
+    return await this.usersRepository.find({
+      where: { role: UserRole.ADMIN, isActive: true },
+      select: ['id', 'email', 'fullName'],
+    });
   }
 
   // Password reset methods
@@ -194,7 +200,7 @@ export class UsersService {
   }
 
   async findByPasswordResetToken(token: string): Promise<User | null> {
-    return this.usersRepository
+    return await this.usersRepository
       .createQueryBuilder('user')
       .addSelect('user.passwordResetToken')
       .where('user.passwordResetToken = :token', { token })
@@ -284,7 +290,7 @@ export class UsersService {
       user.avatarUrl = updateProfileDto.avatarUrl;
     }
 
-    return this.usersRepository.save(user);
+    return await this.usersRepository.save(user);
   }
 
   async updateOAuthAvatar(

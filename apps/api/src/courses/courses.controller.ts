@@ -9,7 +9,17 @@ import {
   Body,
   Delete,
   ParseUUIDPipe,
+  Logger,
 } from '@nestjs/common';
+
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { GeneratedQuestion } from '../quizzes/services/ai-quiz-generator.service';
+import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
 
 import {
   CoursesService,
@@ -29,17 +39,11 @@ import { CourseLevel, Course } from './entities/course.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { LessonResource } from './entities/lesson-resource.entity';
 import { Lesson } from './entities/lesson.entity';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { GeneratedQuestion } from '../quizzes/services/ai-quiz-generator.service';
-import { User } from '../users/entities/user.entity';
-import { UserRole } from '../users/enums/user-role.enum';
 
 @Controller('courses')
 export class CoursesController {
+  private readonly logger = new Logger(CoursesController.name);
+
   constructor(private readonly coursesService: CoursesService) {}
 
   @Get('tags')
@@ -131,7 +135,7 @@ export class CoursesController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: User,
   ): Promise<Enrollment> {
-    return this.coursesService.enroll(user.id, id);
+    return await this.coursesService.enroll(user.id, id);
   }
 
   @Get(':id/enrollment')
@@ -167,7 +171,7 @@ export class CoursesController {
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @CurrentUser() user: User,
   ): Promise<{ lesson: Lesson; hasAccess: boolean }> {
-    return this.coursesService.getLessonWithAccessControl(
+    return await this.coursesService.getLessonWithAccessControl(
       user,
       courseId,
       lessonId,
@@ -182,7 +186,7 @@ export class CoursesController {
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @CurrentUser() user: User,
   ): Promise<Enrollment | null> {
-    return this.coursesService.completeLesson(user, courseId, lessonId);
+    return await this.coursesService.completeLesson(user, courseId, lessonId);
   }
 
   /**
@@ -299,15 +303,16 @@ export class CoursesController {
     return this.coursesService.removeLesson(lessonId, user.id);
   }
 
-  @Post(':id/lessons/:lessonId/resources')
+  @Post('lessons/:lessonId/resources')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR)
   async addResource(
-    @Param('lessonId') lessonId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Body() dto: CreateResourceDto,
     @CurrentUser() user: User,
   ): Promise<LessonResource> {
-    return this.coursesService.addResource(lessonId, dto, user.id);
+    this.logger.debug(`Adding resource to lesson ${lessonId}`);
+    return await this.coursesService.addResource(lessonId, dto, user.id);
   }
 
   @Delete('lessons/resources/:resourceId')
@@ -317,7 +322,7 @@ export class CoursesController {
     @Param('resourceId') resourceId: string,
     @CurrentUser() user: User,
   ): Promise<void> {
-    return this.coursesService.removeResource(resourceId, user.id);
+    return await this.coursesService.removeResource(resourceId, user.id);
   }
 
   @Post(':id/sections/reorder')
@@ -346,9 +351,9 @@ export class CoursesController {
   @Roles(UserRole.INSTRUCTOR)
   submit(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() _user: User,
+    @CurrentUser() user: User,
   ): Promise<Course> {
-    return this.coursesService.submitForApproval(id);
+    return this.coursesService.submitForApproval(id, user.id);
   }
 
   @Patch(':id/approve')
@@ -364,7 +369,7 @@ export class CoursesController {
   async generateQuiz(
     @Body() dto: GenerateQuizPreviewDto,
   ): Promise<{ title: string; questions: GeneratedQuestion[] }> {
-    return this.coursesService.generateQuizPreview(dto);
+    return await this.coursesService.generateQuizPreview(dto);
   }
 
   @Patch(':id/reject')

@@ -61,7 +61,7 @@ export default defineConfig({
             '@dnd-kit/utilities',
           ],
           'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
-          utils: ['clsx', 'tailwind-merge', 'class-variance-authority'],
+          utils: ['clsx', 'tailwind-merge'],
         },
         // Optimize chunk file names for caching
         chunkFileNames: 'assets/js/[name]-[hash].js',

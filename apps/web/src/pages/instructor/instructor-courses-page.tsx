@@ -138,7 +138,7 @@ export function InstructorCoursesPage() {
             </div>
             {(user?.role === null || user?.role === 'guest') && (
               <Button
-                onClick={() => navigate('/auth/select-role')}
+                onClick={() => void navigate('/auth/select-role')}
                 size="lg"
                 className="gap-2"
               >
@@ -146,7 +146,7 @@ export function InstructorCoursesPage() {
                 Select Instructor Role
               </Button>
             )}
-            <Button variant="outline" onClick={() => navigate('/')}>
+            <Button variant="outline" onClick={() => void navigate('/')}>
               Go to Home
             </Button>
           </div>
@@ -165,7 +165,7 @@ export function InstructorCoursesPage() {
           <h1 className="text-3xl font-bold">My Courses</h1>
           <p className="text-muted-foreground">Manage your content</p>
         </div>
-        <Button onClick={() => navigate('/instructor/courses/new')}>
+        <Button onClick={() => void navigate('/instructor/courses/new')}>
           <Plus className="w-4 h-4 mr-2" />
           Create Course
         </Button>
@@ -289,7 +289,7 @@ export function InstructorCoursesPage() {
                 the world.
               </p>
               <Button
-                onClick={() => navigate('/instructor/courses/new')}
+                onClick={() => void navigate('/instructor/courses/new')}
                 className="mt-4"
               >
                 <Plus className="w-4 h-4 mr-2" />

@@ -192,7 +192,10 @@ function ProfileSection({ user, onUpdate }: ProfileSectionProps) {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={(e) => void handleSubmit(onSubmit)(e)}
+        className="space-y-6"
+      >
         {/* Avatar Upload */}
         <div className="space-y-2">
           <span className="text-sm font-medium text-foreground block">
@@ -382,7 +385,10 @@ function SecuritySection({ hasPassword }: SecuritySectionProps) {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form
+        onSubmit={(e) => void handleSubmit(onSubmit)(e)}
+        className="space-y-5"
+      >
         {/* Current Password */}
         <div className="space-y-2">
           <label
@@ -586,7 +592,10 @@ function DangerZoneSection({ hasPassword, onDelete }: DangerZoneSectionProps) {
               deleted.
             </p>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form
+              onSubmit={(e) => void handleSubmit(onSubmit)(e)}
+              className="space-y-4"
+            >
               {hasPassword && (
                 <div className="space-y-2">
                   <label

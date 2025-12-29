@@ -44,18 +44,18 @@ export class User {
   @Column({ type: 'varchar', nullable: true, select: false })
   activationToken: string | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   activationTokenExpiry: Date | null;
 
   @Column({ type: 'varchar', nullable: true, select: false })
   passwordResetToken: string | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   passwordResetTokenExpiry: Date | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 }

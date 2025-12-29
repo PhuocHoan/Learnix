@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { getRepositoryToken } from '@nestjs/typeorm';
-
 import { type Repository } from 'typeorm';
 
 import { AppModule } from '../app.module';
@@ -28,9 +27,11 @@ async function bootstrap(): Promise<void> {
     console.warn('Instructor exists.');
   }
 
-  console.warn('Updating instructor status...');
-  // Force update verify status and role
-  // Using query builder to bypass any service logic constraints
+  console.warn('Updating instructor status and password...');
+  const bcrypt = require('bcrypt');
+  const hashedPassword = await bcrypt.hash(instructorPass, 10);
+
+  // Force update verify status, role, and password
   await usersRepository
     .createQueryBuilder()
     .update(User)
@@ -38,11 +39,39 @@ async function bootstrap(): Promise<void> {
       isEmailVerified: true,
       isActive: true,
       role: UserRole.INSTRUCTOR,
+      password: hashedPassword,
     })
     .where('email = :email', { email: instructorEmail })
     .execute();
 
-  console.warn('Instructor updated: Verified and Active.');
+  console.warn('Instructor updated: Verified, Active, and Password reset.');
+
+  // Seed Student
+  const studentEmail = 'student_test@example.com';
+  const studentPass = 'Password123!';
+  const student = await usersService.findByEmail(studentEmail);
+  if (!student) {
+    console.warn('Creating student...');
+    await usersService.create({
+      email: studentEmail,
+      password: studentPass,
+      fullName: 'Test Student',
+    });
+  }
+
+  await usersRepository
+    .createQueryBuilder()
+    .update(User)
+    .set({
+      isEmailVerified: true,
+      isActive: true,
+      role: UserRole.STUDENT,
+      password: hashedPassword,
+    })
+    .where('email = :email', { email: studentEmail })
+    .execute();
+
+  console.warn('Student updated: Verified, Active, and Password reset.');
   await app.close();
 }
 

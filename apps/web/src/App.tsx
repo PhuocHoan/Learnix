@@ -10,6 +10,7 @@ import { RoleSelectionGuard } from '@/components/auth/role-selection-guard';
 import { AppShell } from '@/components/layout/app-shell';
 import { ScrollToTop } from '@/components/scroll-to-top';
 import { AuthProvider } from '@/contexts/auth-context';
+import { LegacyLessonRedirect } from '@/pages/courses/legacy-lesson-redirect';
 
 // Lazy load pages for code splitting
 const AdminDashboardPage = lazy(
@@ -56,6 +57,9 @@ const CourseEditorPage = lazy(
 const QuizEditorPage = lazy(
   () => import('@/pages/instructor/quiz-editor-page'),
 );
+const CheckoutPage = lazy(() => import('@/pages/checkout/checkout-page'));
+
+// Redirect component for legacy lesson URLs (from old notifications)
 
 // Loading fallback component
 function PageLoader() {
@@ -151,6 +155,10 @@ function App() {
                   element={<LessonViewerPage />}
                 />
                 <Route
+                  path="/courses/:courseId/lessons/:lessonId"
+                  element={<LegacyLessonRedirect />}
+                />
+                <Route
                   path="/my-learning"
                   element={
                     <ProtectedRoute allowedRoles={['student', 'instructor']}>
@@ -163,6 +171,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <SettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/checkout/:courseId"
+                  element={
+                    <ProtectedRoute allowedRoles={['student', 'instructor']}>
+                      <CheckoutPage />
                     </ProtectedRoute>
                   }
                 />

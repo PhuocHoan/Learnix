@@ -35,6 +35,13 @@ import { Button } from '@/components/ui/button';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { Input } from '@/components/ui/input';
 import { MarkdownEditor } from '@/components/ui/markdown-editor';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UrlInput } from '@/components/ui/url-input';
 import { VideoUpload } from '@/components/ui/video-upload';
@@ -211,8 +218,12 @@ export function BlockEditor({
                 <div className="opacity-50 pointer-events-none">
                   {renderBlockInput(
                     activeBlock,
-                    () => {},
-                    () => {},
+                    () => {
+                      /* noop */
+                    },
+                    () => {
+                      /* noop */
+                    },
                   )}
                 </div>
               </div>
@@ -657,21 +668,25 @@ function renderBlockInput(
       return (
         <div className="space-y-2 border border-input rounded-lg overflow-hidden">
           <div className="bg-muted px-3 py-1 border-b border-input flex gap-2">
-            <select
+            <Select
               value={block.metadata?.language ?? 'javascript'}
-              onChange={(e) => {
+              onValueChange={(val) => {
                 onChange({
-                  metadata: { ...block.metadata, language: e.target.value },
+                  metadata: { ...block.metadata, language: val },
                 });
               }}
-              className="text-xs bg-transparent border-none focus:ring-0 cursor-pointer"
             >
-              <option value="javascript">JavaScript</option>
-              <option value="typescript">TypeScript</option>
-              <option value="python">Python</option>
-              <option value="html">HTML</option>
-              <option value="css">CSS</option>
-            </select>
+              <SelectTrigger className="h-6 w-[120px] bg-transparent border-none focus:ring-0 text-xs text-muted-foreground hover:text-foreground p-0 gap-1 justify-start">
+                <SelectValue placeholder="Language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="javascript">JavaScript</SelectItem>
+                <SelectItem value="typescript">TypeScript</SelectItem>
+                <SelectItem value="python">Python</SelectItem>
+                <SelectItem value="html">HTML</SelectItem>
+                <SelectItem value="css">CSS</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <textarea
             value={block.content}

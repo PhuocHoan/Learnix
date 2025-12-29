@@ -7,8 +7,9 @@ import {
   JoinColumn,
 } from 'typeorm';
 
-import { Quiz } from './quiz.entity';
 import { User } from '../../users/entities/user.entity';
+
+import { Quiz } from './quiz.entity';
 
 @Entity('quiz_submissions')
 export class QuizSubmission {

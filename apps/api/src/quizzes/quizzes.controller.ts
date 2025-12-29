@@ -7,8 +7,14 @@ import {
   Body,
   Param,
   UseGuards,
-  NotFoundException,
 } from '@nestjs/common';
+
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
 
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { CreateQuizDto } from './dto/create-quiz.dto';
@@ -19,12 +25,7 @@ import { Question } from './entities/question.entity';
 import { QuizSubmission } from './entities/quiz-submission.entity';
 import { Quiz } from './entities/quiz.entity';
 import { QuizzesService } from './quizzes.service';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { User } from '../users/entities/user.entity';
-import { UserRole } from '../users/enums/user-role.enum';
+import { GeneratedQuestion } from './services/ai-quiz-generator.service';
 
 @Controller('quizzes')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -47,7 +48,7 @@ export class QuizzesController {
     @Body() createDto: CreateQuizDto,
     @CurrentUser() user: User,
   ): Promise<Quiz> {
-    return this.quizzesService.create(createDto, user.id);
+    return await this.quizzesService.create(createDto, user.id);
   }
 
   @Post(':id/questions')
@@ -56,33 +57,44 @@ export class QuizzesController {
     @Param('id') quizId: string,
     @Body() createDto: CreateQuestionDto,
   ): Promise<Question> {
-    return this.quizzesService.createQuestion(quizId, createDto);
+    return await this.quizzesService.createQuestion(quizId, createDto);
+  }
+
+  @Post('generate')
+  @Roles(UserRole.INSTRUCTOR)
+  async generateQuiz(
+    @Body() body: { text: string; count: number; types: string[] },
+  ): Promise<{ title: string; questions: GeneratedQuestion[] }> {
+    return await this.quizzesService.generateQuiz(
+      body.text,
+      body.count,
+      body.types,
+    );
   }
 
   @Get('by-lesson/:lessonId')
-  async getQuizByLesson(@Param('lessonId') lessonId: string): Promise<Quiz> {
+  async getQuizByLesson(
+    @Param('lessonId') lessonId: string,
+  ): Promise<Quiz | null> {
     const quiz = await this.quizzesService.findByLesson(lessonId);
-    if (!quiz) {
-      throw new NotFoundException('Quiz not found for this lesson');
-    }
-    return quiz;
+    return quiz ?? null;
   }
 
   @Get('my-quizzes')
   @Roles(UserRole.INSTRUCTOR)
   async getMyQuizzes(@CurrentUser() user: User): Promise<Quiz[]> {
-    return this.quizzesService.findByInstructor(user.id);
+    return await this.quizzesService.findByInstructor(user.id);
   }
 
   @Get(':id')
   async getQuiz(@Param('id') id: string): Promise<Quiz> {
-    return this.quizzesService.findOne(id);
+    return await this.quizzesService.findOne(id);
   }
 
   @Patch(':id/approve')
   @Roles(UserRole.INSTRUCTOR)
   async approveQuiz(@Param('id') id: string): Promise<Quiz> {
-    return this.quizzesService.approveQuiz(id);
+    return await this.quizzesService.approveQuiz(id);
   }
 
   @Patch('questions/:questionId')
@@ -91,7 +103,7 @@ export class QuizzesController {
     @Param('questionId') questionId: string,
     @Body() updateDto: UpdateQuestionDto,
   ): Promise<Question> {
-    return this.quizzesService.updateQuestion(questionId, updateDto);
+    return await this.quizzesService.updateQuestion(questionId, updateDto);
   }
 
   @Delete('questions/:questionId')
@@ -109,7 +121,7 @@ export class QuizzesController {
     @Param('id') id: string,
     @Body() updateDto: UpdateQuizDto,
   ): Promise<Quiz> {
-    return this.quizzesService.update(id, updateDto);
+    return await this.quizzesService.update(id, updateDto);
   }
 
   @Post(':id/save-progress')
@@ -119,7 +131,11 @@ export class QuizzesController {
     @Body() submitDto: SubmitQuizDto,
     @CurrentUser() user: User,
   ): Promise<QuizSubmission> {
-    return this.quizzesService.saveProgress(user.id, id, submitDto.answers);
+    return await this.quizzesService.saveProgress(
+      user.id,
+      id,
+      submitDto.answers,
+    );
   }
   @Post(':id/submit')
   @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
@@ -128,7 +144,7 @@ export class QuizzesController {
     @Body() submitDto: SubmitQuizDto,
     @CurrentUser() user: User,
   ): Promise<QuizSubmission> {
-    return this.quizzesService.submitQuiz(user.id, id, submitDto);
+    return await this.quizzesService.submitQuiz(user.id, id, submitDto);
   }
 
   @Get(':id/submission')

@@ -251,6 +251,11 @@ describe('CourseDetailPage', () => {
 
     it('shows success toast when enrollment is successful', async () => {
       const user = userEvent.setup();
+      // Mock a free course so enrollment happens directly (not via checkout)
+      vi.mocked(coursesApi.getCourse).mockResolvedValue({
+        ...mockCourse,
+        price: 0, // Free course triggers direct enrollment
+      });
       vi.mocked(coursesApi.getEnrollment).mockResolvedValue({
         isEnrolled: false,
         isInstructor: false,
@@ -366,7 +371,10 @@ describe('CourseDetailPage', () => {
 
   it('shows loading state while fetching', () => {
     vi.mocked(coursesApi.getCourse).mockImplementation(
-      () => new Promise(() => {}),
+      () =>
+        new Promise(() => {
+          /* pending */
+        }),
     ); // Never resolves
     renderWithProviders();
 

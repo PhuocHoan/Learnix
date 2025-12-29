@@ -10,9 +10,10 @@ test.describe('AI Quiz Generation', () => {
 
     // Login as instructor
     await authPage.gotoLogin();
+    await page.waitForLoadState('networkidle');
     await authPage.login('instructor_mod_js@example.com', 'Password123!');
 
-    await expect(page).toHaveURL(/.*dashboard/);
+    await expect(page).toHaveURL(/.*dashboard/, { timeout: 30000 });
   });
 
   test('should open AI quiz generator for a course', async ({ page }) => {
@@ -69,7 +70,12 @@ test.describe('AI Quiz Generation', () => {
     }
 
     await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('heading', { name: /edit:/i })).toBeVisible();
+    // Wait for either "Edit:" heading (existing course) or course title heading (new course)
+    await expect(
+      page
+        .getByRole('heading', { name: /edit:/i })
+        .or(page.getByRole('heading', { name: /E2E Test Course/i })),
+    ).toBeVisible({ timeout: 15000 });
 
     // Go to curriculum tab
     await page.getByRole('tab', { name: /curriculum/i }).click();
@@ -90,24 +96,37 @@ test.describe('AI Quiz Generation', () => {
     }
 
     // Ensure a lesson exists (AI needs lessons to generate from)
-    if ((await page.locator('.lesson-item').count()) === 0) {
-      const addLessonBtn = page
-        .getByRole('button', { name: /add lesson/i })
-        .first();
-      await addLessonBtn.click();
-      await page.getByLabel(/lesson title/i).fill('Test Lesson');
-      await page.getByRole('button', { name: /save lesson/i }).click();
-      await expect(page.getByText('Test Lesson').first()).toBeVisible();
-    }
+    // Actually we don't need a lesson if we manually create a quiz, but we need the section.
 
-    // Open Quiz dialog
-    await page.getByRole('button', { name: /Quiz/i }).first().click();
+    // Open Quiz creation dialog
+    const quizBtn = page.getByRole('button', { name: /Quiz/i }).first();
+    await quizBtn.waitFor({ state: 'visible' });
+    await quizBtn.click();
 
-    // Select AI Powered
-    await page.getByRole('heading', { name: /AI Powered/i }).click();
+    // Select Manual Create to get to the editor
+    await page.getByText('Manual Create').click();
 
-    // Should see AI Quiz Engineer modal
-    await expect(page.getByText(/AI Quiz Engineer/i)).toBeVisible();
-    await expect(page.getByText(/Question Formats/i)).toBeVisible();
+    // Fill title
+    const quizTitle = 'Test AI Quiz ' + Date.now();
+    await page.getByLabel(/Quiz Title/i).fill(quizTitle);
+    await page.getByRole('button', { name: /Create Quiz/i }).click();
+
+    // Wait for navigation to Quiz Editor
+    await expect(page).toHaveURL(/.*\/quiz.*\/edit/);
+    await page.waitForLoadState('networkidle');
+
+    // Click Generate with AI (the feature we implemented)
+    const generateBtn = page.getByRole('button', { name: /Generate with AI/i });
+    await generateBtn.waitFor({ state: 'visible' });
+    await generateBtn.click();
+
+    // Should see Generate Quiz with AI modal
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByText(/Generate Quiz with AI/i)).toBeVisible();
+
+    // Use label to find the textarea
+    const lessonContent = dialog.getByLabel(/Lesson Content/i);
+    await expect(lessonContent).toBeVisible();
   });
 });

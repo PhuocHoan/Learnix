@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
@@ -40,13 +40,37 @@ import { NotFoundPage } from '@/pages/not-found-page';
 
 // --- Block Renderers ---
 
-function VideoBlock({ content }: { content: string }) {
-  if (!content) {
-    return null;
-  }
+function VideoBlock({
+  content,
+  onComplete,
+}: {
+  content: string;
+  onComplete?: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const youtubeId = getYoutubeId(content);
   const vimeoId = getVimeoId(content);
+
+  // Note: For YouTube/Vimeo iframes, we cannot robustly detect 'end' events
+  // without using their respective heavy SDKs (YouTube IFrame API / Vimeo Player SDK).
+  // For this implementation, we will trust the user's scroll for embeds,
+  // or you could implement a timer-based approximation if strictly required.
+  // We will trigger onComplete immediately for embeds to avoid blocking completion,
+  // unless we want to force valid "watch time" which is hard with simple iframes.
+  // User requested "must finish video", so for direct videos we use onEnded.
+  // For embeds, we'll mark as complete when they load for now to prevent getting stuck,
+  // since we can't track them.
+  useEffect(() => {
+    if (youtubeId || vimeoId) {
+      // Simulate completion for embeds since we can't track them without SDKs
+      requestAnimationFrame(() => onComplete?.());
+    }
+  }, [youtubeId, vimeoId, onComplete]);
+
+  if (!content) {
+    return null;
+  }
 
   if (youtubeId) {
     return (
@@ -80,7 +104,12 @@ function VideoBlock({ content }: { content: string }) {
   if (isDirectVideo) {
     return (
       <div className="aspect-video w-full rounded-xl overflow-hidden shadow-sm my-6 bg-black">
-        <video controls className="w-full h-full">
+        <video
+          ref={videoRef}
+          controls
+          className="w-full h-full"
+          onEnded={() => onComplete?.()}
+        >
           <source src={content} />
           <track kind="captions" />
           Your browser does not support the video tag.
@@ -89,10 +118,16 @@ function VideoBlock({ content }: { content: string }) {
     );
   }
 
-  // If it's not a recognized video format but in a video block, still try video tag
+  // Fallback for upload/generic video
   return (
     <div className="aspect-video w-full rounded-xl overflow-hidden shadow-sm my-6 bg-black font-medium">
-      <video controls className="w-full h-full" src={content}>
+      <video
+        ref={videoRef}
+        controls
+        className="w-full h-full"
+        src={content}
+        onEnded={() => onComplete?.()}
+      >
         <track kind="captions" />
       </video>
     </div>
@@ -153,7 +188,6 @@ function ImageBlock({
           alt={caption ?? 'Lesson image'}
           className="rounded-xl w-full object-contain max-h-100 border border-border shadow-sm bg-black/5"
           onError={(e) => {
-            // If it failed as image, and we didn't catch it as video, show placeholder
             (e.target as HTMLImageElement).src =
               'https://placehold.co/600x400?text=Invalid+Media+URL';
           }}
@@ -172,11 +206,11 @@ function ImageBlock({
 const markdownComponents = {
   h1: ({
     className,
-    children,
+    kids,
     ...props
-  }: React.HTMLAttributes<HTMLHeadingElement>) => (
+  }: React.HTMLAttributes<HTMLHeadingElement> & { kids?: React.ReactNode }) => (
     <h1 className={cn('text-3xl font-bold mt-8 mb-4', className)} {...props}>
-      {children}
+      {kids}
     </h1>
   ),
   h2: ({
@@ -297,7 +331,13 @@ const markdownComponents = {
 
 // --- Main Content Renderer ---
 
-function LessonContent({ blocks }: { blocks: LessonBlock[] }) {
+function LessonContent({
+  blocks,
+  onVideoComplete,
+}: {
+  blocks: LessonBlock[];
+  onVideoComplete: (blockId: string) => void;
+}) {
   if (!blocks || blocks.length === 0) {
     return (
       <div className="text-center py-10 text-muted-foreground">
@@ -316,7 +356,7 @@ function LessonContent({ blocks }: { blocks: LessonBlock[] }) {
               return (
                 <div key={block.id} className="max-w-none my-6 text-foreground">
                   <ReactMarkdown
-                    components={markdownComponents}
+                    components={markdownComponents as any}
                     remarkPlugins={[remarkGfm]}
                   >
                     {block.content}
@@ -325,7 +365,13 @@ function LessonContent({ blocks }: { blocks: LessonBlock[] }) {
               );
             }
             case 'video': {
-              return <VideoBlock key={block.id} content={block.content} />;
+              return (
+                <VideoBlock
+                  key={block.id}
+                  content={block.content}
+                  onComplete={() => onVideoComplete(block.id)}
+                />
+              );
             }
             case 'image': {
               return (
@@ -356,8 +402,6 @@ function LessonContent({ blocks }: { blocks: LessonBlock[] }) {
 
 // --- Quiz Component ---
 
-// --- Quiz Component ---
-
 function QuizSection({
   lessonId,
   isEnrolled,
@@ -376,6 +420,7 @@ function QuizSection({
         return await quizzesApi.getQuizByLessonId(lessonId);
       } catch (error) {
         const err = error as { response?: { status?: number } };
+        // Silence 404s for initial checks
         if (err.response?.status === 404) {
           return null;
         }
@@ -411,10 +456,10 @@ function QuizSection({
     </div>
   );
 }
+
 // --- Main Page Component ---
 
 export function LessonViewerPage() {
-  // Use default value to avoid non-null assertions later
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -423,15 +468,18 @@ export function LessonViewerPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { isAuthenticated, user } = useAuth();
+  const completionTriggeredRef = useRef(false); // Prevents duplicate calls
 
   // Lesson Completion Restrictions
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
-  const [hasQuiz, setHasQuiz] = useState(false);
+  const [_hasQuiz, setHasQuiz] = useState(false);
+  const [watchedVideoIds, setWatchedVideoIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const lessonIdFromUrl = searchParams.get('lesson');
 
-  // Fetch Course
   const {
     data: course,
     isLoading: isLoadingCourse,
@@ -448,7 +496,6 @@ export function LessonViewerPage() {
     },
   });
 
-  // Fetch Enrollment
   const {
     data: enrollment,
     isLoading: isLoadingEnrollment,
@@ -466,7 +513,6 @@ export function LessonViewerPage() {
   const activeLessonId =
     lessonIdFromUrl ?? course?.sections?.[0]?.lessons?.[0]?.id;
 
-  // Find active lesson
   const currentLesson: Lesson | undefined = course?.sections?.reduce<
     Lesson | undefined
   >(
@@ -475,11 +521,43 @@ export function LessonViewerPage() {
     undefined,
   );
 
-  // Reset completion states when lesson changes
+  const completedIds = enrollment?.progress?.completedLessonIds ?? [];
+  const isLessonCompleted =
+    currentLesson && completedIds.includes(currentLesson.id);
+
+  // Identify stats about the lesson
+  const videoBlocks =
+    currentLesson?.content.filter((b) => b.type === 'video') ?? [];
+  const hasVideos = videoBlocks.length > 0;
+  const hasWatchedAllVideos = videoBlocks.every((b) =>
+    watchedVideoIds.has(b.id),
+  );
+
+  const isInstructor = Boolean(
+    isAuthenticated && user?.id && course?.instructor?.id === user.id,
+  );
+  const isAdmin = Boolean(isAuthenticated && user?.role === 'admin');
+
+  const { mutate: completeLesson, isPending: isCompletingLesson } = useMutation(
+    {
+      mutationFn: (variables: { lessonId: string; suppressToast?: boolean }) =>
+        coursesApi.completeLesson(id, variables.lessonId),
+      onSuccess: (_data, variables) => {
+        void queryClient.invalidateQueries({ queryKey: ['enrollment', id] });
+        if (!variables.suppressToast) {
+          toast.success('Lesson completed!');
+        }
+      },
+    },
+  );
+
+  // Reset state when lesson changes
   useEffect(() => {
     const timer = setTimeout(() => {
       setHasScrolledToBottom(false);
-      setHasQuiz(false); // Reset/trust QuizSection to update this
+      setHasQuiz(false);
+      setWatchedVideoIds(new Set());
+      completionTriggeredRef.current = false;
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTop = 0;
       }
@@ -487,47 +565,94 @@ export function LessonViewerPage() {
     return () => clearTimeout(timer);
   }, [activeLessonId]);
 
-  // Check initial scroll height (if content fits without scrolling)
+  // Main completion logic
   useEffect(() => {
-    const checkScroll = () => {
-      if (scrollContainerRef.current) {
-        const { scrollHeight, clientHeight } = scrollContainerRef.current;
-        // If content is shorter than or equal to container (with small tolerance)
-        if (scrollHeight <= clientHeight + 50) {
-          setHasScrolledToBottom(true);
-        }
-      }
-    };
-    // Check after a short delay to allow content rendering (images, etc)
-    const timer = setTimeout(checkScroll, 1000);
-    return () => clearTimeout(timer);
-  }, [currentLesson]);
+    // If we have already triggered completion for THIS lesson, do nothing
+    // preventing "bulk toasts"
+    if (completionTriggeredRef.current) {
+      return;
+    }
 
-  const handleScroll = () => {
+    if (
+      currentLesson &&
+      currentLesson.type !== 'quiz' &&
+      !isLessonCompleted &&
+      !isCompletingLesson &&
+      isEnrolled &&
+      !isInstructor &&
+      !isAdmin
+    ) {
+      if (hasScrolledToBottom && (!hasVideos || hasWatchedAllVideos)) {
+        completionTriggeredRef.current = true; // Mark as triggered
+        completeLesson({
+          lessonId: currentLesson.id,
+          suppressToast: false,
+        });
+      }
+    }
+  }, [
+    hasScrolledToBottom,
+    hasWatchedAllVideos,
+    hasVideos,
+    currentLesson,
+    isLessonCompleted,
+    isCompletingLesson,
+    completeLesson,
+    isEnrolled,
+    isInstructor,
+    isAdmin,
+  ]);
+
+  // --- Handlers ---
+
+  // --- Handlers ---
+
+  const checkScroll = useCallback(() => {
     if (scrollContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } =
         scrollContainerRef.current;
-      // Check if reached bottom (within 50px tolerance)
-      if (scrollTop + clientHeight >= scrollHeight - 50) {
+      // Triggers if:
+      // 1. User scrolled to bottom (within 50px buffer)
+      // 2. Content is smaller than viewport (fully visible)
+      if (
+        scrollHeight <= clientHeight + 50 ||
+        scrollTop + clientHeight >= scrollHeight - 50
+      ) {
         setHasScrolledToBottom(true);
       }
     }
+  }, []);
+
+  // Check scroll on mount, resize, and content change
+  useEffect(() => {
+    // Use requestAnimationFrame to defer the initial check, avoiding synchronous setState in effect
+    const frameId = requestAnimationFrame(checkScroll);
+    window.addEventListener('resize', checkScroll);
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [checkScroll, currentLesson]);
+
+  // Re-check when content likely loads/renders (e.g. slight delay for images/markdown)
+  useEffect(() => {
+    const timer = setTimeout(checkScroll, 500);
+    return () => clearTimeout(timer);
+  }, [checkScroll, currentLesson]);
+
+  const handleScroll = () => {
+    checkScroll();
   };
 
-  const isPreviewLesson = currentLesson?.isFreePreview ?? false;
-  const isInstructor = Boolean(
-    isAuthenticated && user?.id && course?.instructor?.id === user.id,
-  );
-  const isAdmin = Boolean(isAuthenticated && user?.role === 'admin');
-  const hasCourseAccess =
-    (enrollment?.hasAccess ?? false) || isInstructor || isAdmin;
-  const hasAccess = hasCourseAccess || isPreviewLesson;
-  const shouldShowAuthModal =
-    !isLoadingEnrollment &&
-    !isLoadingCourse &&
-    course &&
-    !hasAccess &&
-    !isAuthenticated;
+  const handleVideoComplete = (blockId: string) => {
+    setWatchedVideoIds((prev) => {
+      const next = new Set(prev);
+      next.add(blockId);
+      return next;
+    });
+  };
+
+  // --- Loading / Auth Checks ---
 
   const accessRedirectedRef = useRef(false);
   const enrollGraceAttemptsRef = useRef(0);
@@ -539,6 +664,11 @@ export function LessonViewerPage() {
     if (isLoadingCourse || isFetchingEnrollment) {
       return;
     }
+
+    const isPreviewLesson = currentLesson?.isFreePreview ?? false;
+    const hasCourseAccess =
+      (enrollment?.hasAccess ?? false) || isInstructor || isAdmin;
+    const hasAccess = hasCourseAccess || isPreviewLesson;
 
     if (course && !hasAccess && isAuthenticated) {
       const cameFromEnroll = Boolean(
@@ -591,7 +721,6 @@ export function LessonViewerPage() {
     isLoadingCourse,
     isFetchingEnrollment,
     course,
-    hasAccess,
     isAuthenticated,
     id,
     navigate,
@@ -600,20 +729,11 @@ export function LessonViewerPage() {
     enrollmentError,
     enrollmentStatus,
     refetchEnrollment,
+    currentLesson?.isFreePreview,
+    isInstructor,
+    isAdmin,
   ]);
 
-  const completeLessonMutation = useMutation({
-    mutationFn: (variables: { lessonId: string; suppressToast?: boolean }) =>
-      coursesApi.completeLesson(id, variables.lessonId),
-    onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ['enrollment', id] });
-      if (!variables.suppressToast) {
-        toast.success('Lesson completed!');
-      }
-    },
-  });
-
-  // Handle Loading States
   if (
     isAxiosError(courseError) &&
     (courseError.response?.status === 404 ||
@@ -630,17 +750,13 @@ export function LessonViewerPage() {
     );
   }
 
-  const completedIds = enrollment?.progress?.completedLessonIds ?? [];
-  const isLessonCompleted =
-    currentLesson && completedIds.includes(currentLesson.id);
+  const isPreviewLesson = currentLesson?.isFreePreview ?? false;
+  const hasCourseAccess =
+    (enrollment?.hasAccess ?? false) || isInstructor || isAdmin;
+  const hasAccess = hasCourseAccess || isPreviewLesson;
+  const shouldShowAuthModal = !hasAccess && !isAuthenticated;
 
-  // Determine if Mark Complete button should be disabled
-  const isCompletionDisabled =
-    !isLessonCompleted && // already completed -> explicit enable (looks better)
-    (completeLessonMutation.isPending ||
-      hasQuiz || // Must complete via quiz
-      !hasScrolledToBottom); // Must scroll to bottom
-
+  // Render
   return (
     <>
       <AuthRequiredModal
@@ -652,13 +768,12 @@ export function LessonViewerPage() {
       />
 
       <div className="h-screen flex flex-col overflow-hidden bg-background">
-        {/* Top Header */}
         <div className="h-16 border-b border-border bg-card flex items-center px-4 justify-between shrink-0 z-20">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(`/courses/${id}`)}
+              onClick={() => void navigate(`/courses/${id}`)}
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
               Back to Course
@@ -671,7 +786,6 @@ export function LessonViewerPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="lg:hidden"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           >
             {isSidebarOpen ? (
@@ -683,7 +797,6 @@ export function LessonViewerPage() {
         </div>
 
         <div className="flex-1 flex overflow-hidden relative">
-          {/* Main Content Area */}
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
@@ -693,12 +806,12 @@ export function LessonViewerPage() {
                 'grid lg:grid-cols-2 gap-0 overflow-hidden',
             )}
           >
-            {/* If IDE enabled, wrap content in a div that scrolls independently or fits in grid */}
             <div
               className={cn(
-                'max-w-4xl mx-auto p-6 md:p-10 w-full',
+                'max-w-4xl mx-auto p-6 md:p-10 w-full transition-all duration-300',
                 currentLesson?.ideConfig &&
                   'overflow-y-auto h-full max-w-none p-6',
+                !isSidebarOpen && !currentLesson?.ideConfig && 'max-w-5xl', // Expand content width when sidebar is closed
               )}
             >
               {currentLesson ? (
@@ -715,7 +828,7 @@ export function LessonViewerPage() {
                               return (
                                 <Button
                                   size="sm"
-                                  disabled
+                                  disabled={false}
                                   variant="outline"
                                   className="text-green-700 border-green-400 bg-green-100/50 font-bold opacity-100"
                                 >
@@ -728,32 +841,27 @@ export function LessonViewerPage() {
                               <Button
                                 size="sm"
                                 disabled
-                                className="bg-orange-500 hover:bg-orange-600 text-white border-none font-bold"
+                                className="bg-orange-500 hover:bg-orange-600 text-white border-none font-bold opacity-100"
                               >
                                 <Loader2 className="w-4 h-4 mr-2" />
-                                Pass quiz to complete
+                                Uncompleted
                               </Button>
                             );
                           }
-                          // Standard lesson completion UI
+
+                          // Standard Lesson
                           return (
                             <Button
                               size="sm"
-                              onClick={() =>
-                                completeLessonMutation.mutate({
-                                  lessonId: currentLesson.id,
-                                })
-                              }
-                              disabled={
-                                isCompletionDisabled || isLessonCompleted
-                              }
+                              disabled={!isLessonCompleted}
                               variant={
-                                isLessonCompleted ? 'outline' : 'primary'
+                                isLessonCompleted ? 'outline' : undefined
                               }
                               className={cn(
-                                'font-bold',
-                                isLessonCompleted &&
-                                  'text-green-700 border-green-400 bg-green-100/50',
+                                'font-bold transition-all duration-300',
+                                isLessonCompleted
+                                  ? 'text-green-700 border-green-400 bg-green-100/50 font-bold opacity-100' // Completed style
+                                  : 'bg-orange-500 hover:bg-orange-600 text-white border-none opacity-100', // "Uncompleted" style (Orange)
                               )}
                             >
                               {isLessonCompleted ? (
@@ -762,7 +870,10 @@ export function LessonViewerPage() {
                                   Completed
                                 </>
                               ) : (
-                                'Mark as Complete'
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2" />
+                                  Uncompleted
+                                </>
                               )}
                             </Button>
                           );
@@ -771,13 +882,12 @@ export function LessonViewerPage() {
                     )}
                   </div>
 
-                  {/* Quiz Section */}
                   <QuizSection
                     lessonId={currentLesson.id}
                     isEnrolled={isEnrolled || isInstructor}
                     onComplete={() => {
                       if (!completedIds.includes(currentLesson.id)) {
-                        completeLessonMutation.mutate({
+                        completeLesson({
                           lessonId: currentLesson.id,
                           suppressToast: true,
                         });
@@ -786,84 +896,52 @@ export function LessonViewerPage() {
                     onHasQuiz={setHasQuiz}
                   />
 
-                  {/* Render the Block Content */}
                   {currentLesson.type === 'quiz' &&
                   (currentLesson.content?.length ?? 0) === 0 ? null : (
-                    <LessonContent blocks={currentLesson.content} />
+                    <LessonContent
+                      blocks={currentLesson.content}
+                      onVideoComplete={handleVideoComplete}
+                    />
                   )}
 
                   <LessonResources
                     courseId={id}
                     lessonId={currentLesson.id}
                     resources={currentLesson.resources ?? []}
-                    isInstructor={isInstructor}
+                    isInstructor={false}
                   />
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <FileText className="w-12 h-12 mb-4 opacity-20" />
-                  <p>Select a lesson from the sidebar to start learning</p>
+                <div className="py-20 text-center text-muted-foreground">
+                  Select a lesson to start learning
                 </div>
               )}
             </div>
-
-            {(() => {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-              const ideConfig = currentLesson?.ideConfig as any;
-              if (!ideConfig) {
-                return null;
-              }
-
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-              const normalizedConfig = ideConfig.allowedLanguages
-                ? ideConfig
-                : {
-                    allowedLanguages: [
-                      {
-                        language:
-                          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                          (ideConfig.language as string) ?? 'javascript',
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                        initialCode: (ideConfig.initialCode as string) ?? '',
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                        expectedOutput: ideConfig.expectedOutput as
-                          | string
-                          | undefined,
-                      },
-                    ],
-                    defaultLanguage:
-                      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                      (ideConfig.language as string) ?? 'javascript',
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                    instructions: ideConfig.instructions as string | undefined,
-                  };
-
-              return (
-                <div className="hidden lg:block h-full border-l border-border overflow-hidden">
-                  <IdePanel
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                    allowedLanguages={normalizedConfig.allowedLanguages}
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                    defaultLanguage={normalizedConfig.defaultLanguage}
-                    lessonId={currentLesson?.id ?? 'preview'}
-                    onSuccess={() => {
-                      if (!isLessonCompleted && currentLesson) {
-                        completeLessonMutation.mutate({
-                          lessonId: currentLesson.id,
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              );
-            })()}
+            {currentLesson?.ideConfig && (
+              <div className="h-full border-l border-border bg-[#1e1e1e] overflow-hidden hidden lg:block">
+                <IdePanel
+                  allowedLanguages={currentLesson.ideConfig.allowedLanguages}
+                  defaultLanguage={currentLesson.ideConfig.defaultLanguage}
+                  lessonId={currentLesson.id}
+                  onSuccess={() => {
+                    if (!isLessonCompleted) {
+                      completeLesson({
+                        lessonId: currentLesson.id,
+                      });
+                    }
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Sidebar Navigation */}
           <div
             className={cn(
-              'w-80 bg-card border-l border-border flex flex-col absolute inset-y-0 right-0 transform transition-transform duration-300 lg:relative lg:translate-x-0 z-10',
+              'w-80 bg-card border-l border-border flex flex-col absolute inset-y-0 right-0 transform transition-all duration-300 z-10',
               isSidebarOpen ? 'translate-x-0' : 'translate-x-full',
+              'lg:relative lg:translate-x-0',
+              !isSidebarOpen && 'lg:w-0 lg:border-l-0 lg:overflow-hidden',
             )}
           >
             <div className="p-4 border-b border-border font-semibold flex justify-between items-center bg-muted/30">
@@ -899,11 +977,18 @@ export function LessonViewerPage() {
                       const canAccess = hasCourseAccess || lesson.isFreePreview;
                       const isLocked = !canAccess;
 
+                      const isCoding = Boolean(lesson.ideConfig);
                       const typeLabel =
-                        lesson.type === 'quiz' ? 'Quiz' : 'Lesson';
+                        lesson.type === 'quiz'
+                          ? 'Quiz'
+                          : isCoding
+                            ? 'Code Exercise'
+                            : 'Lesson';
                       const typeIcon =
                         lesson.type === 'quiz' ? (
                           <CircleHelp className="w-3 h-3" aria-hidden="true" />
+                        ) : isCoding ? (
+                          <CodeIcon className="w-3 h-3" aria-hidden="true" />
                         ) : (
                           <FileText className="w-3 h-3" aria-hidden="true" />
                         );

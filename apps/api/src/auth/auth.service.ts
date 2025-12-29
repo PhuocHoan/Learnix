@@ -5,18 +5,18 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 
-import { UsersService } from '../users/users.service';
-import { LoginDto } from './dto/login.dto';
-import { ExternalAuth, AuthProvider } from './entities/external-auth.entity';
 import { MailService } from '../mail/mail.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UpdateProfileDto } from '../users/dto/update-profile.dto';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
+import { UsersService } from '../users/users.service';
+
+import { LoginDto } from './dto/login.dto';
+import { ExternalAuth, AuthProvider } from './entities/external-auth.entity';
 
 export interface OAuthProfile {
   email: string;

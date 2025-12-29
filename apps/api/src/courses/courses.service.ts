@@ -6,8 +6,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-
 import { Repository, Brackets } from 'typeorm';
+
+import { NotificationsService } from '../notifications/notifications.service';
+import {
+  AiQuizGeneratorService,
+  GeneratedQuestion,
+} from '../quizzes/services/ai-quiz-generator.service';
+import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
+import { UsersService } from '../users/users.service';
 
 import { CreateCourseDto } from './dto/create-course.dto';
 import { CreateLessonDto } from './dto/create-lesson.dto';
@@ -23,12 +31,6 @@ import { Enrollment } from './entities/enrollment.entity';
 import { LessonResource } from './entities/lesson-resource.entity';
 import { Lesson } from './entities/lesson.entity';
 import { CourseStatus } from './enums/course-status.enum';
-import {
-  AiQuizGeneratorService,
-  GeneratedQuestion,
-} from '../quizzes/services/ai-quiz-generator.service';
-import { User } from '../users/entities/user.entity';
-import { UserRole } from '../users/enums/user-role.enum';
 
 export interface EnrolledCourseDto {
   id: string;
@@ -84,6 +86,8 @@ export class CoursesService {
     @InjectRepository(LessonResource)
     private resourceRepository: Repository<LessonResource>,
     private aiQuizService: AiQuizGeneratorService,
+    private notificationsService: NotificationsService,
+    private usersService: UsersService,
   ) {}
 
   async findAllPublished(
@@ -183,6 +187,7 @@ export class CoursesService {
       .leftJoinAndSelect('course.instructor', 'instructor')
       .leftJoinAndSelect('course.sections', 'sections')
       .leftJoinAndSelect('sections.lessons', 'lessons')
+      .leftJoinAndSelect('lessons.resources', 'resources')
       .loadRelationCountAndMap('course.studentCount', 'course.enrollments')
       .where('course.id = :id', { id })
       .orderBy('sections.orderIndex', 'ASC')
@@ -212,9 +217,10 @@ export class CoursesService {
     // Passing generic user object to allow enrollment only if visible
     const course = await this.findOne(courseId, { id: userId } as User);
 
-    if (course.instructor?.id === userId) {
-      throw new ConflictException('Cannot enroll in your own course');
-    }
+    // Check for self-enrollment is REMOVED to allow instructors to check their own courses as students
+    // if (course.instructor?.id === userId) {
+    //   throw new ConflictException('Cannot enroll in your own course');
+    // }
 
     // Check if already enrolled
     const existing = await this.enrollmentRepository.findOne({
@@ -231,14 +237,25 @@ export class CoursesService {
       completedLessonIds: [],
     });
 
-    return this.enrollmentRepository.save(enrollment);
+    const savedEnrollment = await this.enrollmentRepository.save(enrollment);
+
+    // Notify user of successful enrollment (for free courses - paid courses get notified via payment)
+    if (Number(course.price) === 0) {
+      await this.notificationsService.notifyEnrollment(
+        userId,
+        course.title,
+        course.id,
+      );
+    }
+
+    return savedEnrollment;
   }
 
   async checkEnrollment(
     userId: string,
     courseId: string,
   ): Promise<Enrollment | null> {
-    return this.enrollmentRepository.findOne({
+    return await this.enrollmentRepository.findOne({
       where: { userId, courseId },
     });
   }
@@ -320,13 +337,17 @@ export class CoursesService {
     const isInstructor = lesson.section.course.instructorId === userId;
     const isAdmin = user.role === UserRole.ADMIN;
 
-    // Instructors and Admins can access lessons but don't track completion (no enrollment needed)
-    if (isInstructor || isAdmin) {
-      return null;
-    }
+    // Instructors and Admins generally don't need enrollment to access lessons
+    // BUT if they ARE enrolled (to test as student), we should track their progress.
 
+    // Check if enrolled first
     const enrollment = await this.checkEnrollment(userId, courseId);
+
+    // If not enrolled, but has special role, just return null (access allowed, no tracking)
     if (!enrollment) {
+      if (isInstructor || isAdmin) {
+        return null;
+      }
       throw new NotFoundException('User is not enrolled in this course');
     }
 
@@ -338,6 +359,33 @@ export class CoursesService {
       enrollment.completedLessonIds.push(lessonId);
       enrollment.lastAccessedAt = new Date();
       await this.enrollmentRepository.save(enrollment);
+
+      // Check if course is now completed
+      const fullCourse = await this.coursesRepository.findOne({
+        where: { id: courseId },
+        relations: ['sections', 'sections.lessons'],
+      });
+
+      if (fullCourse) {
+        const allLessonIds = fullCourse.sections.flatMap((s) =>
+          s.lessons.map((l) => l.id),
+        );
+        const isCompleted =
+          allLessonIds.length > 0 &&
+          allLessonIds.every((id) =>
+            enrollment.completedLessonIds?.includes(id),
+          );
+
+        if (isCompleted && !enrollment.completedAt) {
+          enrollment.completedAt = new Date();
+          await this.enrollmentRepository.save(enrollment);
+          await this.notificationsService.notifyCourseCompleted(
+            userId,
+            fullCourse.title,
+            fullCourse.id,
+          );
+        }
+      }
     }
 
     return enrollment;
@@ -479,7 +527,7 @@ export class CoursesService {
     enrollment.isArchived = true;
     enrollment.archivedAt = new Date();
 
-    return this.enrollmentRepository.save(enrollment);
+    return await this.enrollmentRepository.save(enrollment);
   }
 
   /**
@@ -498,7 +546,7 @@ export class CoursesService {
     enrollment.isArchived = false;
     enrollment.archivedAt = null as unknown as Date;
 
-    return this.enrollmentRepository.save(enrollment);
+    return await this.enrollmentRepository.save(enrollment);
   }
 
   /**
@@ -581,19 +629,19 @@ export class CoursesService {
 
     // Add tag matching conditions (OR for any tag match)
     const tagConditions = Array.from(userTags).map(
-      (_, index) => `LOWER(course.tags) LIKE:tag_${index} `,
+      (_, index) => `LOWER(course.tags) LIKE :tag_${index}`,
     );
     if (tagConditions.length > 0) {
       queryBuilder.andWhere(
         new Brackets((qb) => {
           Array.from(userTags).forEach((tag, index) => {
             if (index === 0) {
-              qb.where(`LOWER(course.tags) LIKE:tag_${index} `, {
-                [`tag_${index} `]: ` % ${tag}% `,
+              qb.where(`LOWER(course.tags) LIKE :tag_${index}`, {
+                [`tag_${index}`]: `%${tag}%`,
               });
             } else {
-              qb.orWhere(`LOWER(course.tags) LIKE:tag_${index} `, {
-                [`tag_${index} `]: ` % ${tag}% `,
+              qb.orWhere(`LOWER(course.tags) LIKE :tag_${index}`, {
+                [`tag_${index}`]: `%${tag}%`,
               });
             }
           });
@@ -632,7 +680,7 @@ export class CoursesService {
       status: CourseStatus.DRAFT, // Default to draft
       isPublished: false, // Legacy field
     });
-    return this.coursesRepository.save(course);
+    return await this.coursesRepository.save(course);
   }
 
   async update(
@@ -648,7 +696,7 @@ export class CoursesService {
       throw new ForbiddenException('You can only update your own courses');
     }
     Object.assign(course, updateCourseDto);
-    return this.coursesRepository.save(course);
+    return await this.coursesRepository.save(course);
   }
 
   async remove(id: string, instructorId: string): Promise<void> {
@@ -663,7 +711,7 @@ export class CoursesService {
   }
 
   async findInstructorCourses(instructorId: string): Promise<Course[]> {
-    return this.coursesRepository.find({
+    return await this.coursesRepository.find({
       where: { instructorId },
       order: { createdAt: 'DESC' },
       relations: ['sections', 'sections.lessons'], // Load structure
@@ -697,7 +745,7 @@ export class CoursesService {
     // Temporary implementation using createQueryBuilder if repo not available directly in snippet context
     // Ideally, update constructor to include sectionRepository
 
-    return this.sectionRepository.save(
+    return await this.sectionRepository.save(
       this.sectionRepository.create({ ...dto, courseId }),
     );
   }
@@ -737,7 +785,7 @@ export class CoursesService {
       throw new ForbiddenException('Access denied');
     }
 
-    return this.lessonRepository.save(
+    return await this.lessonRepository.save(
       this.lessonRepository.create({ ...dto, sectionId }),
     );
   }
@@ -760,7 +808,7 @@ export class CoursesService {
     }
 
     Object.assign(lesson, dto);
-    return this.lessonRepository.save(lesson);
+    return await this.lessonRepository.save(lesson);
   }
 
   async removeLesson(lessonId: string, instructorId: string): Promise<void> {
@@ -830,7 +878,7 @@ export class CoursesService {
       lessonId,
     });
 
-    return this.resourceRepository.save(resource);
+    return await this.resourceRepository.save(resource);
   }
 
   async removeResource(
@@ -898,51 +946,90 @@ export class CoursesService {
   }
 
   async count(): Promise<number> {
-    return this.coursesRepository.count();
+    return await this.coursesRepository.count();
   }
 
   // --- Statistics ---
 
   async countEnrollments(): Promise<number> {
-    return this.enrollmentRepository.count();
+    return await this.enrollmentRepository.count();
   }
 
   // --- Moderation ---
 
-  async submitForApproval(id: string): Promise<Course> {
-    const course = await this.findOne(id);
-    if (course.status !== CourseStatus.DRAFT) {
-      throw new BadRequestException('Only draft courses can be submitted');
+  async submitForApproval(id: string, userId: string): Promise<Course> {
+    const course = await this.findOne(id, {
+      id: userId,
+      role: UserRole.INSTRUCTOR,
+    });
+    if (
+      course.status !== CourseStatus.DRAFT &&
+      course.status !== CourseStatus.REJECTED
+    ) {
+      throw new BadRequestException(
+        'Only draft or rejected courses can be submitted',
+      );
     }
 
     course.status = CourseStatus.PENDING;
-    return this.coursesRepository.save(course);
+    const savedCourse = await this.coursesRepository.save(course);
+
+    // Notify all admins about the new course submission
+    const admins = await this.usersService.findAllAdmins();
+    const adminIds = admins.map((admin) => admin.id);
+    const instructorName = course.instructor?.fullName ?? 'Unknown Instructor';
+    await this.notificationsService.notifyCourseSubmitted(
+      adminIds,
+      course.title,
+      instructorName,
+      course.id,
+    );
+
+    return savedCourse;
   }
 
   async approveCourse(id: string): Promise<Course> {
-    const course = await this.findOne(id);
+    const course = await this.findOne(id, { role: UserRole.ADMIN });
     if (course.status !== CourseStatus.PENDING) {
       throw new BadRequestException('Course is not pending approval');
     }
 
     course.status = CourseStatus.PUBLISHED;
     course.isPublished = true;
-    return this.coursesRepository.save(course);
+    const savedCourse = await this.coursesRepository.save(course);
+
+    // Notify instructor that their course was approved
+    await this.notificationsService.notifyCourseApproved(
+      course.instructorId,
+      course.title,
+      course.id,
+    );
+
+    return savedCourse;
   }
 
-  async rejectCourse(id: string, _reason: string): Promise<Course> {
-    const course = await this.findOne(id);
+  async rejectCourse(id: string, reason: string): Promise<Course> {
+    const course = await this.findOne(id, { role: UserRole.ADMIN });
     if (course.status !== CourseStatus.PENDING) {
       throw new BadRequestException('Course is not pending approval');
     }
 
     course.status = CourseStatus.REJECTED;
-    // course.rejectionReason = reason; // Assuming we add this field later
-    return this.coursesRepository.save(course);
+    const savedCourse = await this.coursesRepository.save(course);
+
+    // Notify instructor that their course was rejected
+    await this.notificationsService.notifyCourseRejected(
+      course.instructorId,
+      course.title,
+      course.id,
+      reason,
+    );
+
+    return savedCourse;
   }
 
   async findAllPending(): Promise<Course[]> {
-    return this.coursesRepository.find({
+    return await this.coursesRepository.find({
       where: { status: CourseStatus.PENDING },
       relations: ['instructor'],
       order: { createdAt: 'DESC' },
@@ -988,7 +1075,7 @@ export class CoursesService {
     }
 
     // Call AI service
-    return this.aiQuizService.generateQuizFromText(
+    return await this.aiQuizService.generateQuizFromText(
       combinedText,
       count,
       preferredTypes,

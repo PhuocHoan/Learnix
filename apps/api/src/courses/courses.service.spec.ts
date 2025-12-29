@@ -6,6 +6,12 @@ import {
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
+import { NotificationsService } from '../notifications/notifications.service';
+import { AiQuizGeneratorService } from '../quizzes/services/ai-quiz-generator.service';
+import { type User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
+import { UsersService } from '../users/users.service';
+
 import { CoursesService } from './courses.service';
 import { CourseSection } from './entities/course-section.entity';
 import { Course, CourseLevel } from './entities/course.entity';
@@ -13,9 +19,6 @@ import { Enrollment } from './entities/enrollment.entity';
 import { LessonResource } from './entities/lesson-resource.entity';
 import { Lesson } from './entities/lesson.entity';
 import { CourseStatus } from './enums/course-status.enum';
-import { AiQuizGeneratorService } from '../quizzes/services/ai-quiz-generator.service';
-import { type User } from '../users/entities/user.entity';
-import { UserRole } from '../users/enums/user-role.enum';
 
 interface MockEnrollmentRepository {
   find: jest.Mock;
@@ -170,6 +173,22 @@ describe('CoursesService', () => {
           provide: AiQuizGeneratorService,
           useValue: {
             generateQuizFromText: jest.fn(),
+          },
+        },
+        {
+          provide: NotificationsService,
+          useValue: {
+            notifyEnrollment: jest.fn().mockResolvedValue({}),
+            notifyCourseCompleted: jest.fn().mockResolvedValue({}),
+            notifyCourseApproved: jest.fn().mockResolvedValue({}),
+            notifyCourseRejected: jest.fn().mockResolvedValue({}),
+            notifyCourseSubmitted: jest.fn().mockResolvedValue([]),
+          },
+        },
+        {
+          provide: UsersService,
+          useValue: {
+            findAllAdmins: jest.fn().mockResolvedValue([]),
           },
         },
       ],
@@ -535,7 +554,7 @@ describe('CoursesService', () => {
       );
     });
 
-    it('should throw ConflictException when instructor attempts to enroll in own course', async () => {
+    it('should allow instructor to enroll in own course', async () => {
       const course = mockCourse('course-1', 'Test Course', ['react']);
       course.instructor = {
         id: 'instructor-1',
@@ -544,10 +563,26 @@ describe('CoursesService', () => {
       singleQueryBuilder.getOne.mockResolvedValue(course);
       const courseRepo = courseRepository;
       courseRepo.createQueryBuilder.mockReturnValue(singleQueryBuilder);
+      mockEnrollmentRepositoryValue.findOne.mockResolvedValue(null);
+      mockEnrollmentRepositoryValue.create.mockReturnValue({
+        userId: 'instructor-1',
+        courseId: 'course-1',
+      });
+      mockEnrollmentRepositoryValue.save.mockResolvedValue({
+        id: 'enrollment-2',
+        userId: 'instructor-1',
+        courseId: 'course-1',
+      });
 
-      await expect(service.enroll('instructor-1', 'course-1')).rejects.toThrow(
-        ConflictException,
+      const result = await service.enroll('instructor-1', 'course-1');
+
+      expect(mockEnrollmentRepositoryValue.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'instructor-1',
+          courseId: 'course-1',
+        }),
       );
+      expect(result).toBeDefined();
     });
   });
 

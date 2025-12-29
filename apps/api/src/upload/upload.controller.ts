@@ -14,9 +14,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
 import { CloudinaryService } from './cloudinary.service';
 import { UploadService } from './upload.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 import type { FileUploadResult } from './upload.service';
 

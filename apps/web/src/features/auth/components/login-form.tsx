@@ -35,7 +35,6 @@ export function LoginForm() {
         void navigate(user.role === 'admin' ? '/admin' : '/dashboard');
       }
     } catch (err: unknown) {
-      console.error('Login error:', err);
       const errorMessage =
         err instanceof Error && 'response' in err
           ? (err as { response?: { data?: { message?: string } } }).response
@@ -52,7 +51,10 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+    <form
+      onSubmit={(e) => void handleSubmit(onSubmit)(e)}
+      className="space-y-5"
+    >
       {error && (
         <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-xl border border-destructive/20">
           <AlertCircle className="w-4 h-4 shrink-0" />

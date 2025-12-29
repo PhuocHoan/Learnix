@@ -234,7 +234,7 @@ export function QuizGenerationModal({
             <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
               <form
                 id="config-form"
-                onSubmit={handleSubmit(handleConfigSubmit)}
+                onSubmit={(e) => void handleSubmit(handleConfigSubmit)(e)}
                 className="max-w-4xl mx-auto space-y-10"
               >
                 {/* Question Types */}

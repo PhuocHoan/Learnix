@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -8,14 +8,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
 }
 
-export function Input({
-  className,
-  leftIcon,
-  rightIcon,
-  error,
-  ...props
-}: InputProps) {
-  return (
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ className, leftIcon, rightIcon, error, ...props }, ref) => (
     <div className="relative">
       {leftIcon && (
         <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -23,6 +17,7 @@ export function Input({
         </div>
       )}
       <input
+        ref={ref}
         className={cn(
           'w-full py-2.5 rounded-xl border bg-muted/50 text-foreground placeholder:text-muted-foreground',
           'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary focus:bg-background',
@@ -42,5 +37,7 @@ export function Input({
         </div>
       )}
     </div>
-  );
-}
+  ),
+);
+
+Input.displayName = 'Input';

@@ -72,6 +72,12 @@ export function CourseDetailPage() {
       return;
     }
 
+    // Redirect to checkout for paid courses
+    if (course && course.price > 0) {
+      void navigate(`/checkout/${id}`);
+      return;
+    }
+
     try {
       const promise = enrollMutation.mutateAsync();
       void toast.promise(promise, {
@@ -92,9 +98,8 @@ export function CourseDetailPage() {
       void navigate(`/courses/${id}/learn`, {
         state: { fromEnroll: true },
       });
-    } catch (error) {
+    } catch (_error) {
       // Error is handled by toast.promise UI
-      console.error('Enrollment error:', error);
     }
   };
 
@@ -235,7 +240,7 @@ export function CourseDetailPage() {
                   size="lg"
                   className="w-full font-semibold"
                   onClick={() =>
-                    navigate(`/courses/${id}/learn`, {
+                    void navigate(`/courses/${id}/learn`, {
                       state: { fromEnroll: true },
                     })
                   }
@@ -249,15 +254,35 @@ export function CourseDetailPage() {
                   {course.price === 0 ? 'Free' : `$${course.price}`}
                 </div>
                 {isAuthenticated && course.instructor?.id === user?.id ? (
-                  <div className="p-4 bg-muted rounded-lg text-center text-sm text-muted-foreground border border-border">
-                    You are the instructor of this course.
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted rounded-lg text-center text-sm text-muted-foreground border border-border">
+                      You are the instructor of this course.
+                    </div>
+                    {!isEnrolled && (
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="w-full font-semibold"
+                        onClick={() => void handleEnroll()}
+                        disabled={enrollMutation.isPending}
+                      >
+                        {enrollMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />{' '}
+                            Enrolling...
+                          </>
+                        ) : (
+                          'Enroll as Student'
+                        )}
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <>
                     <Button
                       size="lg"
                       className="w-full font-semibold"
-                      onClick={handleEnroll}
+                      onClick={() => void handleEnroll()}
                       disabled={
                         enrollMutation.isPending ||
                         (isAuthenticated && isLoadingEnrollment)
@@ -311,34 +336,28 @@ export function CourseDetailPage() {
                       const derivedType = hasVideo ? 'video' : 'text';
 
                       return (
-                        <div
+                        <button
                           key={lesson.id}
-                          role={isLocked ? 'button' : undefined}
-                          tabIndex={isLocked ? 0 : undefined}
+                          type="button"
                           className={cn(
-                            'p-4 flex items-center gap-4 transition-all hover-highlight',
+                            'w-full p-4 flex items-center gap-4 transition-all text-left group',
                             isLocked
                               ? 'opacity-75 hover:bg-muted/10 cursor-pointer'
-                              : 'hover:bg-muted/20',
+                              : 'hover:bg-muted/20 cursor-pointer',
                           )}
                           onClick={() => {
                             if (isLocked) {
                               handleLockedLessonClick();
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (
-                              isLocked &&
-                              (e.key === 'Enter' || e.key === ' ')
-                            ) {
-                              e.preventDefault();
-                              handleLockedLessonClick();
+                            } else {
+                              void navigate(
+                                `/courses/${id}/learn?lesson=${lesson.id}`,
+                              );
                             }
                           }}
                         >
                           <div
                             className={cn(
-                              'p-2 rounded-lg',
+                              'p-2 rounded-lg shrink-0',
                               isCompleted
                                 ? 'bg-green-100 text-green-600'
                                 : 'bg-primary/5 text-primary',
@@ -346,42 +365,27 @@ export function CourseDetailPage() {
                           >
                             {getLessonIcon(isCompleted, derivedType)}
                           </div>
-                          <div className="flex-1 text-sm font-medium">
+                          <div className="flex-1 text-sm font-medium min-w-0 truncate">
                             {lesson.title}
                           </div>
 
-                          {/* Logic for Buttons/Icons */}
-                          {hasCourseAccess || lesson.isFreePreview ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs h-8"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent parent click
-                                void navigate(
-                                  `/courses/${id}/learn?lesson=${lesson.id}`,
-                                );
-                              }}
-                            >
-                              {hasCourseAccess ? 'View' : 'Preview'}
-                            </Button>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              {/* Replaced Icon with Button-like feel or just icon */}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 hover:bg-transparent"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleLockedLessonClick();
-                                }}
-                              >
-                                <Lock className="w-4 h-4 text-muted-foreground" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
+                          {/* Action indicator at the end */}
+                          <div className="shrink-0 ml-2">
+                            {hasCourseAccess ? (
+                              <div className="inline-flex items-center justify-center font-semibold text-xs h-8 px-3 rounded-lg bg-primary/10 text-primary">
+                                View
+                              </div>
+                            ) : lesson.isFreePreview ? (
+                              <div className="inline-flex items-center justify-center font-semibold text-xs h-8 px-3 rounded-lg bg-primary/10 text-primary">
+                                Preview
+                              </div>
+                            ) : (
+                              <div className="p-1.5 text-muted-foreground/50">
+                                <Lock className="w-4 h-4" />
+                              </div>
+                            )}
+                          </div>
+                        </button>
                       );
                     })}
                   </div>

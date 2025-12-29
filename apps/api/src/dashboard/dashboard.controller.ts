@@ -1,5 +1,9 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { User } from '../users/entities/user.entity';
+
 import {
   DashboardService,
   ActivityItem,
@@ -8,9 +12,6 @@ import {
   StudentStats,
   ProgressResult,
 } from './dashboard.service';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { User } from '../users/entities/user.entity';
 
 @Controller('dashboard')
 @UseGuards(JwtAuthGuard)

@@ -20,7 +20,9 @@ vi.mock('@/features/auth/api/auth-api', () => ({
 describe('useAuth hook', () => {
   it('throws error when used outside AuthProvider', () => {
     // Suppress console.error for this test
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* noop */
+    });
 
     expect(() => {
       renderHook(() => useAuth());

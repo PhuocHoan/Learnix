@@ -14,6 +14,10 @@ import { Lesson } from './courses/entities/lesson.entity';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { HealthController } from './health.controller';
+import { Notification } from './notifications/entities/notification.entity';
+import { NotificationsModule } from './notifications/notifications.module';
+import { Payment } from './payments/entities/payment.entity';
+import { PaymentsModule } from './payments/payments.module';
 import { Question } from './quizzes/entities/question.entity';
 import { QuizSubmission } from './quizzes/entities/quiz-submission.entity';
 import { Quiz } from './quizzes/entities/quiz.entity';
@@ -56,8 +60,11 @@ import { UsersModule } from './users/users.module';
               Lesson,
               LessonResource,
               QuizSubmission,
+              Payment,
+              Notification,
             ],
             synchronize: !isProduction,
+            timezone: 'Z',
             ssl: caCert
               ? { rejectUnauthorized: true, ca: caCert }
               : { rejectUnauthorized: false },
@@ -100,8 +107,11 @@ import { UsersModule } from './users/users.module';
             Lesson,
             LessonResource,
             QuizSubmission,
+            Payment,
+            Notification,
           ],
           synchronize: !isProduction,
+          timezone: 'Z',
           ssl:
             configService.get<string>('DB_SSL') === 'true'
               ? { rejectUnauthorized: false }
@@ -125,6 +135,8 @@ import { UsersModule } from './users/users.module';
     CoursesModule,
     ExercisesModule,
     UploadModule,
+    PaymentsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

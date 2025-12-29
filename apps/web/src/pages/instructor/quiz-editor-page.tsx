@@ -30,8 +30,9 @@ import {
   CheckCircle2,
   Circle,
   Pencil,
+  Sparkles,
 } from 'lucide-react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import ReactMarkdown from 'react-markdown';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import remarkGfm from 'remark-gfm';
@@ -58,6 +59,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -92,6 +100,16 @@ export default function QuizEditorPage() {
   );
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
   const [orderedQuestions, setOrderedQuestions] = useState<Question[]>([]);
+  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [aiConfig, setAiConfig] = useState<{
+    text: string;
+    count: number;
+    types: string[];
+  }>({
+    text: '',
+    count: 5,
+    types: ['multiple_choice'], // Default
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -160,6 +178,39 @@ export default function QuizEditorPage() {
     },
     onError: () => {
       toast.error('Failed to delete question');
+    },
+  });
+
+  const generateQuizMutation = useMutation({
+    mutationFn: quizzesApi.generateQuiz,
+    onSuccess: async (data) => {
+      toast.success(`Generated ${data.questions.length} questions!`);
+      setShowAiDialog(false);
+      // Sequentially add questions
+      if (quiz) {
+        let addedCount = 0;
+        for (const q of data.questions) {
+          try {
+            await quizzesApi.createQuestion(quiz.id, {
+              ...q,
+              type: q.type,
+              points: 1,
+            });
+            addedCount++;
+          } catch (_e) {
+            // Silently continue if one question fails
+          }
+        }
+        if (addedCount > 0) {
+          toast.success(`Added ${addedCount} questions to quiz.`);
+          void queryClient.invalidateQueries({
+            queryKey: ['quiz', 'lesson', lessonId],
+          });
+        }
+      }
+    },
+    onError: () => {
+      toast.error('Failed to generate quiz. Please try again.');
     },
   });
 
@@ -239,7 +290,7 @@ export default function QuizEditorPage() {
           variant="ghost"
           size="sm"
           onClick={() =>
-            navigate(`/instructor/courses/${courseId}/edit?tab=curriculum`)
+            void navigate(`/instructor/courses/${courseId}/edit?tab=curriculum`)
           }
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -277,10 +328,26 @@ export default function QuizEditorPage() {
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">Questions</h2>
-          <Button onClick={() => setEditingQuestionId('new')} disabled={!quiz}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Question
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="gap-2 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
+              onClick={() => setShowAiDialog(true)}
+              disabled={!quiz || generateQuizMutation.isPending}
+            >
+              <Sparkles className="w-4 h-4" />
+              {generateQuizMutation.isPending
+                ? 'Generating...'
+                : 'Generate with AI'}
+            </Button>
+            <Button
+              onClick={() => setEditingQuestionId('new')}
+              disabled={!quiz}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Question
+            </Button>
+          </div>
         </div>
 
         {editingQuestionId === 'new' && quiz && (
@@ -368,6 +435,124 @@ export default function QuizEditorPage() {
               disabled={deleteQuestionMutation.isPending}
             >
               {deleteQuestionMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Sparkles className="w-5 h-5" /> Generate Quiz with AI
+            </DialogTitle>
+            <DialogDescription>
+              Paste your lesson content below and let AI generate questions for
+              you.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="lesson-content" className="text-sm font-medium">
+                Lesson Content
+              </label>
+              <Textarea
+                id="lesson-content"
+                placeholder="Paste text notes, summary, or lesson script..."
+                className="min-h-[200px]"
+                value={aiConfig.text}
+                onChange={(e) =>
+                  setAiConfig((prev) => ({ ...prev, text: e.target.value }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                The more context you provide, the better the questions will be.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="question-count" className="text-sm font-medium">
+                  Number of Questions
+                </label>
+                <Input
+                  id="question-count"
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={aiConfig.count}
+                  onChange={(e) =>
+                    setAiConfig((prev) => ({
+                      ...prev,
+                      count: parseInt(e.target.value) || 5,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm font-medium">Question Types</span>
+                <div className="flex flex-col gap-2 p-3 border rounded-md">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={aiConfig.types.includes('multiple_choice')}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setAiConfig((prev) => ({
+                          ...prev,
+                          types: checked
+                            ? [...prev.types, 'multiple_choice']
+                            : prev.types.filter((t) => t !== 'multiple_choice'),
+                        }));
+                      }}
+                    />{' '}
+                    Multiple Choice
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={aiConfig.types.includes('true_false')}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setAiConfig((prev) => ({
+                          ...prev,
+                          types: checked
+                            ? [...prev.types, 'true_false']
+                            : prev.types.filter((t) => t !== 'true_false'),
+                        }));
+                      }}
+                    />{' '}
+                    True/False
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowAiDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() =>
+                generateQuizMutation.mutate({
+                  text: aiConfig.text,
+                  count: aiConfig.count,
+                  types: aiConfig.types.length
+                    ? aiConfig.types
+                    : ['multiple_choice'],
+                })
+              }
+              disabled={!aiConfig.text || generateQuizMutation.isPending}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {generateQuizMutation.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              {generateQuizMutation.isPending
+                ? 'Generating...'
+                : 'Generate Questions'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -674,39 +859,51 @@ function QuestionEditor({
           <div className="flex items-center gap-4">
             {isNew ? 'Create Question' : 'Edit Question'}
             <div className="w-px h-6 bg-border/60 mx-1" />
-            <select
-              {...form.register('type')}
-              className="bg-background border rounded px-2 py-1 text-sm font-bold focus:outline-none focus:ring-1 focus:ring-primary h-8"
-              onChange={(e) => {
-                const type = e.target.value as QuestionType;
-                form.setValue('type', type);
-                if (type === 'true_false') {
-                  form.setValue('options', [
-                    { value: 'True' },
-                    { value: 'False' },
-                  ]);
-                  form.setValue('correctAnswer', 'A');
-                } else if (
-                  type === 'multiple_choice' ||
-                  type === 'multi_select'
-                ) {
-                  form.setValue('options', [
-                    { value: '' },
-                    { value: '' },
-                    { value: '' },
-                    { value: '' },
-                  ]);
-                  form.setValue('correctAnswer', 'A');
-                } else {
-                  form.setValue('options', []);
-                }
-              }}
-            >
-              <option value="multiple_choice">Single Choice</option>
-              <option value="multi_select">Multi-Select</option>
-              <option value="true_false">True / False</option>
-              <option value="short_answer">Short Answer</option>
-            </select>
+            <Controller
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={(val: QuestionType) => {
+                    field.onChange(val);
+                    const type = val;
+                    if (type === 'true_false') {
+                      form.setValue('options', [
+                        { value: 'True' },
+                        { value: 'False' },
+                      ]);
+                      form.setValue('correctAnswer', 'A');
+                    } else if (
+                      type === 'multiple_choice' ||
+                      type === 'multi_select'
+                    ) {
+                      form.setValue('options', [
+                        { value: '' },
+                        { value: '' },
+                        { value: '' },
+                        { value: '' },
+                      ]);
+                      form.setValue('correctAnswer', 'A');
+                    } else {
+                      form.setValue('options', []);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[180px] h-8 font-bold">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="multiple_choice">
+                      Single Choice
+                    </SelectItem>
+                    <SelectItem value="multi_select">Multi-Select</SelectItem>
+                    <SelectItem value="true_false">True / False</SelectItem>
+                    <SelectItem value="short_answer">Short Answer</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
           <div className="flex items-center gap-2">
             <label
@@ -726,7 +923,10 @@ function QuestionEditor({
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form
+          onSubmit={(e) => void form.handleSubmit(onSubmit)(e)}
+          className="space-y-6"
+        >
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}

@@ -32,8 +32,7 @@ applyTo: '**/*.{tsx,jsx,ts,js,css}'
 
 1.  **CSS-First**: Use the new CSS-first configuration approach.
 2.  **Utility-First**: Prefer utility classes over custom CSS.
-3.  **Shadcn UI**: Use Shadcn UI components as the base for the design system. Customize via `tailwind.config.js` (or CSS variables in v4).
-4.  **Responsive**: Use mobile-first responsive design (`sm:`, `md:`, `lg:`).
+3.  **Responsive**: Use mobile-first responsive design (`sm:`, `md:`, `lg:`).
 
 ## Accessibility (A11y)
 

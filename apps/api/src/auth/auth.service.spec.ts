@@ -2,15 +2,15 @@ import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-
 import * as bcrypt from 'bcrypt';
 
-import { AuthService, type OAuthProfile } from './auth.service';
 import { MailService } from '../mail/mail.service';
-import { ExternalAuth, AuthProvider } from './entities/external-auth.entity';
 import { type User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
 import { UsersService } from '../users/users.service';
+
+import { AuthService, type OAuthProfile } from './auth.service';
+import { ExternalAuth, AuthProvider } from './entities/external-auth.entity';
 
 // Mock bcrypt
 jest.mock('bcrypt');

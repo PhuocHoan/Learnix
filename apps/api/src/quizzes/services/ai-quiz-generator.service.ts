@@ -1,7 +1,6 @@
+import { GoogleGenAI } from '@google/genai';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
-import { GoogleGenAI } from '@google/genai';
 
 export interface GeneratedQuestion {
   questionText: string;
@@ -25,7 +24,7 @@ export class AiQuizGeneratorService {
 
   async generateQuizFromText(
     lessonText: string,
-    numberOfQuestions: number = 5,
+    numberOfQuestions = 5,
     preferredTypes: string[] = ['multiple_choice'],
   ): Promise<{ title: string; questions: GeneratedQuestion[] }> {
     if (!this.genAI) {

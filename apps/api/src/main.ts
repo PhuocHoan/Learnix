@@ -3,7 +3,6 @@ import { join } from 'path';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { type NestExpressApplication } from '@nestjs/platform-express';
-
 import cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';

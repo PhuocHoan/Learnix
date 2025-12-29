@@ -9,6 +9,13 @@ import { PageContainer } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useAuth } from '@/contexts/use-auth';
 import {
   coursesApi,
@@ -174,34 +181,44 @@ export function CoursesPage() {
             />
 
             {/* 2. Difficulty Select */}
-            <select
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              value={selectedLevel}
-              onChange={(e) => setSelectedLevel(e.target.value)}
+            <Select
+              value={selectedLevel || 'all'}
+              onValueChange={(val) =>
+                setSelectedLevel(val === 'all' ? '' : val)
+              }
             >
-              <option value="">All Levels</option>
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="All Levels" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Levels</SelectItem>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
 
             {/* 3. Sort Select */}
-            <select
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            <Select
               value={`${sortConfig.sort}-${sortConfig.order}`}
-              onChange={(e) => {
-                const [sort, order] = e.target.value.split('-') as [
+              onValueChange={(val) => {
+                const [sort, order] = val.split('-') as [
                   'price' | 'date',
                   'ASC' | 'DESC',
                 ];
                 setSortConfig({ sort, order });
               }}
             >
-              <option value="date-DESC">Newest First</option>
-              <option value="date-ASC">Oldest First</option>
-              <option value="price-ASC">Price: Low to High</option>
-              <option value="price-DESC">Price: High to Low</option>
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Newest First" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date-DESC">Newest First</SelectItem>
+                <SelectItem value="date-ASC">Oldest First</SelectItem>
+                <SelectItem value="price-ASC">Price: Low to High</SelectItem>
+                <SelectItem value="price-DESC">Price: High to Low</SelectItem>
+              </SelectContent>
+            </Select>
 
             {/* 4. Tags Input */}
             <div className="relative group">
@@ -435,7 +452,7 @@ export function CoursesPage() {
               )}
               {!hasNextPage && data && data.pages[0].data.length > 0 && (
                 <span className="text-muted-foreground text-sm">
-                  You've reached the end
+                  You&apos;ve reached the end
                 </span>
               )}
               {!hasNextPage && data?.pages[0].data.length === 0 && (

@@ -558,7 +558,7 @@ function EmptyState({ tab, hasSearchQuery }: EmptyStateProps) {
         </div>
         <h3 className="text-xl font-semibold mb-2">No courses found</h3>
         <p className="text-muted-foreground max-w-md mx-auto">
-          We couldn't find any courses matching your search. Try different
+          We couldn&apos;t find any courses matching your search. Try different
           keywords.
         </p>
       </div>

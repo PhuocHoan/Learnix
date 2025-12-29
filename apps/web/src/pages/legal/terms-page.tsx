@@ -37,9 +37,9 @@ export function TermsPage() {
               1. Acceptance of Terms
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              By accessing and using Learnix ("the Service"), you accept and
-              agree to be bound by these Terms of Service. If you do not agree
-              to these terms, please do not use our Service.
+              By accessing and using Learnix (&quot;the Service&quot;), you
+              accept and agree to be bound by these Terms of Service. If you do
+              not agree to these terms, please do not use our Service.
             </p>
           </section>
 
@@ -124,11 +124,11 @@ export function TermsPage() {
               8. Limitation of Liability
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              Learnix is provided "as is" without warranties of any kind. We are
-              not liable for any indirect, incidental, or consequential damages
-              arising from your use of the Service. Our total liability shall
-              not exceed the amount you paid for the Service in the past 12
-              months.
+              Learnix is provided &quot;as is&quot; without warranties of any
+              kind. We are not liable for any indirect, incidental, or
+              consequential damages arising from your use of the Service. Our
+              total liability shall not exceed the amount you paid for the
+              Service in the past 12 months.
             </p>
           </section>
 

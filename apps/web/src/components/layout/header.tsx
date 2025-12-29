@@ -8,7 +8,6 @@ import {
 
 import { useQuery } from '@tanstack/react-query';
 import {
-  Bell,
   Search,
   Moon,
   Sun,
@@ -37,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/contexts/use-auth';
 import { coursesApi, type Course } from '@/features/courses/api/courses-api';
+import { NotificationDropdown } from '@/features/notifications/components/notification-dropdown';
 import { cn } from '@/lib/utils';
 
 // Get initial theme from DOM
@@ -162,7 +162,6 @@ export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(getInitialTheme);
-  const [hasNotifications] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
@@ -751,7 +750,7 @@ export function Header() {
                           : 'hover:bg-muted',
                       )}
                     >
-                      See all results for "{searchQuery}"
+                      See all results for &quot;{searchQuery}&quot;
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -765,7 +764,7 @@ export function Header() {
                     <div className="p-6 text-center">
                       <Search className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
                       <p className="text-sm text-muted-foreground">
-                        No courses found for "{searchQuery}"
+                        No courses found for &quot;{searchQuery}&quot;
                       </p>
                       <button
                         onClick={() => handleSearch(searchQuery)}
@@ -807,15 +806,8 @@ export function Header() {
               /* Logged In State */
               <>
                 {/* Notifications */}
-                <button
-                  className="relative p-2.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-                  aria-label="Notifications"
-                >
-                  <Bell className="w-5 h-5" />
-                  {hasNotifications && (
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  )}
-                </button>
+                {/* Notifications */}
+                <NotificationDropdown />
 
                 {/* User Menu */}
                 <div className="relative ml-2" ref={userMenuRef}>
@@ -952,7 +944,7 @@ export function Header() {
 
                         {/* Logout */}
                         <button
-                          onClick={handleLogout}
+                          onClick={() => void handleLogout()}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                         >
                           <LogOut className="w-4 h-4" />
@@ -969,12 +961,12 @@ export function Header() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigate('/login')}
+                  onClick={() => void navigate('/login')}
                   className="hidden sm:flex"
                 >
                   Log in
                 </Button>
-                <Button size="sm" onClick={() => navigate('/register')}>
+                <Button size="sm" onClick={() => void navigate('/register')}>
                   Sign up
                 </Button>
               </div>

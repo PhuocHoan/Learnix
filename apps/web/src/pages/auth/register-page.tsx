@@ -38,7 +38,7 @@ export function RegisterPage() {
           <Button
             variant="outline"
             size="sm"
-            className="h-10 px-5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-lg border-white/20 text-white shadow-[0_8px_32px_rgba(0,0,0,0.1)] hover:shadow-primary/20 transition-all group border"
+            className="h-10 px-5 rounded-full bg-background/50 dark:bg-white/10 hover:bg-background/80 dark:hover:bg-white/20 backdrop-blur-lg border-border/50 dark:border-white/20 text-foreground dark:text-white shadow-sm hover:shadow-md transition-all group border"
           >
             <ChevronLeft className="w-4 h-4 mr-1 transition-transform group-hover:-translate-x-1" />
             <span className="font-bold text-xs uppercase tracking-widest">

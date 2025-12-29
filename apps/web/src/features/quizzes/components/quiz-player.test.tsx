@@ -2,8 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { QuizPlayer } from './quiz-player';
 import { quizzesApi } from '../api/quizzes-api';
+
+import { QuizPlayer } from './quiz-player';
 
 // Mock the API
 vi.mock('../api/quizzes-api', () => ({

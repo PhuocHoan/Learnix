@@ -5,7 +5,6 @@ import { extname, join, resolve, normalize } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
-
 import { diskStorage, memoryStorage } from 'multer';
 
 import { CloudinaryService } from './cloudinary.service';

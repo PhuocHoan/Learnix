@@ -35,18 +35,18 @@ export class Enrollment {
   @Column({ type: 'simple-array', nullable: true })
   completedLessonIds: string[] | null; // List of IDs of lessons completed
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   completedAt: Date; // When they finished the course
 
   @Column({ name: 'is_archived', default: false })
   isArchived: boolean; // Whether the course is archived by the user
 
-  @Column({ name: 'archived_at', nullable: true })
+  @Column({ name: 'archived_at', type: 'timestamptz', nullable: true })
   archivedAt: Date; // When the user archived the course
 
-  @CreateDateColumn({ name: 'enrolled_at' })
+  @CreateDateColumn({ name: 'enrolled_at', type: 'timestamptz' })
   enrolledAt: Date;
 
-  @UpdateDateColumn({ name: 'last_accessed_at' })
+  @UpdateDateColumn({ name: 'last_accessed_at', type: 'timestamptz' })
   lastAccessedAt: Date;
 }

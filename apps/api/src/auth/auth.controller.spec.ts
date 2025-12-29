@@ -1,10 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 
-import { AuthController } from './auth.controller';
-import { AuthService, type OAuthProfile } from './auth.service';
 import { type User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
+
+import { AuthController } from './auth.controller';
+import { AuthService, type OAuthProfile } from './auth.service';
 
 import type { Response, Request } from 'express';
 

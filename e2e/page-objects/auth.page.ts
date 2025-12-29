@@ -93,4 +93,17 @@ export class AuthPage {
   async clickGitHubLogin() {
     await this.githubButton.click();
   }
+
+  async logout() {
+    // Open user menu
+    const userMenuBtn = this.page.getByLabel('User menu');
+    await userMenuBtn.click();
+
+    // Click Sign Out
+    const signOutBtn = this.page.getByRole('button', { name: /Sign Out/i });
+    await signOutBtn.click();
+
+    // Validate we are logged out (e.g. redirected to home or login)
+    await expect(this.page).toHaveURL('/');
+  }
 }
