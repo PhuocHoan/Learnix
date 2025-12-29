@@ -17,7 +17,13 @@
     "test:e2e:headed": "playwright test --headed",
     "precommit": "pnpm format && turbo lint typecheck test build --force"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@nestjs/common": "^11.1.10",
+    "@nestjs/core": "^11.1.10",
+    "@nestjs/platform-express": "^11.1.10",
+    "cookie-parser": "^1.4.7",
+    "reflect-metadata": "^0.2.2"
+  },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@types/cookie-parser": "^1.4.10",

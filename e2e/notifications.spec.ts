@@ -23,7 +23,7 @@ test.describe('Notifications System', () => {
     // 3. Verify Dropdown Content
     // It should either show a list or "No notifications yet"
     // We expect one of these to be visible.
-    const hasItems = await page.getByText('Notifications').isVisible();
+
     // The header "Notifications" is always there in standard dropdowns usually?
     // In notification-dropdown.tsx: <h4 className="font-semibold text-sm">Notifications</h4>
     await expect(

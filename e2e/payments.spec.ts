@@ -10,7 +10,6 @@ test.describe('Payments System', () => {
     test.setTimeout(180000); // 3 minutes for full flow
     const uniqueId = Date.now().toString();
     const courseTitle = `Paid Course ${uniqueId}`;
-    const studentEmail = `student${uniqueId}@test.com`;
 
     // 1. Instructor: Create & Submit Course
     authPage = new AuthPage(page);
