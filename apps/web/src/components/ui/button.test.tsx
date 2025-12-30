@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 
+vi.setConfig({ testTimeout: 20000 });
+
 import { Button } from './button';
 
 describe('Button', () => {

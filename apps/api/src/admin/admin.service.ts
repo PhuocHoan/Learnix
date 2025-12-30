@@ -7,6 +7,14 @@ export interface SystemStats {
   totalUsers: number;
   totalCourses: number;
   totalEnrollments: number;
+  userGrowth: { date: string; count: number }[];
+  courseGrowth: { date: string; count: number }[];
+  enrollmentGrowth: { date: string; count: number }[];
+  revenueGrowth: { date: string; count: number }[];
+  avgCompletionRate: number;
+  totalRevenue: number;
+  activeInstructors: number;
+  categoryDistribution: { name: string; value: number }[];
 }
 
 @Injectable()
@@ -21,10 +29,34 @@ export class AdminService {
     const totalCourses = await this.coursesService.count();
     const totalEnrollments = await this.coursesService.countEnrollments();
 
+    // Get trend data (last 30 days)
+    const userGrowth = await this.usersService.getGrowthStats(30);
+    const courseGrowth = await this.coursesService.getCourseGrowthStats(30);
+    const enrollmentGrowth =
+      await this.coursesService.getEnrollmentGrowthStats(30);
+    const revenueGrowth = await this.coursesService.getRevenueGrowthStats(30);
+
+    // New stats
+    const avgCompletionRate =
+      await this.coursesService.getAverageCompletionRate();
+    const totalRevenue = await this.coursesService.getTotalRevenue();
+    const activeInstructors =
+      await this.usersService.getActiveInstructorsCount();
+    const categoryDistribution =
+      await this.coursesService.getCourseCategoryDistribution();
+
     return {
       totalUsers,
       totalCourses,
       totalEnrollments,
+      userGrowth,
+      courseGrowth,
+      enrollmentGrowth,
+      revenueGrowth,
+      avgCompletionRate,
+      totalRevenue,
+      activeInstructors,
+      categoryDistribution,
     };
   }
 }

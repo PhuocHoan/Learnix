@@ -17,6 +17,14 @@ export interface SystemStats {
   totalUsers: number;
   totalCourses: number;
   totalEnrollments: number;
+  userGrowth: { date: string; count: number }[];
+  courseGrowth: { date: string; count: number }[];
+  enrollmentGrowth: { date: string; count: number }[];
+  revenueGrowth: { date: string; count: number }[];
+  avgCompletionRate: number;
+  totalRevenue: number;
+  activeInstructors: number;
+  categoryDistribution: { name: string; value: number }[];
 }
 
 export const adminApi = {

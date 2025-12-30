@@ -343,6 +343,11 @@ export const coursesApi = {
     return response.data;
   },
 
+  unpublishCourse: async (id: string): Promise<Course> => {
+    const response = await api.patch<Course>(`/courses/${id}/unpublish`);
+    return response.data;
+  },
+
   addResource: async (
     lessonId: string,
     data: CreateResourceData,

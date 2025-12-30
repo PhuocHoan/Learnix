@@ -15,6 +15,11 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { User } from './entities/user.entity';
 import { UserRole } from './enums/user-role.enum';
 
+export interface DailyStat {
+  date: string;
+  count: number;
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -322,5 +327,41 @@ export class UsersService {
       .getOne();
 
     return user?.password !== null && user?.password !== undefined;
+  }
+
+  async getGrowthStats(_days = 30): Promise<DailyStat[]> {
+    const data = await this.usersRepository
+      .createQueryBuilder('user')
+      .select("TO_CHAR(user.createdAt, 'YYYY-MM-DD')", 'date')
+      .addSelect('COUNT(*)', 'count')
+      .where("user.createdAt >= NOW() - INTERVAL '30 days'")
+      .groupBy("TO_CHAR(user.createdAt, 'YYYY-MM-DD')")
+      .orderBy('date', 'ASC')
+      .getRawMany();
+
+    return (data as { date: string; count: string }[]).map((d) => ({
+      date: d.date,
+      count: Number(d.count),
+    }));
+  }
+
+  async getActiveInstructorsCount(): Promise<number> {
+    // Active instructor = Is INSTRUCTOR role AND has at least 1 published course
+    const count = await this.usersRepository
+      .createQueryBuilder('user')
+      .where("user.role = 'instructor'")
+      .andWhere((qb) => {
+        const subQuery = qb
+          .subQuery()
+          .select('course.id')
+          .from('courses', 'course') // Table name is 'courses'
+          .where('course.instructor_id = user.id')
+          .andWhere('course.isPublished = :isPublished', { isPublished: true })
+          .getQuery();
+        return `EXISTS ${subQuery}`;
+      })
+      .getCount();
+
+    return count;
   }
 }

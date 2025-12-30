@@ -15,11 +15,19 @@ describe('AdminService', () => {
     findAll: jest.fn(),
     updateRole: jest.fn(),
     updateStatus: jest.fn(),
+    getGrowthStats: jest.fn(),
+    getActiveInstructorsCount: jest.fn(),
   };
 
   const mockCoursesService: Partial<jest.Mocked<CoursesService>> = {
     count: jest.fn(),
     countEnrollments: jest.fn(),
+    getCourseGrowthStats: jest.fn(),
+    getEnrollmentGrowthStats: jest.fn(),
+    getRevenueGrowthStats: jest.fn(),
+    getAverageCompletionRate: jest.fn(),
+    getTotalRevenue: jest.fn(),
+    getCourseCategoryDistribution: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -51,8 +59,17 @@ describe('AdminService', () => {
       const enrollmentCount = 150;
 
       usersService.count.mockResolvedValue(userCount);
+      usersService.getGrowthStats.mockResolvedValue([]);
+      usersService.getActiveInstructorsCount.mockResolvedValue(5);
+
       coursesService.count.mockResolvedValue(courseCount);
       coursesService.countEnrollments.mockResolvedValue(enrollmentCount);
+      coursesService.getCourseGrowthStats.mockResolvedValue([]);
+      coursesService.getEnrollmentGrowthStats.mockResolvedValue([]);
+      coursesService.getRevenueGrowthStats.mockResolvedValue([]);
+      coursesService.getAverageCompletionRate.mockResolvedValue(75);
+      coursesService.getTotalRevenue.mockResolvedValue(1000);
+      coursesService.getCourseCategoryDistribution.mockResolvedValue([]);
 
       const result = await service.getSystemStats();
 
@@ -64,13 +81,30 @@ describe('AdminService', () => {
         totalUsers: userCount,
         totalCourses: courseCount,
         totalEnrollments: enrollmentCount,
+        userGrowth: [],
+        courseGrowth: [],
+        enrollmentGrowth: [],
+        revenueGrowth: [],
+        avgCompletionRate: 75,
+        totalRevenue: 1000,
+        activeInstructors: 5,
+        categoryDistribution: [],
       });
     });
 
     it('should return zero counts when no data exists', async () => {
       usersService.count.mockResolvedValue(0);
+      usersService.getGrowthStats.mockResolvedValue([]);
+      usersService.getActiveInstructorsCount.mockResolvedValue(0);
+
       coursesService.count.mockResolvedValue(0);
       coursesService.countEnrollments.mockResolvedValue(0);
+      coursesService.getCourseGrowthStats.mockResolvedValue([]);
+      coursesService.getEnrollmentGrowthStats.mockResolvedValue([]);
+      coursesService.getRevenueGrowthStats.mockResolvedValue([]);
+      coursesService.getAverageCompletionRate.mockResolvedValue(0);
+      coursesService.getTotalRevenue.mockResolvedValue(0);
+      coursesService.getCourseCategoryDistribution.mockResolvedValue([]);
 
       const result = await service.getSystemStats();
 
@@ -78,6 +112,14 @@ describe('AdminService', () => {
         totalUsers: 0,
         totalCourses: 0,
         totalEnrollments: 0,
+        userGrowth: [],
+        courseGrowth: [],
+        enrollmentGrowth: [],
+        revenueGrowth: [],
+        avgCompletionRate: 0,
+        totalRevenue: 0,
+        activeInstructors: 0,
+        categoryDistribution: [],
       });
     });
   });

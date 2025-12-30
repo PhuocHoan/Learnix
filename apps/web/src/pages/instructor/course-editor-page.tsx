@@ -147,6 +147,7 @@ export default function CourseEditorPage() {
   };
 
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [showUnpublishConfirm, setShowUnpublishConfirm] = useState(false);
 
   const { data: course, isLoading } = useQuery({
     queryKey: ['course', courseId],
@@ -162,6 +163,18 @@ export default function CourseEditorPage() {
     },
     onError: () => {
       toast.error('Failed to submit course');
+    },
+  });
+
+  const unpublishMutation = useMutation({
+    mutationFn: () => coursesApi.unpublishCourse(courseId ?? ''),
+    onSuccess: () => {
+      toast.success('Course unpublished');
+      void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+      setShowUnpublishConfirm(false);
+    },
+    onError: () => {
+      toast.error('Failed to unpublish course');
     },
   });
 
@@ -213,6 +226,22 @@ export default function CourseEditorPage() {
                 <Badge variant="secondary">Draft</Badge>
               )}
             </div>
+
+            {course.status === 'published' && (
+              <Button
+                variant="outline"
+                onClick={() => setShowUnpublishConfirm(true)}
+                disabled={unpublishMutation.isPending}
+                className="text-orange-500 border-orange-500 hover:bg-orange-50 hover:text-orange-600 mr-2"
+              >
+                {unpublishMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <X className="w-4 h-4 mr-2" />
+                )}
+                Unpublish Course
+              </Button>
+            )}
 
             {(course.status === 'draft' ||
               course.status === 'rejected' ||
@@ -294,6 +323,37 @@ export default function CourseEditorPage() {
               }}
             >
               Submit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showUnpublishConfirm}
+        onOpenChange={(open) => !open && setShowUnpublishConfirm(false)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unpublish Course</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to unpublish this course? It will revert to
+              draft status and no longer be visible to students in the catalog.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setShowUnpublishConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                unpublishMutation.mutate();
+              }}
+            >
+              Unpublish
             </Button>
           </DialogFooter>
         </DialogContent>

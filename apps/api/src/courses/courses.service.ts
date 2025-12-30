@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Brackets } from 'typeorm';
+import { Repository, Not, IsNull, Brackets } from 'typeorm';
 
 import { NotificationsService } from '../notifications/notifications.service';
 import {
@@ -31,6 +31,11 @@ import { Enrollment } from './entities/enrollment.entity';
 import { LessonResource } from './entities/lesson-resource.entity';
 import { Lesson } from './entities/lesson.entity';
 import { CourseStatus } from './enums/course-status.enum';
+
+export interface CourseDailyStat {
+  date: string;
+  count: number;
+}
 
 export interface EnrolledCourseDto {
   id: string;
@@ -699,6 +704,26 @@ export class CoursesService {
     return await this.coursesRepository.save(course);
   }
 
+  async unpublishCourse(id: string, instructorId: string): Promise<Course> {
+    const course = await this.findOne(id, {
+      id: instructorId,
+      role: UserRole.INSTRUCTOR,
+    } as User);
+
+    if (course.instructorId !== instructorId) {
+      throw new ForbiddenException('You can only unpublish your own courses');
+    }
+
+    if (course.status !== CourseStatus.PUBLISHED) {
+      throw new BadRequestException('Course is not published');
+    }
+
+    course.status = CourseStatus.DRAFT;
+    course.isPublished = false;
+
+    return await this.coursesRepository.save(course);
+  }
+
   async remove(id: string, instructorId: string): Promise<void> {
     const course = await this.findOne(id, {
       id: instructorId,
@@ -1034,6 +1059,98 @@ export class CoursesService {
       relations: ['instructor'],
       order: { createdAt: 'DESC' },
     });
+  }
+
+  // --- Stats for Admin ---
+
+  async getCourseGrowthStats(_days = 30): Promise<CourseDailyStat[]> {
+    const data = await this.coursesRepository
+      .createQueryBuilder('course')
+      .select("TO_CHAR(course.createdAt, 'YYYY-MM-DD')", 'date')
+      .addSelect('COUNT(*)', 'count')
+      .where("course.createdAt >= NOW() - INTERVAL '30 days'")
+      .groupBy("TO_CHAR(course.createdAt, 'YYYY-MM-DD')")
+      .orderBy('date', 'ASC')
+      .getRawMany();
+
+    return (data as { date: string; count: string }[]).map((d) => ({
+      date: d.date,
+      count: Number(d.count),
+    }));
+  }
+
+  async getEnrollmentGrowthStats(_days = 30): Promise<CourseDailyStat[]> {
+    const data = await this.enrollmentRepository
+      .createQueryBuilder('enrollment')
+      .select("TO_CHAR(enrollment.enrolledAt, 'YYYY-MM-DD')", 'date')
+      .addSelect('COUNT(*)', 'count')
+      .where("enrollment.enrolledAt >= NOW() - INTERVAL '30 days'")
+      .groupBy("TO_CHAR(enrollment.enrolledAt, 'YYYY-MM-DD')")
+      .orderBy('date', 'ASC')
+      .getRawMany();
+
+    return (data as { date: string; count: string }[]).map((d) => ({
+      date: d.date,
+      count: Number(d.count),
+    }));
+  }
+
+  async getRevenueGrowthStats(_days = 30): Promise<CourseDailyStat[]> {
+    const data = await this.enrollmentRepository
+      .createQueryBuilder('enrollment')
+      .leftJoin('enrollment.course', 'course')
+      .select("TO_CHAR(enrollment.enrolledAt, 'YYYY-MM-DD')", 'date')
+      .addSelect('SUM(course.price)', 'count') // Reusing 'count' field for value to match interface
+      .where("enrollment.enrolledAt >= NOW() - INTERVAL '30 days'")
+      .groupBy("TO_CHAR(enrollment.enrolledAt, 'YYYY-MM-DD')")
+      .orderBy('date', 'ASC')
+      .getRawMany();
+
+    return (data as { date: string; count: string }[]).map((d) => ({
+      date: d.date,
+      count: Number(d.count || 0),
+    }));
+  }
+
+  async getAverageCompletionRate(): Promise<number> {
+    // This is a simplified calculation.
+    // In a real app, we'd check % of lessons completed per enrollment.
+    // For now, let's look at enrollments with 'completedAt' set vs total enrollments
+    const totalEnrollments = await this.enrollmentRepository.count();
+    if (totalEnrollments === 0) return 0;
+
+    const completedEnrollments = await this.enrollmentRepository.count({
+      where: { completedAt: Not(IsNull()) },
+    });
+
+    return Math.round((completedEnrollments / totalEnrollments) * 100);
+  }
+
+  async getTotalRevenue(): Promise<number> {
+    const result: { total?: string } | undefined =
+      await this.enrollmentRepository
+        .createQueryBuilder('enrollment')
+        .leftJoin('enrollment.course', 'course')
+        .select('SUM(course.price)', 'total')
+        .getRawOne();
+
+    return Number(result?.total ?? 0);
+  }
+
+  async getCourseCategoryDistribution(): Promise<
+    { name: string; value: number }[]
+  > {
+    const result = await this.coursesRepository
+      .createQueryBuilder('course')
+      .select('course.level', 'name')
+      .addSelect('COUNT(*)', 'value')
+      .groupBy('course.level')
+      .getRawMany();
+
+    return (result as { name: string; value: string }[]).map((r) => ({
+      name: r.name.charAt(0).toUpperCase() + r.name.slice(1), // Capitalize
+      value: Number(r.value),
+    }));
   }
 
   async generateQuizPreview(

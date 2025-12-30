@@ -115,7 +115,19 @@ describe('AdminController', () => {
 
   describe('getSystemStats', () => {
     it('should return system statistics', async () => {
-      const stats = { totalUsers: 10, totalCourses: 5, totalEnrollments: 20 };
+      const stats = {
+        totalUsers: 10,
+        totalCourses: 5,
+        totalEnrollments: 20,
+        userGrowth: [],
+        courseGrowth: [],
+        enrollmentGrowth: [],
+        revenueGrowth: [],
+        avgCompletionRate: 0,
+        totalRevenue: 0,
+        activeInstructors: 0,
+        categoryDistribution: [],
+      };
       adminService.getSystemStats.mockResolvedValue(stats);
 
       const result = await controller.getSystemStats();
