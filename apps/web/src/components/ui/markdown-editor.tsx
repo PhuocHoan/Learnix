@@ -125,7 +125,7 @@ const MenuBar = ({ editor, onLinkClick }: MenuBarProps) => {
     className: cn(
       'h-8 w-8 p-0 cursor-pointer',
       isActive
-        ? 'bg-accent text-accent-foreground shadow-sm'
+        ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm ring-1 ring-primary'
         : 'text-muted-foreground hover:bg-muted hover:text-foreground',
     ),
   });
@@ -264,6 +264,8 @@ export function MarkdownEditor({
           '[&_h3]:text-lg [&_h3]:font-bold [&_h3]:mb-2',
           '[&_ul]:mb-3 [&_ol]:mb-3',
           '[&_s]:line-through [&_del]:line-through',
+          '[&_strong]:font-bold [&_strong]:text-foreground',
+          '[&_em]:italic',
         ),
       },
     },

@@ -1479,10 +1479,11 @@ function AddLessonDialog({
   );
   const [testCodes, setTestCodes] = useState<Map<string, string>>(new Map());
 
-  // Pending resources for new lessons
+  // Pending resources for new/edit lessons
   const [pendingResources, setPendingResources] = useState<LessonResource[]>(
     [],
   );
+  const [removedResourceIds, setRemovedResourceIds] = useState<string[]>([]);
 
   // Initialize state from existing lesson
   useEffect(() => {
@@ -1499,6 +1500,10 @@ function AddLessonDialog({
 
       // Use setTimeout to avoid 'setState in effect' warning for synchronous updates
       setTimeout(() => {
+        // Initialize resources
+        setPendingResources(existingLesson?.resources ?? []);
+        setRemovedResourceIds([]);
+
         setEnableIde(Boolean(config));
 
         if (config) {
@@ -1536,7 +1541,9 @@ function AddLessonDialog({
             new Map([['javascript', getDefaultExpectedOutput('javascript')]]),
           );
           setTestCodes(new Map());
+          setTestCodes(new Map());
           setPendingResources([]);
+          setRemovedResourceIds([]);
         }
       }, 0);
     }
@@ -1586,25 +1593,42 @@ function AddLessonDialog({
   const [isBlocksValid, setIsBlocksValid] = useState(true);
 
   const mutation = useMutation({
-    mutationFn: (data: CreateLessonData) => {
+    mutationFn: async (data: CreateLessonData) => {
+      let lessonId = existingLesson?.id;
+
       if (existingLesson) {
-        return coursesApi.updateLesson(existingLesson.id, data);
+        await coursesApi.updateLesson(existingLesson.id, data);
+      } else {
+        const newLesson = await coursesApi.createLesson(sectionId, data);
+        lessonId = newLesson.id;
       }
-      return coursesApi.createLesson(sectionId, data).then(async (lesson) => {
-        if (pendingResources.length > 0) {
-          await Promise.all(
-            pendingResources.map((r) =>
-              coursesApi.addResource(lesson.id, {
-                title: r.title,
-                type: r.type,
-                url: r.url,
-                fileSize: r.fileSize,
-              }),
-            ),
-          );
-        }
-        return lesson;
-      });
+
+      if (!lessonId) return;
+
+      // Handle Resource Updates
+      // 1. Add new resources (those that are present in pending but not in initial existing resources, or all if new lesson)
+      const initialResources = existingLesson?.resources ?? [];
+      const resourcesToAdd = pendingResources.filter(
+        (r) => !initialResources.some((ir) => ir.id === r.id),
+      );
+
+      // 2. Remove deleted resources
+      // We use the explicit removedResourceIds list
+      const resourcesToRemove = removedResourceIds;
+
+      await Promise.all([
+        ...resourcesToAdd.map((r) =>
+          coursesApi.addResource(lessonId, {
+            title: r.title,
+            type: r.type,
+            url: r.url,
+            fileSize: r.fileSize,
+          }),
+        ),
+        ...resourcesToRemove.map((rId) => coursesApi.removeResource(rId)),
+      ]);
+
+      return { id: lessonId };
     },
     onSuccess: () => {
       toast.success(`Lesson ${existingLesson ? 'updated' : 'added'}`);
@@ -1620,6 +1644,7 @@ function AddLessonDialog({
       setOpen(false);
       form.reset();
       setPendingResources([]);
+      setRemovedResourceIds([]);
       void queryClient.invalidateQueries({ queryKey: ['course', courseId] });
     },
   });
@@ -1974,39 +1999,32 @@ function AddLessonDialog({
           </DialogFooter>
         </form>
 
-        {existingLesson && (
-          <div className="mt-8">
-            <LessonResources
-              courseId={courseId}
-              lessonId={existingLesson.id}
-              resources={existingLesson.resources ?? []}
-              isInstructor={true}
-            />
-          </div>
-        )}
-        {!existingLesson && (
-          <div className="mt-8">
-            <LessonResources
-              courseId={courseId}
-              lessonId="" // Not needed for draft
-              resources={pendingResources}
-              isInstructor={true}
-              onAddResource={(newRes) => {
-                const res: LessonResource = {
-                  ...newRes,
-                  id: crypto.randomUUID(), // Temp ID
-                  lessonId: '',
-                };
-                setPendingResources([...pendingResources, res]);
-              }}
-              onRemoveResource={(resId) => {
-                setPendingResources(
-                  pendingResources.filter((r) => r.id !== resId),
-                );
-              }}
-            />
-          </div>
-        )}
+        <div className="mt-8">
+          <LessonResources
+            courseId={courseId}
+            lessonId={existingLesson?.id ?? ''}
+            resources={pendingResources}
+            isInstructor={true}
+            onAddResource={(newRes) => {
+              const res: LessonResource = {
+                ...newRes,
+                id: crypto.randomUUID(), // Temp ID
+                lessonId: existingLesson?.id ?? '',
+              };
+              setPendingResources([...pendingResources, res]);
+            }}
+            onRemoveResource={(resId) => {
+              // If it's an existing resource, track it for deletion
+              if (existingLesson?.resources.some((r) => r.id === resId)) {
+                setRemovedResourceIds([...removedResourceIds, resId]);
+              }
+              // Remove from UI immediately
+              setPendingResources(
+                pendingResources.filter((r) => r.id !== resId),
+              );
+            }}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );

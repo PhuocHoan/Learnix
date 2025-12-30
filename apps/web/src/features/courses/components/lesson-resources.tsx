@@ -172,6 +172,10 @@ export function LessonResources({
             open={isAddDialogOpen}
             onOpenChange={setIsAddDialogOpen}
             onAdd={onAddResource}
+            currentTotalSize={resources.reduce(
+              (acc, r) => acc + (r.fileSize ?? 0),
+              0,
+            )}
           />
         )}
       </div>
@@ -323,11 +327,13 @@ function AddResourceDialog({
   open,
   onOpenChange,
   onAdd,
+  currentTotalSize,
 }: {
   lessonId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAdd?: (resource: Omit<LessonResource, 'id' | 'lessonId'>) => void;
+  currentTotalSize: number;
 }) {
   const [title, setTitle] = useState('');
   const [type, setType] = useState<'link' | 'file'>('link');
@@ -351,6 +357,17 @@ function AddResourceDialog({
       return;
     }
 
+    // Check 25MB limit
+    if (type === 'file') {
+      const newFilesSize = selectedFiles.reduce((acc, f) => acc + f.size, 0);
+      if (currentTotalSize + newFilesSize > 25 * 1024 * 1024) {
+        toast.error(
+          `Total lesson resources size cannot exceed 25MB. You have ${Math.round((25 * 1024 * 1024 - currentTotalSize) / 1024 / 1024)}MB remaining.`,
+        );
+        return;
+      }
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -362,12 +379,19 @@ function AddResourceDialog({
           // Use user-provided title for single file, or filename for multiple
           const resourceTitle = selectedFiles.length === 1 ? title : file.name;
 
-          return coursesApi.addResource(lessonId, {
+          const resourceData = {
             title: resourceTitle,
-            type: 'file',
+            type: 'file' as const,
             url: uploadResult.url,
             fileSize: uploadResult.size,
-          });
+          };
+
+          if (onAdd) {
+            onAdd(resourceData);
+            return;
+          }
+
+          return coursesApi.addResource(lessonId, resourceData);
         });
 
         await Promise.all(uploadPromises);

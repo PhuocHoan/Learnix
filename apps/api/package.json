@@ -38,6 +38,7 @@
     "class-validator": "^0.14.3",
     "cloudinary": "^2.8.0",
     "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.12",
     "passport": "^0.7.0",

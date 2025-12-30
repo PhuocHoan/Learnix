@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
@@ -12,6 +12,7 @@ import {
   Lock,
   Code as CodeIcon,
   CircleHelp,
+  ArrowRight,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -31,6 +32,7 @@ import {
   coursesApi,
   type Lesson,
   type LessonBlock,
+  type CourseSection,
 } from '@/features/courses/api/courses-api';
 import { LessonResources } from '@/features/courses/components/lesson-resources';
 import { quizzesApi } from '@/features/quizzes/api/quizzes-api';
@@ -472,11 +474,7 @@ export function LessonViewerPage() {
 
   // Lesson Completion Restrictions
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [_hasQuiz, setHasQuiz] = useState(false);
-  const [watchedVideoIds, setWatchedVideoIds] = useState<Set<string>>(
-    new Set(),
-  );
 
   const lessonIdFromUrl = searchParams.get('lesson');
 
@@ -488,7 +486,7 @@ export function LessonViewerPage() {
     queryKey: ['course', id],
     queryFn: () => coursesApi.getCourse(id),
     enabled: Boolean(id),
-    retry: (failureCount, error) => {
+    retry: (failureCount: number, error: unknown) => {
       if (isAxiosError(error) && error.response?.status === 404) {
         return false;
       }
@@ -516,7 +514,7 @@ export function LessonViewerPage() {
   const currentLesson: Lesson | undefined = course?.sections?.reduce<
     Lesson | undefined
   >(
-    (found, section) =>
+    (found: Lesson | undefined, section: CourseSection) =>
       found ?? section.lessons.find((l) => l.id === activeLessonId),
     undefined,
   );
@@ -525,13 +523,18 @@ export function LessonViewerPage() {
   const isLessonCompleted =
     currentLesson && completedIds.includes(currentLesson.id);
 
-  // Identify stats about the lesson
-  const videoBlocks =
-    currentLesson?.content.filter((b) => b.type === 'video') ?? [];
-  const hasVideos = videoBlocks.length > 0;
-  const hasWatchedAllVideos = videoBlocks.every((b) =>
-    watchedVideoIds.has(b.id),
+  // Calculate next lesson
+  const allLessons =
+    course?.sections?.flatMap((s: CourseSection) => s.lessons) ?? [];
+  const currentIndex = allLessons.findIndex(
+    (l: Lesson) => l.id === activeLessonId,
   );
+  const nextLesson =
+    currentIndex !== -1 && currentIndex < allLessons.length - 1
+      ? allLessons[currentIndex + 1]
+      : null;
+
+  // Identify stats about the lesson
 
   const isInstructor = Boolean(
     isAuthenticated && user?.id && course?.instructor?.id === user.id,
@@ -542,7 +545,10 @@ export function LessonViewerPage() {
     {
       mutationFn: (variables: { lessonId: string; suppressToast?: boolean }) =>
         coursesApi.completeLesson(id, variables.lessonId),
-      onSuccess: (_data, variables) => {
+      onSuccess: (
+        _data: unknown,
+        variables: { lessonId: string; suppressToast?: boolean },
+      ) => {
         void queryClient.invalidateQueries({ queryKey: ['enrollment', id] });
         if (!variables.suppressToast) {
           toast.success('Lesson completed!');
@@ -554,9 +560,7 @@ export function LessonViewerPage() {
   // Reset state when lesson changes
   useEffect(() => {
     const timer = setTimeout(() => {
-      setHasScrolledToBottom(false);
       setHasQuiz(false);
-      setWatchedVideoIds(new Set());
       completionTriggeredRef.current = false;
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTop = 0;
@@ -567,89 +571,53 @@ export function LessonViewerPage() {
 
   // Main completion logic
   useEffect(() => {
-    // If we have already triggered completion for THIS lesson, do nothing
-    // preventing "bulk toasts"
-    if (completionTriggeredRef.current) {
-      return;
-    }
-
-    if (
-      currentLesson &&
-      currentLesson.type !== 'quiz' &&
-      !isLessonCompleted &&
-      !isCompletingLesson &&
-      isEnrolled &&
-      !isInstructor &&
-      !isAdmin
-    ) {
-      if (hasScrolledToBottom && (!hasVideos || hasWatchedAllVideos)) {
-        completionTriggeredRef.current = true; // Mark as triggered
-        completeLesson({
-          lessonId: currentLesson.id,
-          suppressToast: false,
-        });
-      }
-    }
-  }, [
-    hasScrolledToBottom,
-    hasWatchedAllVideos,
-    hasVideos,
-    currentLesson,
-    isLessonCompleted,
-    isCompletingLesson,
-    completeLesson,
-    isEnrolled,
-    isInstructor,
-    isAdmin,
-  ]);
-
-  // --- Handlers ---
-
-  // --- Handlers ---
-
-  const checkScroll = useCallback(() => {
-    if (scrollContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } =
-        scrollContainerRef.current;
-      // Triggers if:
-      // 1. User scrolled to bottom (within 50px buffer)
-      // 2. Content is smaller than viewport (fully visible)
-      if (
-        scrollHeight <= clientHeight + 50 ||
-        scrollTop + clientHeight >= scrollHeight - 50
-      ) {
-        setHasScrolledToBottom(true);
-      }
-    }
+    // Auto-completion on scroll removed per user request.
+    // Lessons should only be completed manually or via code execution.
   }, []);
 
-  // Check scroll on mount, resize, and content change
-  useEffect(() => {
-    // Use requestAnimationFrame to defer the initial check, avoiding synchronous setState in effect
-    const frameId = requestAnimationFrame(checkScroll);
-    window.addEventListener('resize', checkScroll);
-    return () => {
-      cancelAnimationFrame(frameId);
-      window.removeEventListener('resize', checkScroll);
-    };
-  }, [checkScroll, currentLesson]);
+  // --- Handlers ---
 
-  // Re-check when content likely loads/renders (e.g. slight delay for images/markdown)
-  useEffect(() => {
-    const timer = setTimeout(checkScroll, 500);
-    return () => clearTimeout(timer);
-  }, [checkScroll, currentLesson]);
+  // --- Handlers ---
+
+  // const checkScroll = useCallback(() => {
+  //   if (scrollContainerRef.current) {
+  //     const { scrollTop, scrollHeight, clientHeight } =
+  //       scrollContainerRef.current;
+  //     // Triggers if:
+  //     // 1. User scrolled to bottom (within 50px buffer)
+  //     // 2. Content is smaller than viewport (fully visible)
+  //     if (
+  //       scrollHeight <= clientHeight + 50 ||
+  //       scrollTop + clientHeight >= scrollHeight - 50
+  //     ) {
+  //       setHasScrolledToBottom(true);
+  //     }
+  //   }
+  // }, []);
+
+  // // Check scroll on mount, resize, and content change
+  // useEffect(() => {
+  //   // Use requestAnimationFrame to defer the initial check, avoiding synchronous setState in effect
+  //   const frameId = requestAnimationFrame(checkScroll);
+  //   window.addEventListener('resize', checkScroll);
+  //   return () => {
+  //     cancelAnimationFrame(frameId);
+  //     window.removeEventListener('resize', checkScroll);
+  //   };
+  // }, [checkScroll, currentLesson]);
+
+  // // Re-check when content likely loads/renders (e.g. slight delay for images/markdown)
+  // useEffect(() => {
+  //   const timer = setTimeout(checkScroll, 500);
+  //   return () => clearTimeout(timer);
+  // }, [checkScroll, currentLesson]);
 
   const handleScroll = () => {
-    checkScroll();
+    // checkScroll();
   };
 
-  const handleVideoComplete = (blockId: string) => {
-    setWatchedVideoIds((prev) => {
-      const next = new Set(prev);
-      next.add(blockId);
-      return next;
-    });
+  const handleVideoComplete = (_blockId: string) => {
+    // Video tracking removed
   };
 
   // --- Loading / Auth Checks ---
@@ -849,34 +817,21 @@ export function LessonViewerPage() {
                             );
                           }
 
-                          // Standard Lesson
-                          return (
-                            <Button
-                              size="sm"
-                              disabled={!isLessonCompleted}
-                              variant={
-                                isLessonCompleted ? 'outline' : undefined
-                              }
-                              className={cn(
-                                'font-bold transition-all duration-300',
-                                isLessonCompleted
-                                  ? 'text-green-700 border-green-400 bg-green-100/50 font-bold opacity-100' // Completed style
-                                  : 'bg-orange-500 hover:bg-orange-600 text-white border-none opacity-100', // "Uncompleted" style (Orange)
-                              )}
-                            >
-                              {isLessonCompleted ? (
-                                <>
-                                  <CheckCircle className="w-4 h-4 mr-2 stroke-3" />
-                                  Completed
-                                </>
-                              ) : (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2" />
-                                  Uncompleted
-                                </>
-                              )}
-                            </Button>
-                          );
+                          // Standard/Code Lesson
+                          if (isLessonCompleted) {
+                            return (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-green-700 border-green-400 bg-green-100/50 font-bold opacity-100 cursor-default hover:bg-green-100/50"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-2 stroke-3" />
+                                Completed
+                              </Button>
+                            );
+                          }
+
+                          return null;
                         })()}
                       </div>
                     )}
@@ -910,6 +865,59 @@ export function LessonViewerPage() {
                     resources={currentLesson.resources ?? []}
                     isInstructor={false}
                   />
+
+                  {/* Next Lesson Button */}
+                  {isEnrolled && !isInstructor && !isAdmin && (
+                    <div className="mt-12 flex justify-end">
+                      <Button
+                        size="lg"
+                        className="gap-2 font-semibold"
+                        onClick={() => {
+                          const handleNavigation = () => {
+                            if (nextLesson) {
+                              setSearchParams({ lesson: nextLesson.id });
+                              if (scrollContainerRef.current) {
+                                scrollContainerRef.current.scrollTop = 0;
+                              }
+                            } else {
+                              toast.success('Course completed!');
+                              void navigate(`/courses/${id}`);
+                            }
+                          };
+
+                          // If code exercise or already completed, just navigate
+                          if (currentLesson.ideConfig || isLessonCompleted) {
+                            handleNavigation();
+                            return;
+                          }
+
+                          // If standard lesson and not completed, complete then navigate
+                          completeLesson(
+                            { lessonId: currentLesson.id },
+                            {
+                              onSuccess: () => handleNavigation(),
+                            },
+                          );
+                        }}
+                        disabled={isCompletingLesson}
+                      >
+                        {isCompletingLesson && (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        )}
+                        {nextLesson ? (
+                          <>
+                            Next: {nextLesson.title}
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        ) : (
+                          <>
+                            Finish Course
+                            <CheckCircle className="w-4 h-4" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="py-20 text-center text-muted-foreground">

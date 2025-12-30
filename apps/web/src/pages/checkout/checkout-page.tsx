@@ -13,13 +13,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardDescription,
-} from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api';
@@ -340,17 +334,14 @@ export default function CheckoutPage() {
                 <CreditCard className="h-5 w-5 text-primary" />
                 Credit Card Payment
               </CardTitle>
-              <CardDescription>
-                <div className="flex items-start gap-2 mt-2 p-3 bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 rounded-md text-xs">
-                  <Info className="h-4 w-4 shrink-0 mt-0.5" />
-                  <span>
-                    Mock Payment Gateway: Enter any valid card format to
-                    succeed. Use{' '}
-                    <strong className="font-mono">4000 0000 0000 0000</strong>{' '}
-                    to simulate failure.
-                  </span>
-                </div>
-              </CardDescription>
+              <div className="flex items-start gap-2 mt-2 p-3 bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 rounded-md text-xs">
+                <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>
+                  Mock Payment Gateway: Enter any valid card format to succeed.
+                  Use <strong className="font-mono">4000 0000 0000 0000</strong>{' '}
+                  to simulate failure.
+                </span>
+              </div>
             </CardHeader>
             <CardContent>
               <form
