@@ -24,18 +24,17 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex relative">
-      {/* Back to Home Button - High Visibility Glass Pill */}
-      <div className="absolute top-6 left-6 z-50 animate-in fade-in slide-in-from-left-4 duration-500">
+      <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-50 animate-in fade-in slide-in-from-left-4 duration-500">
         <Link to="/">
           <Button
-            variant="outline"
-            size="sm"
-            className="h-10 px-5 rounded-full bg-background/50 dark:bg-white/10 hover:bg-background/80 dark:hover:bg-white/20 backdrop-blur-lg border-border/50 dark:border-white/20 text-foreground dark:text-white shadow-sm hover:shadow-md transition-all group border"
+            variant="ghost"
+            className="w-12 h-12 rounded-full bg-background/30 dark:bg-black/30 backdrop-blur-md border border-foreground/10 hover:bg-background/50 dark:hover:bg-white/10 hover:scale-110 transition-all duration-300 shadow-lg group p-0 flex items-center justify-center"
           >
-            <ChevronLeft className="w-4 h-4 mr-1 transition-transform group-hover:-translate-x-1" />
-            <span className="font-bold text-xs uppercase tracking-widest">
-              Back to Home
-            </span>
+            <ChevronLeft
+              className="w-6 h-6 text-foreground dark:text-white group-hover:-translate-x-1 transition-transform duration-300"
+              strokeWidth={2.5}
+            />
+            <span className="sr-only">Back to Home</span>
           </Button>
         </Link>
       </div>

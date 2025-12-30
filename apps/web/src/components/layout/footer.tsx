@@ -1,15 +1,11 @@
+import { Mail, MapPin, Phone, GraduationCap, Heart } from 'lucide-react';
 import {
-  Facebook,
-  Twitter,
-  Instagram,
-  Linkedin,
-  Youtube,
-  Mail,
-  MapPin,
-  Phone,
-  GraduationCap,
-  Heart,
-} from 'lucide-react';
+  FaFacebookF,
+  FaInstagram,
+  FaLinkedinIn,
+  FaXTwitter,
+  FaYoutube,
+} from 'react-icons/fa6';
 import { Link } from 'react-router-dom';
 
 const footerLinks = {
@@ -52,11 +48,11 @@ const footerLinks = {
 };
 
 const socialLinks = [
-  { icon: Facebook, href: '#', label: 'Facebook' },
-  { icon: Twitter, href: '#', label: 'Twitter' },
-  { icon: Instagram, href: '#', label: 'Instagram' },
-  { icon: Linkedin, href: '#', label: 'LinkedIn' },
-  { icon: Youtube, href: '#', label: 'YouTube' },
+  { icon: FaFacebookF, href: '#', label: 'Facebook' },
+  { icon: FaXTwitter, href: '#', label: 'X' },
+  { icon: FaInstagram, href: '#', label: 'Instagram' },
+  { icon: FaLinkedinIn, href: '#', label: 'LinkedIn' },
+  { icon: FaYoutube, href: '#', label: 'YouTube' },
 ];
 
 export function Footer() {
