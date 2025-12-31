@@ -12,7 +12,7 @@ on:
     branches: [main, develop]
   schedule:
     # Run weekly on Sundays at 00:00 UTC
-    - cron: '0 0 * * 0'
+    - cron: "0 0 * * 0"
   workflow_dispatch:
 
 permissions:
@@ -67,7 +67,7 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
-          category: '/language:${{ matrix.language }}'
+          category: "/language:${{ matrix.language }}"
 
   # ===========================================================================
   # npm Audit
@@ -90,7 +90,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.27
+          version: 10.27.0
 
       - name: Audit ${{ matrix.project }}
         working-directory: ${{ matrix.project }}
