@@ -256,6 +256,25 @@ export class CoursesService {
     return savedEnrollment;
   }
 
+  async unenroll(userId: string, courseId: string): Promise<void> {
+    const enrollment = await this.enrollmentRepository.findOne({
+      where: { userId, courseId },
+      relations: ['course'],
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException('User is not enrolled in this course');
+    }
+
+    await this.notificationsService.notifyUnenrollment(
+      userId,
+      enrollment.course.title,
+      courseId,
+    );
+
+    await this.enrollmentRepository.remove(enrollment);
+  }
+
   async checkEnrollment(
     userId: string,
     courseId: string,

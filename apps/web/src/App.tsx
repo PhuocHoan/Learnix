@@ -133,6 +133,13 @@ function App() {
                 }
               />
 
+              {/* Lesson Viewer - Full screen player mode without header/footer (like Udemy) */}
+              <Route path="/courses/:id/learn" element={<LessonViewerPage />} />
+              <Route
+                path="/courses/:courseId/lessons/:lessonId"
+                element={<LegacyLessonRedirect />}
+              />
+
               {/* Layout Routes (Includes Sidebar & Header) */}
               <Route element={<AppShell />}>
                 {/* Public Routes */}
@@ -148,15 +155,6 @@ function App() {
                       <DashboardPage />
                     </ProtectedRoute>
                   }
-                />
-                {/* Lesson Viewer - accessible to guests for preview lessons */}
-                <Route
-                  path="/courses/:id/learn"
-                  element={<LessonViewerPage />}
-                />
-                <Route
-                  path="/courses/:courseId/lessons/:lessonId"
-                  element={<LegacyLessonRedirect />}
                 />
                 <Route
                   path="/my-learning"

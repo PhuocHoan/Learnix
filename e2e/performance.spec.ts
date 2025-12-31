@@ -70,30 +70,31 @@ test.describe('Performance', () => {
 
     test('should load more courses on scroll', async ({ page }) => {
       await page.goto('/courses');
+      await page.waitForLoadState('networkidle');
 
-      // Wait for initial courses - skip if none available
-      try {
-        await page.waitForSelector('a[href^="/courses/"]', { timeout: 10000 });
+      // Verify page loaded
+      await expect(
+        page.getByRole('heading', { name: /Courses|Browse/i }),
+      ).toBeVisible();
 
-        const initialCount = await page.locator('a[href^="/courses/"]').count();
+      const courses = page.locator('a[href^="/courses/"]');
+      const initialCount = await courses.count();
 
+      if (initialCount > 0) {
         // Scroll to bottom
         await page.evaluate(() =>
           window.scrollTo(0, document.body.scrollHeight),
         );
 
         // Wait for potential new courses
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(2000);
 
-        const finalCount = await page.locator('a[href^="/courses/"]').count();
+        const finalCount = await courses.count();
 
         // Count should be same or more (infinite scroll)
         expect(finalCount).toBeGreaterThanOrEqual(initialCount);
-      } catch {
-        // No courses available - verify page loaded
-        await expect(
-          page.getByRole('heading', { name: /Courses|Browse/i }),
-        ).toBeVisible();
+      } else {
+        console.log('No courses found on initial load - skipping scroll test');
       }
     });
   });

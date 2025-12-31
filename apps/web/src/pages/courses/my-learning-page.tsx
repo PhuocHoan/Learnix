@@ -160,6 +160,54 @@ export function MyLearningPage() {
     },
   });
 
+  // Unenroll mutation with optimistic update
+  const unenrollMutation = useMutation({
+    mutationFn: coursesApi.unenrollFromCourse,
+    onMutate: async (courseId) => {
+      await queryClient.cancelQueries({ queryKey: ['enrolled-courses'] });
+
+      const previousActive = queryClient.getQueryData<EnrolledCourse[]>([
+        'enrolled-courses',
+        { archived: false },
+      ]);
+      const previousArchived = queryClient.getQueryData<EnrolledCourse[]>([
+        'enrolled-courses',
+        { archived: true },
+      ]);
+
+      // Remove from active courses
+      queryClient.setQueryData<EnrolledCourse[]>(
+        ['enrolled-courses', { archived: false }],
+        (old) => old?.filter((c) => c.id !== courseId) ?? [],
+      );
+
+      // Also ensure it's removed from archived if present (though unlikely to be called from there)
+      queryClient.setQueryData<EnrolledCourse[]>(
+        ['enrolled-courses', { archived: true }],
+        (old) => old?.filter((c) => c.id !== courseId) ?? [],
+      );
+
+      return { previousActive, previousArchived };
+    },
+    onError: (_err, _courseId, context) => {
+      queryClient.setQueryData(
+        ['enrolled-courses', { archived: false }],
+        context?.previousActive,
+      );
+      queryClient.setQueryData(
+        ['enrolled-courses', { archived: true }],
+        context?.previousArchived,
+      );
+      toast.error('Unable to unenroll. Please try again.');
+    },
+    onSuccess: () => {
+      toast.success('Unenrolled successfully');
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['enrolled-courses'] });
+    },
+  });
+
   // Filter courses based on active tab and search query
   const getFilteredCourses = (): EnrolledCourse[] => {
     const getCoursesByTab = (tab: TabValue): EnrolledCourse[] => {
@@ -298,6 +346,7 @@ export function MyLearningPage() {
                 searchQuery,
                 archiveMutation,
                 unarchiveMutation,
+                unenrollMutation,
               })}
             </TabsContent>
           ))}
@@ -315,6 +364,7 @@ interface RenderTabContentProps {
   searchQuery: string;
   archiveMutation: { mutate: (id: string) => void };
   unarchiveMutation: { mutate: (id: string) => void };
+  unenrollMutation: { mutate: (id: string) => void };
 }
 
 function renderTabContent({
@@ -324,6 +374,7 @@ function renderTabContent({
   searchQuery,
   archiveMutation,
   unarchiveMutation,
+  unenrollMutation,
 }: RenderTabContentProps) {
   if (isLoading) {
     return (
@@ -349,6 +400,7 @@ function renderTabContent({
           course={course}
           onArchive={() => void archiveMutation.mutate(course.id)}
           onUnarchive={() => void unarchiveMutation.mutate(course.id)}
+          onUnenroll={() => void unenrollMutation.mutate(course.id)}
         />
       ))}
     </div>
@@ -378,9 +430,15 @@ interface CourseCardProps {
   course: EnrolledCourse;
   onArchive: () => void;
   onUnarchive: () => void;
+  onUnenroll: () => void;
 }
 
-function CourseCard({ course, onArchive, onUnarchive }: CourseCardProps) {
+function CourseCard({
+  course,
+  onArchive,
+  onUnarchive,
+  onUnenroll,
+}: CourseCardProps) {
   const isCompleted = course.status === 'completed';
 
   return (
@@ -460,13 +518,23 @@ function CourseCard({ course, onArchive, onUnarchive }: CourseCardProps) {
                         Restore to My Learning
                       </DropdownMenuItem>
                     ) : (
-                      <DropdownMenuItem
-                        onClick={onArchive}
-                        className="cursor-pointer text-muted-foreground"
-                      >
-                        <Archive className="w-4 h-4 mr-2" />
-                        Archive Course
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem
+                          onClick={onArchive}
+                          className="cursor-pointer text-muted-foreground"
+                        >
+                          <Archive className="w-4 h-4 mr-2" />
+                          Archive Course
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={onUnenroll}
+                          className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                        >
+                          <Archive className="w-4 h-4 mr-2" />
+                          Unenroll
+                        </DropdownMenuItem>
+                      </>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>

@@ -138,6 +138,17 @@ export class CoursesController {
     return await this.coursesService.enroll(user.id, id);
   }
 
+  @Delete(':id/enroll')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
+  async unenroll(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: User,
+  ): Promise<{ success: boolean; message: string }> {
+    await this.coursesService.unenroll(user.id, id);
+    return { success: true, message: 'Unenrolled successfully' };
+  }
+
   @Get(':id/enrollment')
   @UseGuards(JwtAuthGuard)
   async checkEnrollment(

@@ -402,10 +402,6 @@ export function QuizGenerationModal({
                         {...register('count', { valueAsNumber: true })}
                         className="w-full h-14 font-bold text-2xl text-center rounded-2xl border-2 bg-background focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 transition-all font-mono"
                       />
-                      <div className="absolute inset-y-0 right-3 flex flex-col justify-center pointer-events-none opacity-50">
-                        <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[6px] border-b-current mb-0.5" />
-                        <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-current" />
-                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground font-medium text-center">
                       5-10 recommended

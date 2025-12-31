@@ -13,6 +13,7 @@ import {
   Code as CodeIcon,
   CircleHelp,
   ArrowRight,
+  GraduationCap,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -20,11 +21,13 @@ import {
   useNavigate,
   useSearchParams,
   useLocation,
+  Link,
 } from 'react-router-dom';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 
 import { IdePanel } from '@/components/ide/ide-panel';
+import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/use-auth';
 import { AuthRequiredModal } from '@/features/auth/components/auth-required-modal';
@@ -349,7 +352,7 @@ function LessonContent({
   }
 
   return (
-    <div className="max-w-3xl mx-auto pb-20">
+    <div className="max-w-3xl mx-auto pb-4">
       {blocks
         .sort((a, b) => a.orderIndex - b.orderIndex)
         .map((block) => {
@@ -557,15 +560,21 @@ export function LessonViewerPage() {
     },
   );
 
-  // Reset state when lesson changes
+  // Reset state when lesson changes - scroll to top like Udemy
   useEffect(() => {
+    // Reset quiz state via callback to avoid direct setState in effect
+    const resetQuizState = () => setHasQuiz(false);
+    resetQuizState();
+    completionTriggeredRef.current = false;
+
+    // Scroll content container to top with smooth animation
+    // Since the layout is fixed height (h-screen), only the content container scrolls
     const timer = setTimeout(() => {
-      setHasQuiz(false);
-      completionTriggeredRef.current = false;
       if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = 0;
+        scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
       }
-    }, 0);
+    }, 50);
+
     return () => clearTimeout(timer);
   }, [activeLessonId]);
 
@@ -736,35 +745,104 @@ export function LessonViewerPage() {
       />
 
       <div className="h-screen flex flex-col overflow-hidden bg-background">
-        <div className="h-16 border-b border-border bg-card flex items-center px-4 justify-between shrink-0 z-20">
+        {/* Udemy-style header */}
+        <header className="h-16 border-b border-border bg-zinc-900 flex items-center px-4 justify-between shrink-0 z-20">
+          {/* Left: Logo */}
           <div className="flex items-center gap-4">
+            <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
+              <div className="p-1.5 gradient-primary rounded-xl glow-primary transition-transform group-hover:scale-105">
+                <GraduationCap className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-lg font-bold text-white hidden sm:block">
+                Learnix
+              </span>
+            </Link>
+            <div className="h-6 w-px bg-zinc-700 hidden md:block" />
+            {/* Course title - links to course page */}
+            <Link
+              to={`/courses/${id}`}
+              className="font-medium text-zinc-300 hover:text-white transition-colors hidden md:flex items-center gap-2 text-sm max-w-md truncate"
+            >
+              <ChevronLeft className="w-4 h-4 shrink-0" />
+              <span className="truncate">{course.title}</span>
+            </Link>
+          </div>
+
+          {/* Right: Progress circle & sidebar toggle */}
+          <div className="flex items-center gap-3">
+            {/* Progress indicator - only show for enrolled users */}
+            {isEnrolled && !isInstructor && !isAdmin && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-400 hidden sm:block">
+                  Your progress
+                </span>
+                <div className="relative w-8 h-8">
+                  <svg className="w-8 h-8 -rotate-90" viewBox="0 0 32 32">
+                    <circle
+                      cx="16"
+                      cy="16"
+                      r="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      className="text-zinc-700"
+                    />
+                    <circle
+                      cx="16"
+                      cy="16"
+                      r="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeDasharray={`${(completedIds.length / (course.sections?.reduce((acc, s) => acc + s.lessons.length, 0) ?? 1)) * 88} 88`}
+                      strokeLinecap="round"
+                      className="text-primary"
+                    />
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white">
+                    {Math.round(
+                      (completedIds.length /
+                        (course.sections?.reduce(
+                          (acc, s) => acc + s.lessons.length,
+                          0,
+                        ) ?? 1)) *
+                        100,
+                    )}
+                    %
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Mobile back button */}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => void navigate(`/courses/${id}`)}
+              className="md:hidden text-zinc-300 hover:text-white hover:bg-zinc-800"
             >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Back to Course
+              <ChevronLeft className="w-4 h-4" />
             </Button>
-            <div className="h-6 w-px bg-border hidden md:block" />
-            <span className="font-semibold hidden md:inline-block text-sm">
-              {course.title}
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          >
-            {isSidebarOpen ? (
-              <X className="w-5 h-5" />
-            ) : (
-              <Menu className="w-5 h-5" />
-            )}
-          </Button>
-        </div>
 
-        <div className="flex-1 flex overflow-hidden relative">
+            {/* Sidebar toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="text-zinc-300 hover:text-white hover:bg-zinc-800"
+            >
+              {isSidebarOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
+        </header>
+
+        {/* Main layout: Fixed sidebar on right, scrollable content on left - Udemy style */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Main content area - scrolls independently */}
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
@@ -772,6 +850,8 @@ export function LessonViewerPage() {
               'flex-1 overflow-y-auto bg-background scroll-smooth',
               currentLesson?.ideConfig &&
                 'grid lg:grid-cols-2 gap-0 overflow-hidden',
+              // Adjust width when sidebar is open on desktop
+              isSidebarOpen && 'lg:mr-0',
             )}
           >
             <div
@@ -868,26 +948,36 @@ export function LessonViewerPage() {
 
                   {/* Next Lesson Button */}
                   {isEnrolled && !isInstructor && !isAdmin && (
-                    <div className="mt-12 flex justify-end">
+                    <div className="mt-6 mb-20 flex justify-end">
                       <Button
                         size="lg"
-                        className="gap-2 font-semibold"
+                        className="gap-2 font-semibold shadow-xl hover:shadow-2xl transition-all"
                         onClick={() => {
                           const handleNavigation = () => {
                             if (nextLesson) {
                               setSearchParams({ lesson: nextLesson.id });
-                              if (scrollContainerRef.current) {
-                                scrollContainerRef.current.scrollTop = 0;
-                              }
+                              // Scroll to top is handled by useEffect on activeLessonId change
                             } else {
                               toast.success('Course completed!');
                               void navigate(`/courses/${id}`);
                             }
                           };
 
-                          // If code exercise or already completed, just navigate
-                          if (currentLesson.ideConfig || isLessonCompleted) {
+                          // If already completed, just navigate
+                          if (isLessonCompleted) {
                             handleNavigation();
+                            return;
+                          }
+
+                          // If code exercise and not completed, block navigation
+                          if (currentLesson.ideConfig) {
+                            // Code exercise must be completed to proceed - button should be disabled
+                            return;
+                          }
+
+                          // If quiz lesson, require quiz completion before navigating
+                          if (currentLesson.type === 'quiz') {
+                            // Quiz must be completed to proceed - button should be disabled
                             return;
                           }
 
@@ -899,7 +989,13 @@ export function LessonViewerPage() {
                             },
                           );
                         }}
-                        disabled={isCompletingLesson}
+                        disabled={
+                          isCompletingLesson ||
+                          (currentLesson.type === 'quiz' &&
+                            !isLessonCompleted) ||
+                          (Boolean(currentLesson.ideConfig) &&
+                            !isLessonCompleted)
+                        }
                       >
                         {isCompletingLesson && (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -925,6 +1021,14 @@ export function LessonViewerPage() {
                 </div>
               )}
             </div>
+
+            {/* Footer - Scrollable with content, spans full width of content area */}
+            {!currentLesson?.ideConfig && (
+              <div className="mt-20 border-t border-border bg-card/50">
+                <Footer />
+              </div>
+            )}
+
             {currentLesson?.ideConfig && (
               <div className="h-full border-l border-border bg-[#1e1e1e] overflow-hidden hidden lg:block">
                 <IdePanel
@@ -943,150 +1047,139 @@ export function LessonViewerPage() {
             )}
           </div>
 
-          {/* Sidebar Navigation */}
+          {/* Mobile backdrop overlay */}
+          {isSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Sidebar Navigation - Fixed position with internal scroll like Udemy */}
           <div
             className={cn(
-              'w-80 bg-card border-l border-border flex flex-col absolute inset-y-0 right-0 transform transition-all duration-300 z-10',
-              isSidebarOpen ? 'translate-x-0' : 'translate-x-full',
-              'lg:relative lg:translate-x-0',
-              !isSidebarOpen && 'lg:w-0 lg:border-l-0 lg:overflow-hidden',
+              'w-80 bg-card border-l border-border flex flex-col shrink-0 transition-all duration-300',
+              // Mobile: fixed overlay below header
+              'fixed top-16 bottom-0 right-0 z-30',
+              // Desktop: relative within flex container
+              'lg:relative lg:top-auto lg:bottom-auto lg:z-10',
+              // Animation
+              isSidebarOpen
+                ? 'translate-x-0'
+                : 'translate-x-full lg:translate-x-0',
+              // Desktop: hide completely when closed
+              !isSidebarOpen && 'hidden lg:hidden',
             )}
           >
-            <div className="p-4 border-b border-border font-semibold flex justify-between items-center bg-muted/30">
-              <span>Course Content</span>
-              {!isInstructor && !isAdmin && isEnrolled && (
-                <span className="text-xs font-normal text-muted-foreground">
-                  {Math.round(
-                    (completedIds.length /
-                      (course.sections?.reduce(
-                        (acc, s) => acc + s.lessons.length,
-                        0,
-                      ) ?? 1)) *
-                      100,
-                  )}
-                  % complete
-                </span>
-              )}
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {course.sections?.map((section) => (
-                <div
-                  key={section.id}
-                  className="border-b border-border/50 last:border-0"
+            {/* Sidebar content toggle for desktop (tabs) */}
+            <div className="flex-1 flex flex-col overflow-hidden overscroll-contain">
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <h2 className="font-bold text-lg">Course Content</h2>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-1.5 hover:bg-muted rounded-lg transition-colors"
                 >
-                  <div className="bg-muted/50 px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wider sticky top-0 backdrop-blur-md z-10">
-                    {section.title}
-                  </div>
-                  <div>
-                    {section.lessons.map((lesson, index) => {
-                      const isCompleted = completedIds.includes(lesson.id);
-                      const isActive = activeLessonId === lesson.id;
-                      const canAccess = hasCourseAccess || lesson.isFreePreview;
-                      const isLocked = !canAccess;
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-                      const isCoding = Boolean(lesson.ideConfig);
-                      const typeLabel =
-                        lesson.type === 'quiz'
-                          ? 'Quiz'
-                          : isCoding
-                            ? 'Code Exercise'
-                            : 'Lesson';
-                      const typeIcon =
-                        lesson.type === 'quiz' ? (
-                          <CircleHelp className="w-3 h-3" aria-hidden="true" />
-                        ) : isCoding ? (
-                          <CodeIcon className="w-3 h-3" aria-hidden="true" />
-                        ) : (
-                          <FileText className="w-3 h-3" aria-hidden="true" />
-                        );
+              {/* Scrollable lesson list */}
+              <div className="flex-1 overflow-y-auto overscroll-contain">
+                {course.sections?.map((section, sectionIndex) => (
+                  <div key={sectionIndex} className="border-b border-border">
+                    <div className="px-4 py-3 bg-muted/30 sticky top-0 z-10 backdrop-blur-sm border-b border-border">
+                      <p className="text-sm font-semibold text-muted-foreground">
+                        Section {sectionIndex + 1}: {section.title}
+                      </p>
+                    </div>
+                    <div className="py-1">
+                      {section.lessons.map((lesson) => {
+                        const isActive = lesson.id === activeLessonId;
+                        const isCompleted = completedIds.includes(lesson.id);
+                        const isLocked =
+                          !isEnrolled && !lesson.isFreePreview && !isInstructor;
 
-                      // Resolve icon based on status to avoid nested ternary
-                      let statusIcon;
-                      if (isLocked) {
-                        statusIcon = <Lock className="w-4 h-4" />;
-                      } else if (isCompleted) {
-                        statusIcon = (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        );
-                      } else {
-                        statusIcon = (
-                          <span className="text-xs font-mono font-medium opacity-70">
-                            {index + 1}
-                          </span>
-                        );
-                      }
+                        let typeIcon = <FileText className="w-4 h-4" />;
+                        let typeLabel = 'Lesson';
 
-                      return (
-                        <button
-                          key={lesson.id}
-                          onClick={() => {
-                            if (isLocked) {
-                              if (!isAuthenticated) {
-                                setShowAuthModal(true);
-                              } else {
-                                toast.error(
-                                  'Please enroll in this course to unlock this lesson',
-                                );
+                        if (lesson.type === 'quiz') {
+                          typeIcon = <CircleHelp className="w-4 h-4" />;
+                          typeLabel = 'Quiz';
+                        } else if (lesson.ideConfig) {
+                          typeIcon = <CodeIcon className="w-4 h-4" />;
+                          typeLabel = 'Code Exercise';
+                        }
+
+                        return (
+                          <button
+                            key={lesson.id}
+                            onClick={() => {
+                              if (isLocked) {
+                                if (!isAuthenticated) {
+                                  setShowAuthModal(true);
+                                } else {
+                                  toast.error(
+                                    'Please enroll in this course to unlock this lesson',
+                                  );
+                                }
+                                return;
                               }
-                              return;
-                            }
-                            setSearchParams({ lesson: lesson.id });
-                            if (window.innerWidth < 1024) {
-                              setIsSidebarOpen(false);
-                            }
-                          }}
-                          disabled={isLocked && isAuthenticated}
-                          className={cn(
-                            'w-full text-left px-4 py-3.5 flex items-start gap-3 transition-all border-l-[3px] hover-highlight',
-                            isActive
-                              ? 'bg-primary/5 border-primary'
-                              : 'border-transparent hover:bg-muted/50',
-                            isLocked &&
-                              'opacity-60 cursor-not-allowed bg-muted/10',
-                          )}
-                        >
-                          <div
+                              setSearchParams({ lesson: lesson.id });
+                              if (window.innerWidth < 1024) {
+                                setIsSidebarOpen(false);
+                              }
+                            }}
+                            disabled={isLocked && isAuthenticated}
                             className={cn(
-                              'mt-0.5 shrink-0',
+                              'w-full text-left px-4 py-3.5 flex items-start gap-3 transition-all border-l-[3px]',
                               isActive
-                                ? 'text-primary'
-                                : 'text-muted-foreground',
+                                ? 'bg-primary/5 border-primary'
+                                : 'border-transparent hover:bg-muted/50',
+                              isLocked &&
+                                'opacity-60 cursor-not-allowed bg-muted/10',
                             )}
                           >
-                            {statusIcon}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <p
-                              className={cn(
-                                'text-sm font-medium leading-snug truncate',
-                                isActive ? 'text-primary' : 'text-foreground',
-                              )}
-                            >
-                              {lesson.title}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                {Math.floor(lesson.durationSeconds / 60)} min
-                              </span>
-                              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                {typeIcon}
-                                <span>{typeLabel}</span>
-                              </span>
-                              {lesson.isFreePreview && !isEnrolled && (
-                                <span className="text-[10px] bg-green-500/10 text-green-600 px-1.5 py-0.5 rounded font-medium">
-                                  Free
-                                </span>
+                            <div className="shrink-0 mt-0.5">
+                              {isCompleted ? (
+                                <CheckCircle className="w-5 h-5 text-green-500 fill-green-500/20" />
+                              ) : isLocked ? (
+                                <Lock className="w-5 h-5 text-muted-foreground/50" />
+                              ) : (
+                                <div className="w-5 h-5 rounded-full border-2 border-muted" />
                               )}
                             </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                            <div className="flex-1 min-w-0">
+                              <p
+                                className={cn(
+                                  'text-sm font-medium leading-tight',
+                                  isActive ? 'text-primary' : 'text-foreground',
+                                )}
+                              >
+                                {lesson.title}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  {Math.floor(lesson.durationSeconds / 60)} min
+                                </span>
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  {typeIcon}
+                                  <span>{typeLabel}</span>
+                                </span>
+                                {lesson.isFreePreview && !isEnrolled && (
+                                  <span className="text-[10px] bg-green-500/10 text-green-600 px-1.5 py-0.5 rounded font-medium">
+                                    Free
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>

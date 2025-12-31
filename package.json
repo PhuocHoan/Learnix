@@ -2,7 +2,7 @@
   "name": "learnix-monorepo",
   "private": true,
   "version": "0.0.0",
-  "packageManager": "pnpm@10.26.2",
+  "packageManager": "pnpm@10.27.0",
   "scripts": {
     "prepare": "husky",
     "dev": "turbo dev",
@@ -18,9 +18,9 @@
     "precommit": "pnpm format && turbo lint typecheck test build --force"
   },
   "dependencies": {
-    "@nestjs/common": "^11.1.10",
-    "@nestjs/core": "^11.1.10",
-    "@nestjs/platform-express": "^11.1.10",
+    "@nestjs/common": "^11.1.11",
+    "@nestjs/core": "^11.1.11",
+    "@nestjs/platform-express": "^11.1.11",
     "cookie-parser": "^1.4.7",
     "reflect-metadata": "^0.2.2"
   },

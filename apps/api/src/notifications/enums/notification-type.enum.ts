@@ -6,5 +6,6 @@ export enum NotificationType {
   COURSE_REJECTED = 'course_rejected',
   COURSE_SUBMITTED = 'course_submitted',
   COURSE_COMPLETED = 'course_completed',
+  COURSE_UNENROLLMENT = 'course_unenrollment',
   QUIZ_SUBMITTED = 'quiz_submitted',
 }

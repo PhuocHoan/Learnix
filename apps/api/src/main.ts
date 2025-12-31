@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 
 import { AppModule } from './app.module';
 
@@ -18,6 +19,9 @@ async function bootstrap(): Promise<void> {
 
   // Enable cookie parsing
   app.use(cookieParser());
+
+  // Security Headers
+  app.use(helmet());
 
   // Configure CORS with credentials support for cookies
   // Support multiple frontend ports for development

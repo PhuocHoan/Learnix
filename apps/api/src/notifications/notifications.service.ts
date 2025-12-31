@@ -261,4 +261,20 @@ export class NotificationsService {
       `/courses/${courseId}/learn?lesson=${lessonId}`,
     );
   }
+
+  async notifyUnenrollment(
+    userId: string,
+    courseTitle: string,
+    courseId: string,
+  ) {
+    return await this.create(
+      userId,
+      'Unenrolled',
+      `You have been unenrolled from "${courseTitle}".`,
+      'info',
+      NotificationType.COURSE_UNENROLLMENT,
+      { courseTitle, courseId },
+      `/courses/${courseId}`,
+    );
+  }
 }

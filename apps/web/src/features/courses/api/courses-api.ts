@@ -268,6 +268,20 @@ export const coursesApi = {
     return response.data;
   },
 
+  enrollInCourse: async (courseId: string) => {
+    const { data } = await api.post<EnrollmentResponse>(
+      `/courses/${courseId}/enroll`,
+    );
+    return data;
+  },
+
+  unenrollFromCourse: async (courseId: string) => {
+    const { data } = await api.delete<{ success: boolean; message: string }>(
+      `/courses/${courseId}/enroll`,
+    );
+    return data;
+  },
+
   updateCourse: async (
     id: string,
     data: Partial<CreateCourseData> & { isPublished?: boolean },

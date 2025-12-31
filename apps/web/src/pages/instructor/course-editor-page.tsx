@@ -1072,6 +1072,7 @@ function SortableSectionItem({
               sectionId={section.id}
               courseId={course.id}
               lessons={course.sections?.flatMap((s) => s.lessons) ?? []}
+              defaultOrderIndex={section.lessons?.length ?? 0}
             />
             <div className="w-px h-6 bg-border/60 mx-1" />
             <Button
@@ -2094,10 +2095,12 @@ function QuizCreationDialog({
   sectionId,
   courseId,
   lessons,
+  defaultOrderIndex = 0,
 }: {
   sectionId: string;
   courseId: string;
   lessons: { id: string; title: string; type?: 'standard' | 'quiz' }[];
+  defaultOrderIndex?: number;
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -2126,7 +2129,7 @@ function QuizCreationDialog({
         content: [],
         durationSeconds: 0,
         isFreePreview: false,
-        orderIndex: 0,
+        orderIndex: defaultOrderIndex,
       });
 
       await quizzesApi.createQuiz({
@@ -2168,7 +2171,7 @@ function QuizCreationDialog({
         content: [],
         durationSeconds: 0,
         isFreePreview: false,
-        orderIndex: 0,
+        orderIndex: defaultOrderIndex,
       });
 
       await quizzesApi.createQuiz({

@@ -31,7 +31,7 @@ api/        # Vercel serverless adapter
 
 ### Prerequisites
 
-- Node.js >= 22
+- Node.js >= 24
 - pnpm >= 10
 - Docker (for database)
 
@@ -98,11 +98,32 @@ pnpm format         # Formatter (Prettier)
 - **Backend**: Deployed as Serverless Functions on Vercel.
 - **Database**: Uses Aiven Cloud PostgreSQL.
 
+### Docker
+
+To run the application with Docker Compose:
+
+1. Ensure `.env` files are set up in `apps/web` and `apps/api`.
+2. Run the compose file
+
+```bash
+docker compose up -d --build
+```
+
+- **Frontend**: <http://localhost:5173>
+- **Backend API**: <http://localhost:3000>
+- **Database**: `postgres` service (internal)
+
+To stop:
+
+```bash
+docker compose down
+```
+
 ## Tech Stack
 
 | Frontend       | Backend                 | DevOps         |
 | -------------- | ----------------------- | -------------- |
-| React 19       | NestJS 11               | Turborepo 2.6  |
+| React 19       | NestJS 11               | Turborepo 2.7  |
 | Vite 7         | TypeORM + PostgreSQL    | GitHub Actions |
 | TailwindCSS 4  | Passport.js (JWT/OAuth) | Playwright     |
 | TanStack Query | Gemini AI (Quizzes)     | Vercel         |

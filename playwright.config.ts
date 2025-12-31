@@ -30,7 +30,7 @@ export default defineConfig({
     ? undefined
     : {
         command:
-          'sh -c "make db && sleep 5 && (cd apps/api && npx ts-node -r tsconfig-paths/register src/scripts/seed-test-data.ts) && pnpm dev"',
+          'sh -c "make db && sleep 5 && (cd apps/api && pnpm exec ts-node -r tsconfig-paths/register src/scripts/seed-test-data.ts) && pnpm dev"',
         url: 'http://localhost:3000/health',
         reuseExistingServer: !process.env.CI,
         timeout: 180 * 1000,

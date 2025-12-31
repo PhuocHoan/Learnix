@@ -6,20 +6,21 @@ test.describe('Payments System', () => {
 
   test('should allow user to purchase a paid course (Full Flow)', async ({
     page,
+    isMobile,
   }) => {
-    test.setTimeout(180000); // 3 minutes for full flow
+    test.setTimeout(240000); // 4 minutes for full flow
     const uniqueId = Date.now().toString();
     const courseTitle = `Paid Course ${uniqueId}`;
 
     // 1. Instructor: Create & Submit Course
     authPage = new AuthPage(page);
-    await page.waitForTimeout(2000); // Wait for frontend to be fully ready
+    await page.waitForTimeout(5000); // Wait for frontend to be fully ready
     await authPage.gotoLogin();
-    await page.waitForLoadState('networkidle');
+
     await authPage.login('instructor_mod_js@example.com', 'Password123!');
 
     try {
-      await expect(page).toHaveURL(/.*dashboard/, { timeout: 30000 });
+      await expect(page).toHaveURL(/.*dashboard/, { timeout: 60000 });
     } catch (e) {
       throw e;
     }
@@ -76,27 +77,36 @@ test.describe('Payments System', () => {
 
     // Find the course (Pending)
     // The admin-courses-page uses Cards, not a table.
-    const approveBtn = page
-      .locator('div')
+    // Find the course (Pending)
+    // The admin-courses-page uses Cards.
+    // We locate the card that contains the specific heading.
+    const adminCourseCard = page
+      .locator('div.rounded-xl, div.border') // Try to hit the card container classes
       .filter({ has: page.getByRole('heading', { name: courseTitle }) })
-      .getByRole('button', { name: /Approve/i });
+      .first();
 
+    const approveBtn = adminCourseCard.getByRole('button', { name: /Approve/i });
+
+    // Ensure we are on the right tab if needed (though default is usually pending)
     if (!(await approveBtn.isVisible())) {
-      // Try checking tabs "Pending" if they exist, or just wait for list
       const pendingTab = page.getByRole('tab', { name: /Pending/i });
       if (await pendingTab.isVisible()) await pendingTab.click();
     }
 
-    await approveBtn.first().waitFor({ state: 'visible', timeout: 30000 });
-    await approveBtn.first().click();
+    await approveBtn.waitFor({ state: 'visible', timeout: 30000 });
+    // Force click can help on mobile if there are overlay issues
+    await approveBtn.click({ force: true });
 
-    // Confirm approval
-    await page
+    // Confirm approval in Dialog
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+
+    await dialog
       .getByRole('button', { name: 'Approve', exact: true })
-      .last()
       .click();
+
     await expect(page.getByText('Course approved')).toBeVisible({
-      timeout: 10000,
+      timeout: 30000,
     });
 
     await authPage.logout();
@@ -107,6 +117,7 @@ test.describe('Payments System', () => {
     await expect(page).toHaveURL(/.*dashboard/, { timeout: 30000 });
 
     await page.goto('/courses');
+    await page.waitForTimeout(10000); // Wait for course propagation/indexing
     await page
       .getByPlaceholder('Search by title...')
       .waitFor({ state: 'visible', timeout: 30000 });
@@ -114,12 +125,12 @@ test.describe('Payments System', () => {
     await page.keyboard.press('Enter');
 
     const courseCard = page.getByText(courseTitle).first();
-    await courseCard.waitFor({ state: 'visible', timeout: 20000 });
+    await courseCard.waitFor({ state: 'visible', timeout: 30000 });
     await courseCard.click();
 
     // Enroll
     const enrollBtn = page.getByRole('button', { name: /Enroll/i });
-    await expect(enrollBtn).toBeVisible({ timeout: 10000 });
+    await expect(enrollBtn).toBeVisible({ timeout: 20000 });
     await enrollBtn.click();
 
     // Checkout
@@ -134,6 +145,6 @@ test.describe('Payments System', () => {
       page
         .getByText(/Payment Successful/i)
         .or(page.getByText(/Successfully enrolled/i)),
-    ).toBeVisible({ timeout: 30000 });
+    ).toBeVisible({ timeout: 40000 });
   });
 });

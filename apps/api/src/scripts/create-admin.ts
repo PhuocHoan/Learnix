@@ -1,12 +1,17 @@
 import { NestFactory } from '@nestjs/core';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
+import { type Repository } from 'typeorm';
 
 import { AppModule } from '../app.module';
+import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
 import { UsersService } from '../users/users.service';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule);
   const usersService = app.get(UsersService);
+  const usersRepository = app.get<Repository<User>>(getRepositoryToken(User));
 
   const email = 'admin@example.com';
   const password = 'Password123!';
@@ -40,11 +45,10 @@ async function bootstrap(): Promise<void> {
   console.warn('Role updated to ADMIN');
 
   // Force update password to ensure consistency with tests
-  const bcrypt = require('bcrypt');
   const hashedPassword = await bcrypt.hash(password, 10);
-  await (usersService as any).usersRepository
+  await usersRepository
     .createQueryBuilder()
-    .update('users')
+    .update(User)
     .set({ password: hashedPassword })
     .where('id = :id', { id: user.id })
     .execute();

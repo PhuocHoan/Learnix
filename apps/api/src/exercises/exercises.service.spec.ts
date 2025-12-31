@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import axios from 'axios';
 
@@ -17,6 +17,11 @@ describe('ExercisesService', () => {
 
     service = module.get<ExercisesService>(ExercisesService);
     jest.clearAllMocks();
+
+    // Mock logger to suppress expected error logs
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {
+      // no-op
+    });
   });
 
   describe('executeCode', () => {
@@ -74,6 +79,7 @@ describe('ExercisesService', () => {
           HttpStatus.BAD_GATEWAY,
         ),
       );
+      expect(Logger.prototype.error).toHaveBeenCalled();
     });
   });
 

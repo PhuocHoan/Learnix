@@ -334,16 +334,6 @@ export class QuizzesService {
 
     const savedSubmission = await this.submissionRepository.save(submission);
 
-    // Notify user of quiz completion
-    await this.notificationsService.notifyQuizSubmitted(
-      userId,
-      quiz.title,
-      score,
-      percentage,
-      quiz.courseId,
-      quiz.lessonId,
-    );
-
     return savedSubmission;
   }
 

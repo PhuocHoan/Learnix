@@ -1,57 +1,70 @@
 # ==============================================================================
-# Docker Compose - Development Only
-# For production: Deploy to Vercel (no Docker needed)
+# Docker Compose
+# Usage: docker compose up -d --build
 # ==============================================================================
 
 services:
   postgres:
     image: postgres:18-alpine
     container_name: learnix-db
-    mem_limit: 512m
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: learnix
-    ports:
-      - '5432:5432'
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-learnix}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d learnix']
+      test: ["CMD-SHELL", "pg_isready -U postgres -d learnix"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   backend:
-    image: node:24-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: api
     container_name: learnix-backend
-    working_dir: /app
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      NODE_ENV: development
+      APP_NAME: api
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_NAME: ${POSTGRES_DB:-learnix}
+      TYPEORM_SYNCHRONIZE: "true"
+      # Override other vars if needed, or rely on .env file
     env_file:
       - ./apps/api/.env
-    volumes:
-      - ./apps/api:/app
-      - backend_node_modules:/app/node_modules
     ports:
-      - '3000:3000'
-    command: sh -c "corepack enable pnpm && pnpm install && pnpm dev"
+      - "3000:3000"
+    restart: unless-stopped
 
   frontend:
-    image: node:24-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: web
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     container_name: learnix-frontend
-    working_dir: /app
+    # Note: Vite build-time env vars (VITE_*) must be present in .env during build
+    # or passed as build args. We pass VITE_API_URL as a build arg above.
+    environment:
+      APP_NAME: web
     env_file:
       - ./apps/web/.env
-    volumes:
-      - ./apps/web:/app
-      - frontend_node_modules:/app/node_modules
     ports:
-      - '5173:5173'
-    command: sh -c "corepack enable pnpm && pnpm install && pnpm dev --host"
+      - "5173:3000"
+    restart: unless-stopped
 
 volumes:
   postgres_data:
-  backend_node_modules:
-  frontend_node_modules:
