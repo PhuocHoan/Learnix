@@ -21,7 +21,9 @@ describe('AdminService', () => {
 
   const mockCoursesService: Partial<jest.Mocked<CoursesService>> = {
     count: jest.fn(),
+    countPublished: jest.fn(),
     countEnrollments: jest.fn(),
+    countPublishedEnrollments: jest.fn(),
     getCourseGrowthStats: jest.fn(),
     getEnrollmentGrowthStats: jest.fn(),
     getRevenueGrowthStats: jest.fn(),
@@ -62,8 +64,10 @@ describe('AdminService', () => {
       usersService.getGrowthStats.mockResolvedValue([]);
       usersService.getActiveInstructorsCount.mockResolvedValue(5);
 
-      coursesService.count.mockResolvedValue(courseCount);
-      coursesService.countEnrollments.mockResolvedValue(enrollmentCount);
+      coursesService.countPublished.mockResolvedValue(courseCount);
+      coursesService.countPublishedEnrollments.mockResolvedValue(
+        enrollmentCount,
+      );
       coursesService.getCourseGrowthStats.mockResolvedValue([]);
       coursesService.getEnrollmentGrowthStats.mockResolvedValue([]);
       coursesService.getRevenueGrowthStats.mockResolvedValue([]);
@@ -74,8 +78,8 @@ describe('AdminService', () => {
       const result = await service.getSystemStats();
 
       expect(usersService.count).toHaveBeenCalledTimes(1);
-      expect(coursesService.count).toHaveBeenCalledTimes(1);
-      expect(coursesService.countEnrollments).toHaveBeenCalledTimes(1);
+      expect(coursesService.countPublished).toHaveBeenCalledTimes(1);
+      expect(coursesService.countPublishedEnrollments).toHaveBeenCalledTimes(1);
 
       expect(result).toEqual({
         totalUsers: userCount,
@@ -97,8 +101,8 @@ describe('AdminService', () => {
       usersService.getGrowthStats.mockResolvedValue([]);
       usersService.getActiveInstructorsCount.mockResolvedValue(0);
 
-      coursesService.count.mockResolvedValue(0);
-      coursesService.countEnrollments.mockResolvedValue(0);
+      coursesService.countPublished.mockResolvedValue(0);
+      coursesService.countPublishedEnrollments.mockResolvedValue(0);
       coursesService.getCourseGrowthStats.mockResolvedValue([]);
       coursesService.getEnrollmentGrowthStats.mockResolvedValue([]);
       coursesService.getRevenueGrowthStats.mockResolvedValue([]);

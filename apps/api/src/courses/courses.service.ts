@@ -459,7 +459,14 @@ export class CoursesService {
     const { archived = false, status = 'all' } = options;
 
     const enrollments = await this.enrollmentRepository.find({
-      where: { userId, isArchived: archived },
+      where: {
+        userId,
+        isArchived: archived,
+        course: {
+          isPublished: true,
+          status: CourseStatus.PUBLISHED,
+        },
+      },
       relations: [
         'course',
         'course.instructor',
@@ -974,10 +981,25 @@ export class CoursesService {
     return await this.coursesRepository.count();
   }
 
+  async countPublished(): Promise<number> {
+    return await this.coursesRepository.count({
+      where: { isPublished: true, status: CourseStatus.PUBLISHED },
+    });
+  }
+
   // --- Statistics ---
 
   async countEnrollments(): Promise<number> {
     return await this.enrollmentRepository.count();
+  }
+
+  async countPublishedEnrollments(): Promise<number> {
+    return await this.enrollmentRepository
+      .createQueryBuilder('enrollment')
+      .leftJoin('enrollment.course', 'course')
+      .where('course.isPublished = :isPublished', { isPublished: true })
+      .andWhere('course.status = :status', { status: CourseStatus.PUBLISHED })
+      .getCount();
   }
 
   // --- Moderation ---
@@ -1068,7 +1090,9 @@ export class CoursesService {
       .createQueryBuilder('course')
       .select("TO_CHAR(course.createdAt, 'YYYY-MM-DD')", 'date')
       .addSelect('COUNT(*)', 'count')
+      .addSelect('COUNT(*)', 'count')
       .where("course.createdAt >= NOW() - INTERVAL '30 days'")
+      .andWhere('course.isPublished = :isPublished', { isPublished: true })
       .groupBy("TO_CHAR(course.createdAt, 'YYYY-MM-DD')")
       .orderBy('date', 'ASC')
       .getRawMany();
@@ -1082,9 +1106,12 @@ export class CoursesService {
   async getEnrollmentGrowthStats(_days = 30): Promise<CourseDailyStat[]> {
     const data = await this.enrollmentRepository
       .createQueryBuilder('enrollment')
+      .leftJoin('enrollment.course', 'course')
       .select("TO_CHAR(enrollment.enrolledAt, 'YYYY-MM-DD')", 'date')
       .addSelect('COUNT(*)', 'count')
       .where("enrollment.enrolledAt >= NOW() - INTERVAL '30 days'")
+      .andWhere('course.isPublished = :isPublished', { isPublished: true })
+      .andWhere('course.status = :status', { status: CourseStatus.PUBLISHED })
       .groupBy("TO_CHAR(enrollment.enrolledAt, 'YYYY-MM-DD')")
       .orderBy('date', 'ASC')
       .getRawMany();
@@ -1102,6 +1129,8 @@ export class CoursesService {
       .select("TO_CHAR(enrollment.enrolledAt, 'YYYY-MM-DD')", 'date')
       .addSelect('SUM(course.price)', 'count') // Reusing 'count' field for value to match interface
       .where("enrollment.enrolledAt >= NOW() - INTERVAL '30 days'")
+      .andWhere('course.isPublished = :isPublished', { isPublished: true })
+      .andWhere('course.status = :status', { status: CourseStatus.PUBLISHED })
       .groupBy("TO_CHAR(enrollment.enrolledAt, 'YYYY-MM-DD')")
       .orderBy('date', 'ASC')
       .getRawMany();
@@ -1131,6 +1160,8 @@ export class CoursesService {
       await this.enrollmentRepository
         .createQueryBuilder('enrollment')
         .leftJoin('enrollment.course', 'course')
+        .where('course.isPublished = :isPublished', { isPublished: true })
+        .andWhere('course.status = :status', { status: CourseStatus.PUBLISHED })
         .select('SUM(course.price)', 'total')
         .getRawOne();
 
@@ -1144,6 +1175,8 @@ export class CoursesService {
       .createQueryBuilder('course')
       .select('course.level', 'name')
       .addSelect('COUNT(*)', 'value')
+      .where('course.isPublished = :isPublished', { isPublished: true })
+      .andWhere('course.status = :status', { status: CourseStatus.PUBLISHED })
       .groupBy('course.level')
       .getRawMany();
 

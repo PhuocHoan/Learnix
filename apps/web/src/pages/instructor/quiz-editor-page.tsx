@@ -103,7 +103,7 @@ export default function QuizEditorPage() {
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [aiConfig, setAiConfig] = useState<{
     text: string;
-    count: number;
+    count: number | '';
     types: string[];
   }>({
     text: '',
@@ -482,18 +482,23 @@ export default function QuizEditorPage() {
                   min={1}
                   max={10}
                   value={aiConfig.count}
-                  onChange={(e) =>
-                    setAiConfig((prev) => ({
-                      ...prev,
-                      count: parseInt(e.target.value) || 5,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setAiConfig((prev) => ({ ...prev, count: '' }));
+                    } else {
+                      const parsed = parseInt(val);
+                      if (!isNaN(parsed)) {
+                        setAiConfig((prev) => ({ ...prev, count: parsed }));
+                      }
+                    }
+                  }}
                 />
               </div>
               <div className="space-y-2">
                 <span className="text-sm font-medium">Question Types</span>
                 <div className="flex flex-col gap-2 p-3 border rounded-md">
-                  <label className="flex items-center gap-2 text-sm">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
                       type="checkbox"
                       checked={aiConfig.types.includes('multiple_choice')}
@@ -506,10 +511,28 @@ export default function QuizEditorPage() {
                             : prev.types.filter((t) => t !== 'multiple_choice'),
                         }));
                       }}
+                      className="rounded border-primary text-primary focus:ring-primary"
                     />{' '}
-                    Multiple Choice
+                    Multiple Choice (Single Answer)
                   </label>
-                  <label className="flex items-center gap-2 text-sm">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={aiConfig.types.includes('multi_select')}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setAiConfig((prev) => ({
+                          ...prev,
+                          types: checked
+                            ? [...prev.types, 'multi_select']
+                            : prev.types.filter((t) => t !== 'multi_select'),
+                        }));
+                      }}
+                      className="rounded border-primary text-primary focus:ring-primary"
+                    />{' '}
+                    Multiple Choice (Multiple Answers)
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
                       type="checkbox"
                       checked={aiConfig.types.includes('true_false')}
@@ -522,8 +545,26 @@ export default function QuizEditorPage() {
                             : prev.types.filter((t) => t !== 'true_false'),
                         }));
                       }}
+                      className="rounded border-primary text-primary focus:ring-primary"
                     />{' '}
                     True/False
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={aiConfig.types.includes('short_answer')}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setAiConfig((prev) => ({
+                          ...prev,
+                          types: checked
+                            ? [...prev.types, 'short_answer']
+                            : prev.types.filter((t) => t !== 'short_answer'),
+                        }));
+                      }}
+                      className="rounded border-primary text-primary focus:ring-primary"
+                    />{' '}
+                    Short Answer
                   </label>
                 </div>
               </div>
@@ -538,13 +579,18 @@ export default function QuizEditorPage() {
               onClick={() =>
                 generateQuizMutation.mutate({
                   text: aiConfig.text,
-                  count: aiConfig.count,
+                  count:
+                    typeof aiConfig.count === 'number' ? aiConfig.count : 5,
                   types: aiConfig.types.length
                     ? aiConfig.types
                     : ['multiple_choice'],
                 })
               }
-              disabled={!aiConfig.text || generateQuizMutation.isPending}
+              disabled={
+                !aiConfig.text ||
+                aiConfig.count === '' ||
+                generateQuizMutation.isPending
+              }
               className="bg-primary hover:bg-primary/90"
             >
               {generateQuizMutation.isPending && (

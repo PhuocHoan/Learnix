@@ -26,8 +26,9 @@ export class AdminService {
 
   async getSystemStats(): Promise<SystemStats> {
     const totalUsers = await this.usersService.count();
-    const totalCourses = await this.coursesService.count();
-    const totalEnrollments = await this.coursesService.countEnrollments();
+    const totalCourses = await this.coursesService.countPublished();
+    const totalEnrollments =
+      await this.coursesService.countPublishedEnrollments();
 
     // Get trend data (last 30 days)
     const userGrowth = await this.usersService.getGrowthStats(30);

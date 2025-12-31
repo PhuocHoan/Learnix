@@ -125,7 +125,10 @@ export function DashboardPage() {
           iconColor: 'text-blue-500',
           subtitle: 'Platform users',
           valueKey: 'totalUsers',
-          trend: '+12%',
+          trend:
+            (stats?.newUsersCount ?? 0) > 0
+              ? `+${stats?.newUsersCount}`
+              : undefined,
         },
         {
           title: 'Total Courses',
@@ -134,20 +137,23 @@ export function DashboardPage() {
           iconColor: 'text-purple-500',
           subtitle: 'Published courses',
           valueKey: 'totalCourses',
-          trend: '+3',
+          trend:
+            (stats?.newCoursesCount ?? 0) > 0
+              ? `+${stats?.newCoursesCount}`
+              : undefined,
         },
         {
           title: 'Active Students',
           icon: TrendingUp,
           iconBg: 'bg-green-500/10',
           iconColor: 'text-green-500',
-          subtitle: 'Learning now',
+          subtitle: 'Active last 7 days',
           valueKey: 'activeStudents',
-          trend: '+25%',
         },
       ];
     }
     if (user?.role === 'instructor') {
+      const newStudents = stats?.newStudentsCount ?? 0;
       return [
         {
           title: 'Your Courses',
@@ -164,16 +170,15 @@ export function DashboardPage() {
           iconColor: 'text-blue-500',
           subtitle: 'Enrolled students',
           valueKey: 'totalStudents',
-          trend: '+8',
+          trend: newStudents > 0 ? `+${newStudents}` : undefined,
         },
         {
-          title: 'Avg. Rating',
-          icon: Award,
-          iconBg: 'bg-yellow-500/10',
-          iconColor: 'text-yellow-500',
-          subtitle: 'Out of 5.0',
-          valueKey: 'averageRating',
-          format: (v) => v.toFixed(1),
+          title: 'Active Learners',
+          icon: TrendingUp,
+          iconBg: 'bg-green-500/10',
+          iconColor: 'text-green-500',
+          subtitle: 'Active this week',
+          valueKey: 'activeStudents',
         },
       ];
     }
@@ -194,7 +199,6 @@ export function DashboardPage() {
         iconColor: 'text-blue-500',
         subtitle: 'Total study time',
         valueKey: 'hoursLearned',
-        trend: '+2h',
       },
       {
         title: 'Avg. Score',

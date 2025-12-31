@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { Course } from '../courses/entities/course.entity';
 import { Enrollment } from '../courses/entities/enrollment.entity';
+import { QuizSubmission } from '../quizzes/entities/quiz-submission.entity';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
 
@@ -13,6 +14,7 @@ describe('DashboardService', () => {
   let mockUserRepository: Record<string, jest.Mock>;
   let mockCourseRepository: Record<string, jest.Mock>;
   let mockEnrollmentRepository: Record<string, jest.Mock>;
+  let mockQuizSubmissionRepository: Record<string, jest.Mock>;
 
   const mockStudent: User = {
     id: 'student-1',
@@ -42,11 +44,20 @@ describe('DashboardService', () => {
     mockUserRepository = {
       count: jest.fn(),
       find: jest.fn(),
+      createQueryBuilder: jest.fn(() => ({
+        where: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(10),
+      })),
     };
 
     mockCourseRepository = {
       count: jest.fn(),
       find: jest.fn(),
+      createQueryBuilder: jest.fn(() => ({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(5),
+      })),
     };
 
     mockEnrollmentRepository = {
@@ -54,10 +65,19 @@ describe('DashboardService', () => {
       find: jest.fn(),
       createQueryBuilder: jest.fn(() => ({
         leftJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
         getCount: jest.fn().mockResolvedValue(5),
         getRawOne: jest.fn().mockResolvedValue({ total: '10' }),
+      })),
+    };
+
+    mockQuizSubmissionRepository = {
+      createQueryBuilder: jest.fn(() => ({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ avgScore: '0' }),
       })),
     };
 
@@ -75,6 +95,10 @@ describe('DashboardService', () => {
         {
           provide: getRepositoryToken(Enrollment),
           useValue: mockEnrollmentRepository,
+        },
+        {
+          provide: getRepositoryToken(QuizSubmission),
+          useValue: mockQuizSubmissionRepository,
         },
       ],
     }).compile();
@@ -98,8 +122,10 @@ describe('DashboardService', () => {
         expect(result).toEqual({
           totalUsers: 100,
           totalCourses: 25,
-          totalEnrollments: 500,
+          totalEnrollments: 5, // queryBuilder mock returns 5
           activeStudents: 5,
+          newUsersCount: 10,
+          newCoursesCount: 5,
         });
       });
     });
@@ -113,7 +139,8 @@ describe('DashboardService', () => {
         expect(result).toEqual({
           coursesCreated: 5,
           totalStudents: 10,
-          averageRating: 0,
+          activeStudents: 10,
+          newStudentsCount: 10,
         });
         expect(mockCourseRepository.count).toHaveBeenCalledWith({
           where: { instructor: { id: 'instructor-1' } },

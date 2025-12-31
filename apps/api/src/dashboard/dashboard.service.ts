@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 
 import { Course } from '../courses/entities/course.entity';
 import { Enrollment } from '../courses/entities/enrollment.entity';
+import { CourseStatus } from '../courses/enums/course-status.enum';
+import { QuizSubmission } from '../quizzes/entities/quiz-submission.entity';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
 
@@ -21,12 +23,15 @@ export interface AdminStats {
   totalCourses: number;
   totalEnrollments: number;
   activeStudents: number;
+  newUsersCount: number;
+  newCoursesCount: number;
 }
 
 export interface InstructorStats {
   coursesCreated: number;
   totalStudents: number;
-  averageRating: number;
+  activeStudents: number;
+  newStudentsCount: number;
 }
 
 export interface StudentStats {
@@ -56,6 +61,8 @@ export class DashboardService {
     private courseRepository: Repository<Course>,
     @InjectRepository(Enrollment)
     private enrollmentRepository: Repository<Enrollment>,
+    @InjectRepository(QuizSubmission)
+    private quizSubmissionRepository: Repository<QuizSubmission>,
   ) {}
 
   async getUserStats(
@@ -64,8 +71,16 @@ export class DashboardService {
     // 1. ADMIN STATS
     if (user.role === UserRole.ADMIN) {
       const totalUsers = await this.userRepository.count();
-      const totalCourses = await this.courseRepository.count();
-      const totalEnrollments = await this.enrollmentRepository.count();
+      const totalCourses = await this.courseRepository.count({
+        where: { isPublished: true, status: CourseStatus.PUBLISHED },
+      });
+
+      const totalEnrollments = await this.enrollmentRepository
+        .createQueryBuilder('enrollment')
+        .leftJoin('enrollment.course', 'course')
+        .where('course.isPublished = :isPublished', { isPublished: true })
+        .andWhere('course.status = :status', { status: CourseStatus.PUBLISHED })
+        .getCount();
 
       const lastWeek = new Date();
       lastWeek.setDate(lastWeek.getDate() - 7);
@@ -75,11 +90,24 @@ export class DashboardService {
         .where('enrollment.lastAccessedAt >= :lastWeek', { lastWeek })
         .getCount();
 
+      const newUsersCount = await this.userRepository
+        .createQueryBuilder('user')
+        .where('user.createdAt >= :lastWeek', { lastWeek })
+        .getCount();
+
+      const newCoursesCount = await this.courseRepository
+        .createQueryBuilder('course')
+        .where('course.createdAt >= :lastWeek', { lastWeek })
+        .andWhere('course.isPublished = :isPublished', { isPublished: true })
+        .getCount();
+
       return {
         totalUsers,
         totalCourses,
         totalEnrollments,
         activeStudents,
+        newUsersCount,
+        newCoursesCount,
       };
     }
 
@@ -94,19 +122,50 @@ export class DashboardService {
         .createQueryBuilder('enrollment')
         .leftJoin('enrollment.course', 'course')
         .where('course.instructorId = :instructorId', { instructorId: user.id })
+        .andWhere('course.isPublished = :isPublished', { isPublished: true }) // Filter unpublished
+        .select('COUNT(DISTINCT enrollment.userId)', 'total')
+        .getRawOne<{ total: string }>();
+
+      const lastWeek = new Date();
+      lastWeek.setDate(lastWeek.getDate() - 7);
+
+      // Active Students (accessed in last 7 days)
+      const activeStudentsResult = await this.enrollmentRepository
+        .createQueryBuilder('enrollment')
+        .leftJoin('enrollment.course', 'course')
+        .where('course.instructorId = :instructorId', { instructorId: user.id })
+        .andWhere('enrollment.lastAccessedAt >= :lastWeek', { lastWeek })
+        .andWhere('course.isPublished = :isPublished', { isPublished: true })
+        .select('COUNT(DISTINCT enrollment.userId)', 'total')
+        .getRawOne<{ total: string }>();
+
+      // New Students (enrolled in last 7 days)
+      const newStudentsResult = await this.enrollmentRepository
+        .createQueryBuilder('enrollment')
+        .leftJoin('enrollment.course', 'course')
+        .where('course.instructorId = :instructorId', { instructorId: user.id })
+        .andWhere('enrollment.enrolledAt >= :lastWeek', { lastWeek })
+        .andWhere('course.isPublished = :isPublished', { isPublished: true })
         .select('COUNT(DISTINCT enrollment.userId)', 'total')
         .getRawOne<{ total: string }>();
 
       return {
         coursesCreated,
         totalStudents: parseInt(result?.total ?? '0', 10),
-        averageRating: 0,
+        activeStudents: parseInt(activeStudentsResult?.total ?? '0', 10),
+        newStudentsCount: parseInt(newStudentsResult?.total ?? '0', 10),
       };
     }
 
     // 3. STUDENT STATS
     const enrollments = await this.enrollmentRepository.find({
-      where: { userId: user.id },
+      where: {
+        userId: user.id,
+        course: {
+          isPublished: true,
+          status: CourseStatus.PUBLISHED,
+        },
+      },
       relations: ['course', 'course.sections', 'course.sections.lessons'],
     });
 
@@ -130,16 +189,31 @@ export class DashboardService {
       );
     }
 
+    // Calculate Average Quiz Score
+    const result = await this.quizSubmissionRepository
+      .createQueryBuilder('submission')
+      .select('AVG(submission.percentage)', 'avgScore')
+      .where('submission.userId = :userId', { userId: user.id })
+      .getRawOne<{ avgScore: string | null }>();
+
+    const avgScore = result?.avgScore;
+
     return {
       coursesEnrolled: enrollments.length,
       hoursLearned: Math.round(totalDurationSeconds / 3600),
-      averageScore: 0,
+      averageScore: avgScore ? Math.round(parseFloat(avgScore)) : 0,
     };
   }
 
   async getUserProgress(user: User): Promise<ProgressResult> {
     const enrollments = await this.enrollmentRepository.find({
-      where: { userId: user.id },
+      where: {
+        userId: user.id,
+        course: {
+          isPublished: true,
+          status: CourseStatus.PUBLISHED,
+        },
+      },
       relations: ['course', 'course.sections', 'course.sections.lessons'],
       order: { lastAccessedAt: 'DESC' },
     });

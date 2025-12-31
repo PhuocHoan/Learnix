@@ -11,6 +11,9 @@ export interface DashboardStats {
   totalCourses?: number;
   activeStudents?: number;
   totalEnrollments?: number;
+  newStudentsCount?: number;
+  newUsersCount?: number;
+  newCoursesCount?: number;
 }
 
 export interface CourseProgress {
