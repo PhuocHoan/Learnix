@@ -85,7 +85,9 @@ test.describe('Payments System', () => {
       .filter({ has: page.getByRole('heading', { name: courseTitle }) })
       .first();
 
-    const approveBtn = adminCourseCard.getByRole('button', { name: /Approve/i });
+    const approveBtn = adminCourseCard.getByRole('button', {
+      name: /Approve/i,
+    });
 
     // Ensure we are on the right tab if needed (though default is usually pending)
     if (!(await approveBtn.isVisible())) {
@@ -101,9 +103,7 @@ test.describe('Payments System', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 10000 });
 
-    await dialog
-      .getByRole('button', { name: 'Approve', exact: true })
-      .click();
+    await dialog.getByRole('button', { name: 'Approve', exact: true }).click();
 
     await expect(page.getByText('Course approved')).toBeVisible({
       timeout: 30000,
