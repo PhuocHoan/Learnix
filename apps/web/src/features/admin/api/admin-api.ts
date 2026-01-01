@@ -27,9 +27,18 @@ export interface SystemStats {
   categoryDistribution: { name: string; value: number }[];
 }
 
+export interface GetUsersFilters {
+  role?: string;
+  sortBy?: 'createdAt' | 'fullName' | 'email';
+  sortOrder?: 'ASC' | 'DESC';
+  isActive?: boolean;
+  isEmailVerified?: boolean;
+  search?: string;
+}
+
 export const adminApi = {
-  getAllUsers: async (): Promise<User[]> => {
-    const response = await api.get<User[]>('/admin/users');
+  getAllUsers: async (filters: GetUsersFilters = {}): Promise<User[]> => {
+    const response = await api.get<User[]>('/admin/users', { params: filters });
     return response.data;
   },
 

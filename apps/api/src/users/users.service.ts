@@ -11,6 +11,11 @@ import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 
 import { CreateUserDto } from './dto/create-user.dto';
+import {
+  GetUsersFilterDto,
+  SortOrder,
+  UserSortBy,
+} from './dto/get-users-filter.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { User } from './entities/user.entity';
 import { UserRole } from './enums/user-role.enum';
@@ -142,10 +147,39 @@ export class UsersService {
     return await this.usersRepository.findOne({ where: { id } });
   }
 
-  async findAll(): Promise<User[]> {
-    return await this.usersRepository.find({
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(filterDto: GetUsersFilterDto = {}): Promise<User[]> {
+    const { role, sortBy, sortOrder, isActive, isEmailVerified, search } =
+      filterDto;
+
+    const query = this.usersRepository.createQueryBuilder('user');
+
+    if (role) {
+      query.andWhere('user.role = :role', { role });
+    }
+
+    if (isActive !== undefined) {
+      query.andWhere('user.isActive = :isActive', { isActive });
+    }
+
+    if (isEmailVerified !== undefined) {
+      query.andWhere('user.isEmailVerified = :isEmailVerified', {
+        isEmailVerified,
+      });
+    }
+
+    if (search) {
+      query.andWhere(
+        '(LOWER(user.email) LIKE LOWER(:search) OR LOWER(user.fullName) LIKE LOWER(:search))',
+        { search: `%${search}%` },
+      );
+    }
+
+    const sortColumn = sortBy ?? UserSortBy.CREATED_AT;
+    const order = sortOrder ?? SortOrder.DESC;
+
+    query.orderBy(`user.${sortColumn}`, order);
+
+    return await query.getMany();
   }
 
   async updateRole(id: string, role: UserRole): Promise<User> {

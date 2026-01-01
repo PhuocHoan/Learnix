@@ -60,7 +60,7 @@ describe('AdminController', () => {
       const users = [mockUser as User];
       usersService.findAll.mockResolvedValue(users);
 
-      const result = await controller.getAllUsers();
+      const result = await controller.getAllUsers({});
 
       expect(usersService.findAll).toHaveBeenCalledTimes(1);
       expect(result).toEqual(users);
@@ -69,7 +69,7 @@ describe('AdminController', () => {
     it('should return empty array when no users exist', async () => {
       usersService.findAll.mockResolvedValue([]);
 
-      const result = await controller.getAllUsers();
+      const result = await controller.getAllUsers({});
 
       expect(result).toEqual([]);
     });

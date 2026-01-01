@@ -156,7 +156,7 @@ describe('Auth unit tests (mocked DB)', () => {
       mockUsersServiceForAdmin as UsersService,
     );
 
-    const users = await adminController.getAllUsers();
+    const users = await adminController.getAllUsers({});
     expect(users).toEqual([{ id: '1', email: 'a@a' }]);
 
     const updateRoleDto: UpdateUserRoleDto = { role: UserRole.ADMIN };

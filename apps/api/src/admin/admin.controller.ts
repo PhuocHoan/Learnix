@@ -1,8 +1,17 @@
-import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  Body,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { GetUsersFilterDto } from '../users/dto/get-users-filter.dto';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
 import { UsersService } from '../users/users.service';
@@ -21,8 +30,8 @@ export class AdminController {
   ) {}
 
   @Get('users')
-  async getAllUsers(): Promise<User[]> {
-    return await this.usersService.findAll();
+  async getAllUsers(@Query() filterDto: GetUsersFilterDto): Promise<User[]> {
+    return await this.usersService.findAll(filterDto);
   }
 
   @Patch('users/:id/role')

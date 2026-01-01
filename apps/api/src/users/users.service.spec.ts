@@ -51,6 +51,9 @@ describe('UsersService', () => {
   const mockQueryBuilder = {
     addSelect: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    getMany: jest.fn(),
     update: jest.fn().mockReturnThis(),
     set: jest.fn().mockReturnThis(),
     execute: jest.fn(),
@@ -238,13 +241,15 @@ describe('UsersService', () => {
   describe('findAll', () => {
     it('should return all users ordered by createdAt', async () => {
       const users = [mockUser as User];
-      repository.find.mockResolvedValue(users);
+      mockQueryBuilder.getMany.mockResolvedValue(users);
 
       const result = await service.findAll();
 
-      expect(repository.find).toHaveBeenCalledWith({
-        order: { createdAt: 'DESC' },
-      });
+      expect(repository.createQueryBuilder).toHaveBeenCalledWith('user');
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        'user.createdAt',
+        'DESC',
+      );
       expect(result).toEqual(users);
     });
   });

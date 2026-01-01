@@ -17,6 +17,13 @@ import { createPortal } from 'react-dom';
 import { PageContainer } from '@/components/layout/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { adminApi, type User } from '@/features/admin/api/admin-api';
 import { config } from '@/lib/config';
 import { cn } from '@/lib/utils';
@@ -93,14 +100,49 @@ function getStatusButtonContent(
   return isActive ? 'Lock' : 'Unlock';
 }
 
+// Helper hook for debouncing
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
 export function UserManagementPage() {
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 500);
+
+  // Filter States
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all'); // all, active, locked
+  const [sortFilter, setSortFilter] = useState<string>('createdAt'); // createdAt, fullName, email
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
   const { data: users, isLoading } = useQuery({
-    queryKey: ['admin', 'users'],
-    queryFn: adminApi.getAllUsers,
+    queryKey: [
+      'admin',
+      'users',
+      {
+        role: roleFilter,
+        status: statusFilter,
+        sortBy: sortFilter,
+        sortOrder,
+        search: debouncedSearch,
+      },
+    ],
+    queryFn: () =>
+      adminApi.getAllUsers({
+        role: roleFilter !== 'all' ? roleFilter : undefined,
+        isActive:
+          statusFilter === 'all' ? undefined : statusFilter === 'active',
+        sortBy: sortFilter as 'createdAt' | 'fullName' | 'email',
+        sortOrder,
+        search: debouncedSearch || undefined,
+      }),
   });
 
   const updateRoleMutation = useMutation({
@@ -119,12 +161,6 @@ export function UserManagementPage() {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     },
   });
-
-  const filteredUsers = users?.filter(
-    (user) =>
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -167,28 +203,81 @@ export function UserManagementPage() {
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-xl">
             <Users className="w-4 h-4" />
-            <span>{users?.length ?? 0} total users</span>
+            <span>{users?.length ?? 0} users found</span>
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search users by email or name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-          />
-        </div>
+        {/* Filters & Search */}
+        <Card className="p-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Search */}
+            <div className="relative sm:col-span-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by email or name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+
+            {/* Role Filter */}
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="student">Student</SelectItem>
+                <SelectItem value="instructor">Instructor</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="locked">Locked</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Sort Filter */}
+            <div className="flex gap-2">
+              <Select value={sortFilter} onValueChange={setSortFilter}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt">Date Created</SelectItem>
+                  <SelectItem value="fullName">Name (ABC)</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                </SelectContent>
+              </Select>
+              <button
+                onClick={() =>
+                  setSortOrder((prev) => (prev === 'ASC' ? 'DESC' : 'ASC'))
+                }
+                className="px-3 py-2 border rounded-md hover:bg-muted"
+                title={sortOrder === 'ASC' ? 'Ascending' : 'Descending'}
+              >
+                {sortOrder === 'ASC' ? '↑' : '↓'}
+              </button>
+            </div>
+          </div>
+        </Card>
 
         {/* User List */}
         <Card>
           <CardHeader className="border-b border-border bg-muted/30">
             <CardTitle className="text-lg flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
-              All Users
+              Users List
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -209,10 +298,10 @@ export function UserManagementPage() {
                   </div>
                 );
               }
-              if (filteredUsers && filteredUsers.length > 0) {
+              if (users && users.length > 0) {
                 return (
                   <div className="divide-y divide-border">
-                    {filteredUsers.map((user) => {
+                    {users.map((user) => {
                       const RoleIcon = getRoleIcon(user.role);
                       return (
                         <div
