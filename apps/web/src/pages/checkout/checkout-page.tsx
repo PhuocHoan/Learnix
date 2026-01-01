@@ -280,7 +280,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="container max-w-5xl py-12 px-4 md:px-6 animate-fade-in">
+    <div className="container mx-auto max-w-5xl py-12 px-4 md:px-6 animate-fade-in">
       <Button
         variant="ghost"
         onClick={() => void navigate(-1)}
