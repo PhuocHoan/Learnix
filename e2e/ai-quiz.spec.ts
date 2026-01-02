@@ -11,7 +11,7 @@ test.describe('AI Quiz Generation', () => {
     // Login as instructor
     await authPage.gotoLogin();
     await page.waitForLoadState('networkidle');
-    await authPage.login('instructor_mod_js@example.com', 'Password123!');
+    await authPage.login('instructor@learnix.edu', 'Password@123');
 
     await expect(page).toHaveURL(/.*dashboard/, { timeout: 30000 });
   });
@@ -29,11 +29,11 @@ test.describe('AI Quiz Generation', () => {
       courseCards
         .first()
         .waitFor({ state: 'visible', timeout: 10000 })
-        .catch(() => {}),
+        .catch(() => { }),
       page
         .getByText(/no courses yet/i)
         .waitFor({ state: 'visible', timeout: 10000 })
-        .catch(() => {}),
+        .catch(() => { }),
     ]);
 
     if ((await courseCards.count()) === 0) {

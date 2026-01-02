@@ -22,11 +22,11 @@ Online learning platform built with React 19, NestJS 11, and Turborepo.
 
 Use these accounts to evaluate the platform in different roles. **Password for all: `Password@123`**
 
-| Role       | Email                    | Features to Test                                              |
-| ---------- | ------------------------ | ------------------------------------------------------------- |
-| Admin      | `admin@learnix.edu`      | Course moderation, user management, system stats              |
-| Instructor | `instructor@learnix.edu` | Create courses, manage lessons, generate AI quizzes           |
-| Student    | `student@learnix.edu`    | Enroll in courses, watch lessons, use Embedded IDE, quizzes   |
+| Role       | Email                    | Features to Test                                            |
+| ---------- | ------------------------ | ----------------------------------------------------------- |
+| Admin      | `admin@learnix.edu`      | Course moderation, user management, system stats            |
+| Instructor | `instructor@learnix.edu` | Create courses, manage lessons, generate AI quizzes         |
+| Student    | `student@learnix.edu`    | Enroll in courses, watch lessons, use Embedded IDE, quizzes |
 
 ## Project Structure
 
@@ -46,13 +46,13 @@ Use these accounts to evaluate the platform in different roles. **Password for a
 
 ### Folder Details
 
-| Folder     | Description                                                         |
-| ---------- | ------------------------------------------------------------------- |
-| `apps/web` | React frontend with Vite, TailwindCSS, TanStack Query, CodeMirror   |
-| `apps/api` | NestJS backend with TypeORM, Passport.js, WebSockets, Gemini AI     |
-| `database` | PostgreSQL schema and seed data with import instructions            |
-| `api`      | Vercel serverless function adapter for backend deployment           |
-| `e2e`      | Playwright E2E tests for critical user flows                        |
+| Folder     | Description                                                       |
+| ---------- | ----------------------------------------------------------------- |
+| `apps/web` | React frontend with Vite, TailwindCSS, TanStack Query, CodeMirror |
+| `apps/api` | NestJS backend with TypeORM, Passport.js, WebSockets, Gemini AI   |
+| `database` | PostgreSQL schema and seed data with import instructions          |
+| `api`      | Vercel serverless function adapter for backend deployment         |
+| `e2e`      | Playwright E2E tests for critical user flows                      |
 
 ## Quick Start for Evaluators (Docker - Recommended)
 

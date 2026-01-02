@@ -54,12 +54,12 @@ DATABASE_URL=postgresql://user:password@host:5432/learnix
 ```text
 users                 # User accounts (admin, instructor, student)
   └── external_auth   # OAuth providers (Google, GitHub)
-  
+
 courses               # Course catalog
   └── course_sections # Course sections/modules
       └── lessons     # Individual lessons
           └── lesson_resources  # Attachments/links
-  
+
 enrollments          # Student-course relationships
 quizzes              # Course quizzes
   └── questions      # Quiz questions
