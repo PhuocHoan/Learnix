@@ -18,7 +18,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed:admin": "ts-node -r tsconfig-paths/register src/scripts/create-admin.ts"
+    "seed:admin": "ts-node -r tsconfig-paths/register src/scripts/create-admin.ts",
+    "db:reset": "ts-node -r tsconfig-paths/register src/scripts/reset-db.ts",
+    "db:seed": "ts-node -r tsconfig-paths/register src/scripts/seed-from-sql.ts"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
@@ -79,11 +81,12 @@
     "eslint-plugin-import-x": "^4.16.1",
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-security": "^3.0.1",
-    "globals": "^16.5.0",
+    "globals": "^17.0.0",
     "jest": "^30.2.0",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.51.0"
   },
