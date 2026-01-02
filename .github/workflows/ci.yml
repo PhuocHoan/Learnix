@@ -10,25 +10,25 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/web/**'
-      - 'apps/api/**'
-      - 'packages/**'
-      - 'e2e/**'
-      - 'playwright.config.ts'
-      - '.github/workflows/ci.yml'
-      - '.github/workflows/reusable-ci.yml'
-      - '.github/actions/**'
+      - "apps/web/**"
+      - "apps/api/**"
+      - "packages/**"
+      - "e2e/**"
+      - "playwright.config.ts"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/reusable-ci.yml"
+      - ".github/actions/**"
   pull_request:
     branches: [main]
     paths:
-      - 'apps/web/**'
-      - 'apps/api/**'
-      - 'packages/**'
-      - 'e2e/**'
-      - 'playwright.config.ts'
-      - '.github/workflows/ci.yml'
-      - '.github/workflows/reusable-ci.yml'
-      - '.github/actions/**'
+      - "apps/web/**"
+      - "apps/api/**"
+      - "packages/**"
+      - "e2e/**"
+      - "playwright.config.ts"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/reusable-ci.yml"
+      - ".github/actions/**"
 
 permissions:
   contents: read
@@ -52,7 +52,7 @@ jobs:
         uses: ./.github/actions/setup-node-pnpm
         with:
           working-directory: .
-          node-version: '24'
+          node-version: "24"
 
       - name: Check formatting
         run: pnpm exec prettier --check .
@@ -65,7 +65,7 @@ jobs:
     uses: ./.github/workflows/reusable-ci.yml
     with:
       project: apps/api
-      filter: '@repo/api'
+      filter: "@repo/api"
       test-command: pnpm test
 
   # ==========================
@@ -76,7 +76,7 @@ jobs:
     uses: ./.github/workflows/reusable-ci.yml
     with:
       project: apps/web
-      filter: '@repo/web'
+      filter: "@repo/web"
       test-command: pnpm test
 
   # ==========================
@@ -111,7 +111,7 @@ jobs:
         uses: ./.github/actions/setup-node-pnpm
         with:
           working-directory: .
-          node-version: '24'
+          node-version: "24"
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5
@@ -139,14 +139,7 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: postgres
           DB_NAME: learnix
-          TYPEORM_SYNCHRONIZE: 'true'
-
-      - name: Start frontend preview server
-        run: |
-          cd apps/web
-          pnpm preview --port 5173 &
-          # Wait for server to be ready
-          npx wait-on http://localhost:5173 --timeout 30000
+          TYPEORM_SYNCHRONIZE: "true"
 
       - name: Run E2E tests
         run: pnpm test:e2e --project=chromium
@@ -158,7 +151,7 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: postgres
           DB_NAME: learnix
-          TYPEORM_SYNCHRONIZE: 'false'
+          TYPEORM_SYNCHRONIZE: "false"
           JWT_SECRET: test-secret-key-for-e2e
           VITE_API_URL: http://localhost:3000
 
