@@ -29,11 +29,15 @@ export default defineConfig({
   webServer: [
     {
       command: process.env.CI
-        ? 'pnpm --filter @repo/api dev'
+        ? 'pnpm --filter @repo/api start:prod'
         : 'sh -c "make db && sleep 5 && (cd apps/api && pnpm db:seed) && pnpm dev"',
       url: 'http://localhost:3000/health',
       reuseExistingServer: !process.env.CI,
       timeout: 180 * 1000,
+      env: {
+        NODE_ENV: process.env.CI ? 'production' : 'development',
+        FRONTEND_URL: 'http://localhost:5173',
+      },
     },
     {
       command: process.env.CI
@@ -41,7 +45,10 @@ export default defineConfig({
         : 'pnpm --filter @repo/web dev',
       url: 'http://localhost:5173',
       reuseExistingServer: !process.env.CI,
-      timeout: 120 * 1000,
+      timeout: 180 * 1000,
+      env: {
+        VITE_API_URL: 'http://localhost:3000',
+      },
     },
   ],
 });

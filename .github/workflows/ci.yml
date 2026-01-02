@@ -130,6 +130,8 @@ jobs:
 
       - name: Build project
         run: pnpm build
+        env:
+          VITE_API_URL: http://localhost:3000
 
       - name: Seed Database
         run: pnpm --filter @repo/api db:seed
@@ -154,6 +156,8 @@ jobs:
           TYPEORM_SYNCHRONIZE: "false"
           JWT_SECRET: test-secret-key-for-e2e
           VITE_API_URL: http://localhost:3000
+          FRONTEND_URL: http://localhost:5173
+          NODE_ENV: production
 
       - name: Upload Playwright report
         if: always()
