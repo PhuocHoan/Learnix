@@ -26,13 +26,22 @@ export default defineConfig({
       use: { ...devices['Pixel 5'] },
     },
   ],
-  webServer: process.env.CI
-    ? undefined
-    : {
-        command:
-          'sh -c "make db && sleep 5 && (cd apps/api && pnpm db:seed) && pnpm dev"',
-        url: 'http://localhost:3000/health',
-        reuseExistingServer: !process.env.CI,
-        timeout: 180 * 1000,
-      },
+  webServer: [
+    {
+      command: process.env.CI
+        ? 'pnpm --filter @repo/api dev'
+        : 'sh -c "make db && sleep 5 && (cd apps/api && pnpm db:seed) && pnpm dev"',
+      url: 'http://localhost:3000/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 180 * 1000,
+    },
+    {
+      command: process.env.CI
+        ? 'pnpm --filter @repo/web preview --port 5173'
+        : 'pnpm --filter @repo/web dev',
+      url: 'http://localhost:5173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+  ],
 });
