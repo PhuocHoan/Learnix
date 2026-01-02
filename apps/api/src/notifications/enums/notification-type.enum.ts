@@ -8,4 +8,5 @@ export enum NotificationType {
   COURSE_COMPLETED = 'course_completed',
   COURSE_UNENROLLMENT = 'course_unenrollment',
   QUIZ_SUBMITTED = 'quiz_submitted',
+  SYSTEM_ALERT = 'system_alert',
 }

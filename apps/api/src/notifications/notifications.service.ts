@@ -277,4 +277,14 @@ export class NotificationsService {
       `/courses/${courseId}`,
     );
   }
+  async notifyRoleChange(userId: string, newRole: string) {
+    return await this.create(
+      userId,
+      'Role Updated 🛡️',
+      `Your account role has been updated to "${newRole.toUpperCase()}". You may need to refresh the page to see changes.`,
+      'info',
+      NotificationType.SYSTEM_ALERT,
+      { newRole },
+    );
+  }
 }
