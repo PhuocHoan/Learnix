@@ -17,7 +17,7 @@ test.describe('Payments System', () => {
     await page.waitForTimeout(5000); // Wait for frontend to be fully ready
     await authPage.gotoLogin();
 
-    await authPage.login('instructor_mod_js@example.com', 'Password123!');
+    await authPage.login('instructor@learnix.edu', 'Password@123');
 
     try {
       await expect(page).toHaveURL(/.*dashboard/, { timeout: 60000 });
@@ -69,7 +69,7 @@ test.describe('Payments System', () => {
 
     // 2. Admin: Approve Course
     await authPage.gotoLogin();
-    await authPage.login('admin@example.com', 'Password123!'); // Assuming admin credentials
+    await authPage.login('admin@learnix.edu', 'Password@123'); // Assuming admin credentials
     await expect(page).toHaveURL(/.*(dashboard|admin)/, { timeout: 30000 }); // Admin dashboard might differ slightly but base is same
 
     // Go to Moderation
@@ -113,7 +113,7 @@ test.describe('Payments System', () => {
 
     // 3. Student: Buy Course
     await authPage.gotoLogin();
-    await authPage.login('student_test@example.com', 'Password123!');
+    await authPage.login('student@learnix.edu', 'Password@123');
     await expect(page).toHaveURL(/.*dashboard/, { timeout: 30000 });
 
     await page.goto('/courses');

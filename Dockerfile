@@ -45,9 +45,10 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 COPY --from=installer --chown=nextjs:nodejs /app .
+COPY --chown=nextjs:nodejs database ./database
 
-# Install serve globally for static site serving (web)
-RUN npm install -g serve
+# Install serve globally for static site serving (web) and pnpm for dev scripts
+RUN npm install -g serve pnpm
 
 USER nextjs
 

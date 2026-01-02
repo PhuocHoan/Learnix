@@ -12,7 +12,7 @@ test.describe('Admin Features', () => {
 
     // Login as admin
     await authPage.gotoLogin();
-    await authPage.login('admin@example.com', 'Password123!');
+    await authPage.login('admin@learnix.edu', 'Password@123');
 
     // Some apps might have a redirect or just wait for dashboard
     await expect(page).toHaveURL(/.*dashboard|.*admin/);

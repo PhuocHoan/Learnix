@@ -34,7 +34,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -88,6 +88,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, frontend]
     if: github.event_name == 'pull_request'
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: learnix
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -113,21 +128,36 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: pnpm exec playwright install-deps chromium
 
-      - name: Build frontend
-        run: pnpm --filter @repo/web build
+      - name: Build project
+        run: pnpm build
+        env:
+          VITE_API_URL: http://localhost:3000
 
-      - name: Start frontend preview server
-        run: |
-          cd apps/web
-          pnpm preview --port 5173 &
-          # Wait for server to be ready
-          npx wait-on http://localhost:5173 --timeout 30000
+      - name: Seed Database
+        run: pnpm --filter @repo/api db:seed
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: learnix
+          TYPEORM_SYNCHRONIZE: 'true'
 
       - name: Run E2E tests
         run: pnpm test:e2e --project=chromium
         env:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:5173
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: learnix
+          TYPEORM_SYNCHRONIZE: 'false'
+          JWT_SECRET: test-secret-key-for-e2e
+          VITE_API_URL: http://localhost:3000
+          FRONTEND_URL: http://localhost:5173
+          NODE_ENV: production
 
       - name: Upload Playwright report
         if: always()
