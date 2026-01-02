@@ -29,10 +29,10 @@ export default defineConfig({
   webServer: process.env.CI
     ? undefined
     : {
-      command:
-        'sh -c "make db && sleep 5 && (cd apps/api && pnpm db:seed) && pnpm dev"',
-      url: 'http://localhost:3000/health',
-      reuseExistingServer: !process.env.CI,
-      timeout: 180 * 1000,
-    },
+        command:
+          'sh -c "make db && sleep 5 && (cd apps/api && pnpm db:seed) && pnpm dev"',
+        url: 'http://localhost:3000/health',
+        reuseExistingServer: !process.env.CI,
+        timeout: 180 * 1000,
+      },
 });

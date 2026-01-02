@@ -29,11 +29,11 @@ test.describe('AI Quiz Generation', () => {
       courseCards
         .first()
         .waitFor({ state: 'visible', timeout: 10000 })
-        .catch(() => { }),
+        .catch(() => {}),
       page
         .getByText(/no courses yet/i)
         .waitFor({ state: 'visible', timeout: 10000 })
-        .catch(() => { }),
+        .catch(() => {}),
     ]);
 
     if ((await courseCards.count()) === 0) {
