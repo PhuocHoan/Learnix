@@ -758,7 +758,7 @@ export class CoursesService {
     if (course.instructorId !== instructorId) {
       throw new ForbiddenException('You can only delete your own courses');
     }
-    await this.coursesRepository.remove(course);
+    await this.coursesRepository.softRemove(course);
   }
 
   async findInstructorCourses(instructorId: string): Promise<Course[]> {
