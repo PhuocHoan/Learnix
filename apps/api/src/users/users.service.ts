@@ -36,7 +36,8 @@ export class UsersService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     @Inject(forwardRef(() => NotificationsService))
-    private notificationsService: NotificationsService,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private notificationsService: any,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -204,6 +205,7 @@ export class UsersService {
     const savedUser = await this.usersRepository.save(user);
 
     // Notify user of role change
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     await this.notificationsService.notifyRoleChange(id, role);
 
     return savedUser;
