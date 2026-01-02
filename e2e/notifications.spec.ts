@@ -8,7 +8,7 @@ test.describe('Notifications System', () => {
     authPage = new AuthPage(page);
     await authPage.gotoLogin();
     // Use known valid user
-    await authPage.login('instructor_mod_js@example.com', 'Password123!');
+    await authPage.login('instructor@learnix.edu', 'Password@123');
     await expect(page).toHaveURL(/.*dashboard/);
   });
 
