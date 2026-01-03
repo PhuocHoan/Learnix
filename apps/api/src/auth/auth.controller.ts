@@ -41,11 +41,7 @@ import type {
   SafeUser,
 } from './auth.service';
 import type { RequestWithUser } from '../types/request.interface';
-import type {
-  CookieOptions,
-  Request as ExpressRequest,
-  Response as ExpressResponse,
-} from 'express';
+import type { CookieOptions, Response as ExpressResponse } from 'express';
 
 // so we can use 'lax' for better security
 const getCookieOptions = (): CookieOptions => {

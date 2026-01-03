@@ -8,7 +8,7 @@ import { AuthController } from './auth.controller';
 import { AuthService, type OAuthProfile } from './auth.service';
 
 import type { RequestWithUser } from '../types/request.interface';
-import type { Response, Request } from 'express';
+import type { Response } from 'express';
 
 describe('AuthController', () => {
   let controller: AuthController;
