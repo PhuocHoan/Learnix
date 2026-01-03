@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Logger, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -11,6 +11,7 @@ import {
 import { Server, Socket } from 'socket.io';
 
 import { decryptTokenFromCookie } from '../auth/utils/token-encryption';
+import { IUsersService } from '../users/interfaces/users-service.interface';
 import { UsersService } from '../users/users.service';
 
 import { Notification } from './entities/notification.entity';
@@ -37,7 +38,8 @@ export class NotificationsGateway
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService,
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: IUsersService,
   ) {}
 
   afterInit(server: Server) {

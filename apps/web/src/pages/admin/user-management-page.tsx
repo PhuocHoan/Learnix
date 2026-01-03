@@ -347,7 +347,18 @@ export function UserManagementPage() {
                           <div className="flex items-center gap-2 sm:ml-auto">
                             <button
                               onClick={() => setSelectedUser(user)}
-                              className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-sm"
+                              disabled={user.role === 'admin'}
+                              className={cn(
+                                'px-4 py-2 text-sm font-medium rounded-xl transition-all shadow-sm',
+                                user.role === 'admin'
+                                  ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+                                  : 'bg-primary text-primary-foreground hover:bg-primary/90',
+                              )}
+                              title={
+                                user.role === 'admin'
+                                  ? 'Cannot modify admin accounts'
+                                  : 'Change Role'
+                              }
                             >
                               Change Role
                             </button>
@@ -358,13 +369,25 @@ export function UserManagementPage() {
                                   isActive: !user.isActive,
                                 });
                               }}
-                              disabled={updateStatusMutation.isPending}
+                              disabled={
+                                updateStatusMutation.isPending ||
+                                user.role === 'admin'
+                              }
                               className={cn(
-                                'px-4 py-2 text-sm font-medium rounded-xl transition-all shadow-sm disabled:opacity-50',
-                                user.isActive
-                                  ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                                  : 'bg-green-600 text-white hover:bg-green-700',
+                                'px-4 py-2 text-sm font-medium rounded-xl transition-all shadow-sm',
+                                user.role === 'admin'
+                                  ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+                                  : user.isActive
+                                    ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                                    : 'bg-green-600 text-white hover:bg-green-700',
                               )}
+                              title={
+                                user.role === 'admin'
+                                  ? 'Cannot lock admin accounts'
+                                  : user.isActive
+                                    ? 'Lock Account'
+                                    : 'Unlock Account'
+                              }
                             >
                               {getStatusButtonContent(
                                 updateStatusMutation.isPending,

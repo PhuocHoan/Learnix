@@ -7,6 +7,8 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 
+import { NotificationsService } from '../notifications/notifications.service';
+
 import { User } from './entities/user.entity';
 import { UserRole } from './enums/user-role.enum';
 import { UsersService } from './users.service';
@@ -24,6 +26,7 @@ const mockedBcrypt = {
 
 describe('UsersService', () => {
   let service: UsersService;
+  let notificationsService: NotificationsService;
   let repository: {
     create: jest.Mock;
     save: jest.Mock;
@@ -60,6 +63,10 @@ describe('UsersService', () => {
     getOne: jest.fn(),
   };
 
+  const mockNotificationsService = {
+    notifyRoleChange: jest.fn(),
+  };
+
   beforeEach(async () => {
     const mockRepository = {
       create: jest.fn(),
@@ -75,10 +82,13 @@ describe('UsersService', () => {
       providers: [
         UsersService,
         { provide: getRepositoryToken(User), useValue: mockRepository },
+        { provide: NotificationsService, useValue: mockNotificationsService },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
+    notificationsService =
+      module.get<NotificationsService>(NotificationsService);
     repository = module.get(getRepositoryToken(User));
   });
 
@@ -328,6 +338,10 @@ describe('UsersService', () => {
       const result = await service.updateRole('user-1', UserRole.INSTRUCTOR);
 
       expect(result.role).toBe(UserRole.INSTRUCTOR);
+      expect(notificationsService.notifyRoleChange).toHaveBeenCalledWith(
+        'user-1',
+        UserRole.INSTRUCTOR,
+      );
     });
 
     it('should throw NotFoundException when user not found', async () => {
