@@ -14,12 +14,12 @@ This folder contains the database schema and seed data for the Learnix online le
 | `schema.sql` | Complete database schema with all tables, enums, indexes, and constraints       |
 | `seed.sql`   | Comprehensive seed data with 5 complete courses, quizzes, and user interactions |
 
-## Quick Start (Using NestJS Scripts)
+## Create schema and import seed data (Using Docker)
 
 ```bash
-cd apps/api
-pnpm db:reset
-pnpm db:seed
+# This reset script will apply the schema and comprehensive seed data
+docker exec -it learnix-backend pnpm --filter @repo/api db:reset
+docker exec -it learnix-backend pnpm --filter @repo/api db:seed
 ```
 
 ## Evaluation Accounts
@@ -46,7 +46,7 @@ DB_NAME=learnix
 DB_SSL=false
 
 # Or use DATABASE_URL
-DATABASE_URL=postgresql://user:password@host:5432/learnix
+DATABASE_URL=postgresql://[USER]:[PASSWORD]@[HOST]:[PORT]/[DATABASE]
 ```
 
 ## Schema Overview
@@ -73,7 +73,6 @@ notifications        # User notifications
 To completely reset the database:
 
 ```bash
-cd apps/api
-pnpm db:reset
-pnpm db:seed
+docker exec -it learnix-backend pnpm --filter @repo/api db:reset
+docker exec -it learnix-backend pnpm --filter @repo/api db:seed
 ```
