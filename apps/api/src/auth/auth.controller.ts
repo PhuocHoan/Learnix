@@ -40,7 +40,15 @@ import type {
   MessageResult,
   SafeUser,
 } from './auth.service';
-import type { Response, Request, CookieOptions } from 'express';
+import type {
+  CookieOptions,
+  Request as ExpressRequest,
+  Response as ExpressResponse,
+} from 'express';
+
+// Express 5 compatible types - using full Express types instead of core types
+type Request = ExpressRequest;
+type Response = ExpressResponse;
 
 // so we can use 'lax' for better security
 const getCookieOptions = (): CookieOptions => {

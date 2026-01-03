@@ -9,9 +9,9 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
-import { Request } from 'express';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequestWithUser } from '../types/request.interface';
 
 import { NotificationsService } from './notifications.service';
 
@@ -22,36 +22,25 @@ export class NotificationsController {
 
   @Get()
   findAll(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
-    return this.notificationsService.findAll(
-      (req.user as { id: string }).id,
-      page,
-      limit,
-    );
+    return this.notificationsService.findAll(req.user.id, page, limit);
   }
 
   @Get('unread-count')
-  getUnreadCount(@Req() req: Request) {
-    return this.notificationsService.getUnreadCount(
-      (req.user as { id: string }).id,
-    );
+  getUnreadCount(@Req() req: RequestWithUser) {
+    return this.notificationsService.getUnreadCount(req.user.id);
   }
 
   @Patch('read-all')
-  markAllAsRead(@Req() req: Request) {
-    return this.notificationsService.markAllAsRead(
-      (req.user as { id: string }).id,
-    );
+  markAllAsRead(@Req() req: RequestWithUser) {
+    return this.notificationsService.markAllAsRead(req.user.id);
   }
 
   @Patch(':id/read')
-  markAsRead(@Req() req: Request, @Param('id') id: string) {
-    return this.notificationsService.markAsRead(
-      (req.user as { id: string }).id,
-      id,
-    );
+  markAsRead(@Req() req: RequestWithUser, @Param('id') id: string) {
+    return this.notificationsService.markAsRead(req.user.id, id);
   }
 }

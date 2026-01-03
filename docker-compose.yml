@@ -34,6 +34,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: development
+      DATABASE_URL: ''
       APP_NAME: api
       DB_HOST: postgres
       DB_PORT: 5432

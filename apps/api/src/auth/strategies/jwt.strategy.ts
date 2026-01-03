@@ -1,12 +1,19 @@
+import { IncomingHttpHeaders } from 'http';
+
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { Request } from 'express';
+import { Request as ExpressRequest } from 'express';
 import { Strategy } from 'passport-jwt';
 
 import { User } from '../../users/entities/user.entity';
 import { UsersService } from '../../users/users.service';
 import { decryptTokenFromCookie } from '../utils/token-encryption';
+
+// Express 5 compatible Request type with proper headers typing
+interface Request extends ExpressRequest {
+  headers: IncomingHttpHeaders;
+}
 
 interface JwtPayload {
   sub: string;
@@ -31,7 +38,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   private extractToken(req: Request): string | null {
     // First try to get token from HTTP-only cookie
-    const cookies = req.cookies as Record<string, string> | undefined;
+    const cookies = req.cookies;
     if (cookies?.access_token) {
       const tokenEncryptionSecret =
         this.configService.get<string>('OAUTH_TOKEN_COOKIE_SECRET') ??
@@ -39,7 +46,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         'dev-secret-key';
 
       const decryptedToken = decryptTokenFromCookie(
-        cookies.access_token,
+        cookies.access_token as string,
         tokenEncryptionSecret,
       );
 
@@ -54,7 +61,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       // if we want to enforce encryption.
       // But during transition, returning the cleartext (if it IS cleartext) is safer for users.
       // Actually, if decryptTokenFromCookie returns null, it means it wasn't a valid encrypted packet.
-      return cookies.access_token;
+      return cookies.access_token as string;
     }
 
     // Fallback to Authorization header (for API clients, testing, etc.)

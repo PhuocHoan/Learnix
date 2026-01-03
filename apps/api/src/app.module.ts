@@ -48,11 +48,10 @@ import { UsersModule } from './users/users.module';
         const isProduction =
           configService.get<string>('NODE_ENV') === 'production';
 
-        // Use DATABASE_URL if provided (production/Aiven), otherwise use individual vars (local dev)
+        // Use DATABASE_URL if provided (Supabase/production), otherwise use individual vars (local dev)
         if (databaseUrl) {
-          // Aiven SSL configuration with CA certificate
-          // Replace literal \n with actual newlines (env files store as escaped string)
-          const caCert = configService.get<string>('DATABASE_CA_CERT');
+          // Supabase uses standard SSL - no CA cert needed
+          // The pooler (port 6543) handles connection management
 
           return {
             type: 'postgres',
@@ -71,26 +70,26 @@ import { UsersModule } from './users/users.module';
               Payment,
               Notification,
             ],
+            // Never synchronize in production - use migrations
             synchronize: !isProduction,
             timezone: 'Z',
-            ssl: caCert
-              ? { rejectUnauthorized: true, ca: caCert }
-              : { rejectUnauthorized: false },
+            // Supabase uses standard SSL
+            ssl: { rejectUnauthorized: false },
             // Reduce retry attempts for serverless - fail fast instead of queuing
             retryAttempts: isProduction ? 1 : 10,
             retryDelay: 500,
-            // Connection pool settings for serverless (Vercel)
-            // NOTE: Aiven free tier has NO PgBouncer. Consider Neon/Supabase for free pooling.
+            // Connection pool settings for serverless (Vercel) with Supavisor pooler
+            // Supavisor handles pooling, so we keep minimal local pooling
             extra: {
-              // Single connection per serverless function instance
+              // Single connection per serverless instance (Supavisor handles pooling)
               max: isProduction ? 1 : 10,
               min: 0,
-              // Fail fast if no connection available
+              // Quick timeout for serverless cold starts
               connectionTimeoutMillis: isProduction ? 5000 : 10000,
-              // Release idle connections quickly in serverless
+              // Release connections quickly (Supavisor manages the real pool)
               idleTimeoutMillis: isProduction ? 1000 : 30000,
               allowExitOnIdle: true,
-              // Disable keepalive for serverless - connections are short-lived
+              // Disable keepalive for serverless
               keepAlive: !isProduction,
             },
           };
