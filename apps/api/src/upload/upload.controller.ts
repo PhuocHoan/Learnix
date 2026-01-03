@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Delete,
+  Get,
   Param,
   UseGuards,
   UseInterceptors,
@@ -21,6 +22,12 @@ import { UploadService } from './upload.service';
 
 import type { FileUploadResult } from './upload.service';
 
+interface CloudinaryConfig {
+  cloudName: string;
+  uploadPreset: string;
+  folder: string;
+}
+
 @Controller('upload')
 @UseGuards(JwtAuthGuard)
 export class UploadController {
@@ -33,6 +40,29 @@ export class UploadController {
   ) {
     // Use Cloudinary if it's configured (works in both dev and production)
     this.useCloudinary = this.cloudinaryService.isAvailable();
+  }
+
+  /**
+   * Get Cloudinary configuration for direct frontend uploads.
+   * This allows large files (videos) to be uploaded directly to Cloudinary,
+   * bypassing Vercel's 4.5MB serverless function body limit.
+   */
+  @Get('cloudinary-config')
+  getCloudinaryConfig(): CloudinaryConfig {
+    const cloudName = this.configService.get<string>('CLOUDINARY_CLOUD_NAME');
+    const uploadPreset = this.configService.get<string>(
+      'CLOUDINARY_UPLOAD_PRESET',
+    );
+
+    if (!cloudName) {
+      throw new BadRequestException('Cloudinary is not configured');
+    }
+
+    return {
+      cloudName,
+      uploadPreset: uploadPreset ?? 'learnix_unsigned',
+      folder: 'learnix/videos',
+    };
   }
 
   /**

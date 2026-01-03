@@ -12,10 +12,44 @@ interface ErrorResponse {
   message?: string;
 }
 
+interface CloudinaryConfig {
+  cloudName: string;
+  uploadPreset: string;
+  folder: string;
+}
+
+interface CloudinaryUploadResponse {
+  secure_url: string;
+  public_id: string;
+  format: string;
+  bytes: number;
+  resource_type: string;
+}
+
 /**
  * Upload API functions for file handling
  */
 export const uploadApi = {
+  /**
+   * Get Cloudinary configuration for direct uploads
+   */
+  getCloudinaryConfig: async (): Promise<CloudinaryConfig> => {
+    const response = await fetch(`${config.apiUrl}/upload/cloudinary-config`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .then((data: unknown) => data as ErrorResponse)
+        .catch((): ErrorResponse => ({}));
+      throw new Error(error.message ?? 'Failed to get Cloudinary config');
+    }
+
+    return response.json() as Promise<CloudinaryConfig>;
+  },
+
   /**
    * Upload an avatar image (max 5MB)
    */
@@ -116,8 +150,20 @@ export const uploadApi = {
 
   /**
    * Upload a video (max 100MB)
+   * Attempts direct Cloudinary upload first to bypass serverless body limits,
+   * falls back to API upload if Cloudinary config is unavailable.
    */
   uploadVideo: async (file: File): Promise<UploadResult> => {
+    // Try direct Cloudinary upload first (for serverless environments with body size limits)
+    try {
+      const cloudinaryConfig = await uploadApi.getCloudinaryConfig();
+      return await uploadVideoDirectToCloudinary(file, cloudinaryConfig);
+    } catch {
+      // Fallback to API upload if Cloudinary config is not available
+      // This works for local development without Cloudinary
+    }
+
+    // Fallback: upload through API
     const formData = new FormData();
     formData.append('file', file);
 
@@ -156,6 +202,42 @@ export const uploadApi = {
     }
   },
 };
+
+/**
+ * Upload video directly to Cloudinary (bypasses API body size limits)
+ */
+async function uploadVideoDirectToCloudinary(
+  file: File,
+  config: CloudinaryConfig,
+): Promise<UploadResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', config.uploadPreset);
+  formData.append('folder', config.folder);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${config.cloudName}/video/upload`,
+    {
+      method: 'POST',
+      body: formData,
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Cloudinary upload failed: ${errorText}`);
+  }
+
+  const result = (await response.json()) as CloudinaryUploadResponse;
+
+  return {
+    filename: result.public_id,
+    originalName: file.name,
+    mimetype: file.type,
+    size: result.bytes,
+    url: result.secure_url,
+  };
+}
 
 /**
  * Helper function to validate file before upload
