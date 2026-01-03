@@ -11,7 +11,7 @@ export interface Lesson {
       language: string;
       initialCode: string;
       expectedOutput?: string;
-      testCode?: string;
+      unitTestCode?: string;
     }[];
     defaultLanguage: string;
     instructions?: string;

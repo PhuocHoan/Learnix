@@ -38,24 +38,72 @@ export class CodeExecutionService {
   private readonly EXPRESS_MOCK = `
 // --- LEARNIX MOCK ENVIRONMENT ---
 // This is a simulated environment for Express.js
-const require = (moduleName) => {
+
+// Initialize a global store for testing purposes
+global.__LEARNIX_MOCK__ = {
+    routes: [],
+    listening: false,
+    port: null
+};
+
+// Helper for Instructors to write easy tests
+global.LearnixTest = {
+    expectRoute: (method, path) => {
+        const found = global.__LEARNIX_MOCK__.routes.some(r => 
+            r.method === method.toUpperCase() && r.path === path
+        );
+        if (!found) {
+            throw new Error(\`❌ Test Failed: Expected route "\${method.toUpperCase()} \${path}" to be defined, but it was not found.\`);
+        }
+    },
+    expectListening: (port) => {
+        if (!global.__LEARNIX_MOCK__.listening) {
+            throw new Error("❌ Test Failed: Expected server to be listening (app.listen), but it wasn't called.");
+        }
+        if (port && global.__LEARNIX_MOCK__.port !== port) {
+             throw new Error(\`❌ Test Failed: Expected server to listen on port \${port}, but it is listening on \${global.__LEARNIX_MOCK__.port}.\`);
+        }
+    }
+};
+
+var require = (moduleName) => {
     if (moduleName === 'express') {
         const app = () => ({
             listen: (port, cb) => {
                 console.log(\`\\x1b[32m[MOCK SERVER] Server running at http://localhost:\${port}\\x1b[0m\`);
                 console.log('\\x1b[33m[NOTE] This is a simulation. No real network port is opened.\\x1b[0m');
+                
+                global.__LEARNIX_MOCK__.listening = true;
+                global.__LEARNIX_MOCK__.port = port;
+                
                 if (cb) cb();
                 return { close: () => {} };
             },
-            get: (path, cb) => console.log(\`[MOCK] Registered GET \${path}\`),
-            post: (path, cb) => console.log(\`[MOCK] Registered POST \${path}\`),
-            put: (path, cb) => console.log(\`[MOCK] Registered PUT \${path}\`),
-            delete: (path, cb) => console.log(\`[MOCK] Registered DELETE \${path}\`),
+            get: (path, cb) => {
+                console.log(\`[MOCK] Registered GET \${path}\`);
+                global.__LEARNIX_MOCK__.routes.push({ method: 'GET', path });
+            },
+            post: (path, cb) => {
+                console.log(\`[MOCK] Registered POST \${path}\`);
+                global.__LEARNIX_MOCK__.routes.push({ method: 'POST', path });
+            },
+            put: (path, cb) => {
+                console.log(\`[MOCK] Registered PUT \${path}\`);
+                global.__LEARNIX_MOCK__.routes.push({ method: 'PUT', path });
+            },
+            delete: (path, cb) => {
+                console.log(\`[MOCK] Registered DELETE \${path}\`);
+                global.__LEARNIX_MOCK__.routes.push({ method: 'DELETE', path });
+            },
             use: (arg1, arg2) => {
                 const path = typeof arg1 === 'string' ? arg1 : '/';
                 console.log(\`[MOCK] Registered Middleware on \${path}\`);
+                global.__LEARNIX_MOCK__.routes.push({ method: 'USE', path });
             },
-            all: (path, cb) => console.log(\`[MOCK] Registered ALL \${path}\`),
+            all: (path, cb) => {
+                console.log(\`[MOCK] Registered ALL \${path}\`);
+                global.__LEARNIX_MOCK__.routes.push({ method: 'ALL', path });
+            },
         });
         app.static = () => {};
         app.json = () => {};

@@ -1183,7 +1183,7 @@ function LessonItem({
   const navigate = useNavigate();
 
   return (
-    <div className="group flex items-center justify-between py-3.5 px-6 hover:bg-primary/[0.02] transition-all border-l-4 border-transparent hover:border-primary/60 relative overflow-hidden">
+    <div className="group flex items-center justify-between py-3.5 px-6 hover:bg-primary/2 transition-all border-l-4 border-transparent hover:border-primary/60 relative overflow-hidden">
       <div className="flex items-center gap-4 flex-1 min-w-0 z-10">
         <div
           {...dragHandleProps}
@@ -1575,8 +1575,8 @@ function AddLessonDialog({
             if (l.expectedOutput) {
               outputs.set(l.language, l.expectedOutput);
             }
-            if (l.testCode) {
-              tests.set(l.language, l.testCode);
+            if (l.unitTestCode) {
+              tests.set(l.language, l.unitTestCode);
             }
           });
           setCodeTemplates(templates);
@@ -1609,7 +1609,7 @@ function AddLessonDialog({
         language: lang,
         initialCode: codeTemplates.get(lang) ?? getDefaultCode(lang),
         expectedOutput: expectedOutputs.get(lang),
-        testCode: testCodes.get(lang) ?? undefined,
+        unitTestCode: testCodes.get(lang) ?? undefined,
         // Note: We don't force default test code into the value sent to DB if empty,
         // because empty means "Standard Grading". Only if user types something do we send it.
         // But the UI editor should show the template if empty so they can start typing.

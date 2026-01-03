@@ -39,6 +39,7 @@ interface IdePanelProps {
     language: string;
     initialCode: string;
     expectedOutput?: string;
+    unitTestCode?: string;
   }[];
   defaultLanguage: string;
   onSuccess?: () => void;
@@ -189,8 +190,20 @@ export function IdePanel({
     }
 
     try {
-      const result = await executeClientSide(currentLanguage, code, stdin);
-      const combinedOutput = result.stdout + result.stderr;
+      // Append unit test code if available
+      let codeToExecute = code;
+      if (currentConfig?.unitTestCode) {
+        // Add some separation
+        codeToExecute = `${code}\n\n${currentConfig.unitTestCode}`;
+      }
+
+      const result = await executeClientSide(
+        currentLanguage,
+        codeToExecute,
+        stdin,
+      );
+      const combinedOutput =
+        result.stdout + (result.stderr ? `\n\n${result.stderr}` : '');
       setOutput(combinedOutput);
 
       if (result.iframeSrc) {
@@ -209,7 +222,13 @@ export function IdePanel({
           setExecutionResult('success');
         }
         clearMarkers();
-      } else if (currentConfig?.expectedOutput) {
+      } else if (result.stderr) {
+        // Runtime error or Test Failure
+        setExecutionResult('error');
+        setMarkers(result.stderr);
+        // Ensure the error tab is visible if it matters, but console is already default
+      } else if (currentConfig?.expectedOutput && !currentConfig.unitTestCode) {
+        // Legacy String Matching (only if no unitTestCode)
         if (combinedOutput.trim() === currentConfig.expectedOutput.trim()) {
           setExecutionResult('success');
           clearMarkers();
@@ -219,12 +238,15 @@ export function IdePanel({
           setExecutionResult('error');
           toast.warning('Output does not match expected result.');
         }
-      } else if (result.stderr) {
-        setExecutionResult('error');
-        setMarkers(result.stderr);
       } else {
+        // Success (No stderr, and either matched or unitTestCode passed validation implicitly by not erroring)
+        // If unitTestCode is present and did not throw, then it is a success.
         setExecutionResult('success');
         clearMarkers();
+        if (currentConfig?.unitTestCode) {
+          toast.success('Tests passed!');
+          onSuccess?.();
+        }
       }
     } catch (error: any) {
       setOutput(String(error.message ?? error));

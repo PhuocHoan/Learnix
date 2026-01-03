@@ -184,7 +184,7 @@ INSERT INTO lesson_resources (id, title, type, url, "fileSize", "lessonId", "cre
 -- ==============================================================================
 
 INSERT INTO quizzes (id, title, description, course_id, lesson_id, status, created_by, ai_generated, created_at, updated_at) VALUES
-('d1000001-0000-0000-0000-000000000001', 'Fullstack Fundamentals Quiz', 'Test your web development knowledge', 'c0000001-0000-0000-0000-000000000001', NULL, 'approved', '00000000-0000-0000-0000-000000000002', FALSE, NOW(), NOW()),
+('d1000001-0000-0000-0000-000000000001', 'Fullstack Fundamentals Quiz', 'Test your web development knowledge', 'c0000001-0000-0000-0000-000000000001', 'b1000001-0000-0000-0000-000000000011', 'approved', '00000000-0000-0000-0000-000000000002', FALSE, NOW(), NOW()),
 ('d1000002-0000-0000-0000-000000000001', 'Machine Learning Basics', 'ML fundamentals assessment', 'c0000001-0000-0000-0000-000000000002', NULL, 'approved', '10000000-0000-0000-0000-000000000001', FALSE, NOW(), NOW()),
 ('d1000003-0000-0000-0000-000000000001', 'Docker and Kubernetes Quiz', 'Container orchestration check', 'c0000001-0000-0000-0000-000000000003', NULL, 'approved', '10000000-0000-0000-0000-000000000003', FALSE, NOW(), NOW()),
 ('d1000004-0000-0000-0000-000000000001', 'UI/UX Design Principles', 'Design fundamentals', 'c0000001-0000-0000-0000-000000000004', NULL, 'approved', '10000000-0000-0000-0000-000000000002', FALSE, NOW(), NOW()),
@@ -304,8 +304,13 @@ INSERT INTO lessons (id, title, type, content, "ideConfig", "durationSeconds", "
 
 ('b1000001-0000-0000-0000-000000000008', 'Create an Express API Endpoint', 'standard',
  '[{"id":"exercise2","type":"text","content":"## Backend Exercise\n\nCreate a REST API endpoint that returns user data.\n\n### Requirements\n- Create GET /api/users endpoint\n- Return JSON array of users\n- Add proper error handling","orderIndex":0}]',
- '{"allowedLanguages":[{"language":"javascript","initialCode":"const express = require(''express'');\nconst app = express();\n\n// Create your endpoint here\n\napp.listen(3000, () => {\n  console.log(''Server running on port 3000'');\n});","expectedOutput":"API endpoint returning user data"}],"defaultLanguage":"javascript"}',
+ '{"allowedLanguages":[{"language":"javascript","initialCode":"const express = require(''express'');\nconst app = express();\n\n// 1. Define some mock data to return\nconst users = [\n    { id: 1, name: ''John Doe'', email: ''john@example.com'' },\n    { id: 2, name: ''Jane Smith'', email: ''jane@example.com'' }\n];\n\n// 2. Create the GET endpoint\n// app.get(''/api/users'', ...\n\napp.listen(3000, () => {\n  console.log(''Server running on port 3000'');\n});","expectedOutput":"Server running on port 3000\\n[MOCK] Registered GET /api/users","unitTestCode":"// Validate the submission\ntry {\n    LearnixTest.expectListening(3000);\n    LearnixTest.expectRoute(''GET'', ''/api/users'');\n} catch (err) {\n    throw err;\n}"}],"defaultLanguage":"javascript"}',
  2100, FALSE, 1, 'a1000001-0000-0000-0000-000000000003'),
+
+ -- Course 1 Quiz Lessons
+ ('b1000001-0000-0000-0000-000000000009', 'React Advanced Assessment', 'quiz', '[]', NULL, 900, FALSE, 3, 'a1000001-0000-0000-0000-000000000002'),
+ ('b1000001-0000-0000-0000-000000000010', 'Node.js Mastery Assessment', 'quiz', '[]', NULL, 900, FALSE, 2, 'a1000001-0000-0000-0000-000000000003'),
+ ('b1000001-0000-0000-0000-000000000011', 'Fullstack Fundamentals Assessment', 'quiz', '[]', NULL, 900, FALSE, 2, 'a1000001-0000-0000-0000-000000000001'),
 
 -- Course 2: ML Code Exercise
 ('b1000002-0000-0000-0000-000000000004', 'Build a Linear Regression Model', 'standard',
@@ -331,8 +336,8 @@ INSERT INTO lessons (id, title, type, content, "ideConfig", "durationSeconds", "
 
 INSERT INTO quizzes (id, title, description, course_id, lesson_id, status, created_by, ai_generated, created_at, updated_at) VALUES
 -- Course 1 Additional Quizzes
-('d1000001-0000-0000-0000-000000000002', 'React Advanced Concepts', 'Test your React expertise', 'c0000001-0000-0000-0000-000000000001', NULL, 'approved', '00000000-0000-0000-0000-000000000002', FALSE, NOW(), NOW()),
-('d1000001-0000-0000-0000-000000000003', 'Node.js and Express Mastery', 'Backend development assessment', 'c0000001-0000-0000-0000-000000000001', NULL, 'approved', '00000000-0000-0000-0000-000000000002', FALSE, NOW(), NOW()),
+('d1000001-0000-0000-0000-000000000002', 'React Advanced Concepts', 'Test your React expertise', 'c0000001-0000-0000-0000-000000000001', 'b1000001-0000-0000-0000-000000000009', 'approved', '00000000-0000-0000-0000-000000000002', FALSE, NOW(), NOW()),
+('d1000001-0000-0000-0000-000000000003', 'Node.js and Express Mastery', 'Backend development assessment', 'c0000001-0000-0000-0000-000000000001', 'b1000001-0000-0000-0000-000000000010', 'approved', '00000000-0000-0000-0000-000000000002', FALSE, NOW(), NOW()),
 
 -- Course 2 Additional Quizzes
 ('d1000002-0000-0000-0000-000000000002', 'Deep Learning Fundamentals', 'Neural networks and deep learning', 'c0000001-0000-0000-0000-000000000002', NULL, 'approved', '10000000-0000-0000-0000-000000000001', FALSE, NOW(), NOW()),
@@ -446,3 +451,232 @@ INSERT INTO questions (id, quiz_id, "questionText", image_url, options, "correct
  '["Two identical production environments", "Single environment", "Testing environment", "Development environment"]', 'A',
  'Blue-green deployment uses two identical environments to reduce downtime.', 1, 4, 'multiple_choice', NOW());
 
+-- Quiz: Machine Learning Basics (d1000002-0000-0000-0000-000000000001)
+INSERT INTO questions (id, quiz_id, "questionText", image_url, options, "correctAnswer", explanation, points, position, type, created_at) VALUES
+('e1000002-0000-0000-0000-000000000001', 'd1000002-0000-0000-0000-000000000001',
+ 'What is supervised learning?', NULL,
+ '["Learning with labeled data", "Learning without labels", "Reinforcement learning", "Self-learning"]', 'A',
+ 'Supervised learning uses labeled training data to learn mappings from inputs to outputs.', 1, 0, 'multiple_choice', NOW()),
+('e1000002-0000-0000-0000-000000000002', 'd1000002-0000-0000-0000-000000000001',
+ 'What is the purpose of train/test split?', NULL,
+ '["Evaluate model on unseen data", "Speed up training", "Reduce data size", "Increase accuracy"]', 'A',
+ 'Train/test split helps evaluate how well a model generalizes to new data.', 1, 1, 'multiple_choice', NOW()),
+('e1000002-0000-0000-0000-000000000003', 'd1000002-0000-0000-0000-000000000001',
+ 'What is a feature in machine learning?', NULL,
+ '["An input variable", "The output variable", "The model", "The algorithm"]', 'A',
+ 'Features are measurable properties or characteristics used as inputs.', 1, 2, 'multiple_choice', NOW()),
+('e1000002-0000-0000-0000-000000000004', 'd1000002-0000-0000-0000-000000000001',
+ 'What is classification?', NULL,
+ '["Predicting discrete labels", "Predicting continuous values", "Clustering data", "Reducing dimensions"]', 'A',
+ 'Classification predicts categorical class labels for new instances.', 1, 3, 'multiple_choice', NOW()),
+('e1000002-0000-0000-0000-000000000005', 'd1000002-0000-0000-0000-000000000001',
+ 'What is regression?', NULL,
+ '["Predicting continuous values", "Predicting categories", "Grouping data", "Finding patterns"]', 'A',
+ 'Regression predicts continuous numerical values.', 1, 4, 'multiple_choice', NOW());
+
+-- Quiz: Docker and Kubernetes (d1000003-0000-0000-0000-000000000001)
+INSERT INTO questions (id, quiz_id, "questionText", image_url, options, "correctAnswer", explanation, points, position, type, created_at) VALUES
+('e1000003-0000-0000-0000-000000000001', 'd1000003-0000-0000-0000-000000000001',
+ 'What is a Docker container?', NULL,
+ '["Lightweight isolated runtime environment", "Virtual machine", "Physical server", "Database"]', 'A',
+ 'Containers are lightweight, standalone packages that include everything needed to run an application.', 1, 0, 'multiple_choice', NOW()),
+('e1000003-0000-0000-0000-000000000002', 'd1000003-0000-0000-0000-000000000001',
+ 'What is a Docker image?', NULL,
+ '["Read-only template for containers", "Running container", "Configuration file", "Log file"]', 'A',
+ 'Docker images are read-only templates used to create containers.', 1, 1, 'multiple_choice', NOW()),
+('e1000003-0000-0000-0000-000000000003', 'd1000003-0000-0000-0000-000000000001',
+ 'What is Kubernetes?', NULL,
+ '["Container orchestration platform", "Container runtime", "Programming language", "Database"]', 'A',
+ 'Kubernetes automates deployment, scaling, and management of containerized applications.', 1, 2, 'multiple_choice', NOW()),
+('e1000003-0000-0000-0000-000000000004', 'd1000003-0000-0000-0000-000000000001',
+ 'What is a Kubernetes Pod?', NULL,
+ '["Smallest deployable unit", "Node in cluster", "Container image", "Service"]', 'A',
+ 'A Pod is the smallest deployable unit that can contain one or more containers.', 1, 3, 'multiple_choice', NOW()),
+('e1000003-0000-0000-0000-000000000005', 'd1000003-0000-0000-0000-000000000001',
+ 'What does docker-compose do?', NULL,
+ '["Define multi-container applications", "Build images", "Push to registry", "Monitor containers"]', 'A',
+ 'Docker Compose defines and runs multi-container Docker applications.', 1, 4, 'multiple_choice', NOW());
+
+-- Quiz: UI/UX Design Principles (d1000004-0000-0000-0000-000000000001)
+INSERT INTO questions (id, quiz_id, "questionText", image_url, options, "correctAnswer", explanation, points, position, type, created_at) VALUES
+('e1000004-0000-0000-0000-000000000001', 'd1000004-0000-0000-0000-000000000001',
+ 'What is the purpose of visual hierarchy?', NULL,
+ '["Guide users to important elements", "Make designs colorful", "Add animations", "Use images"]', 'A',
+ 'Visual hierarchy helps users understand the importance and order of elements.', 1, 0, 'multiple_choice', NOW()),
+('e1000004-0000-0000-0000-000000000002', 'd1000004-0000-0000-0000-000000000001',
+ 'What is whitespace in design?', NULL,
+ '["Empty space between elements", "White color", "Background images", "Text content"]', 'A',
+ 'Whitespace (negative space) gives elements room to breathe and improves readability.', 1, 1, 'multiple_choice', NOW()),
+('e1000004-0000-0000-0000-000000000003', 'd1000004-0000-0000-0000-000000000001',
+ 'What is a design system?', NULL,
+ '["Collection of reusable components", "Single design", "Color palette", "Font family"]', 'A',
+ 'Design systems provide consistent, reusable components and guidelines.', 1, 2, 'multiple_choice', NOW()),
+('e1000004-0000-0000-0000-000000000004', 'd1000004-0000-0000-0000-000000000001',
+ 'What is the 60-30-10 rule?', NULL,
+ '["Color proportion guideline", "Layout rule", "Typography rule", "Spacing rule"]', 'A',
+ 'The 60-30-10 rule suggests using a dominant color 60%, secondary 30%, accent 10%.', 1, 3, 'multiple_choice', NOW()),
+('e1000004-0000-0000-0000-000000000005', 'd1000004-0000-0000-0000-000000000001',
+ 'What is accessibility in design?', NULL,
+ '["Making designs usable by everyone", "Making designs pretty", "Using bright colors", "Adding animations"]', 'A',
+ 'Accessibility ensures designs are usable by people with disabilities.', 1, 4, 'multiple_choice', NOW());
+
+-- Quiz: Data Science Fundamentals (d1000005-0000-0000-0000-000000000001)
+INSERT INTO questions (id, quiz_id, "questionText", image_url, options, "correctAnswer", explanation, points, position, type, created_at) VALUES
+('e1000005-0000-0000-0000-000000000001', 'd1000005-0000-0000-0000-000000000001',
+ 'What is a DataFrame in Pandas?', NULL,
+ '["2D labeled data structure", "1D array", "Database table", "File format"]', 'A',
+ 'DataFrame is a 2-dimensional labeled data structure with columns of different types.', 1, 0, 'multiple_choice', NOW()),
+('e1000005-0000-0000-0000-000000000002', 'd1000005-0000-0000-0000-000000000001',
+ 'What does df.describe() do?', NULL,
+ '["Generates summary statistics", "Describes columns", "Shows data types", "Counts rows"]', 'A',
+ 'describe() generates descriptive statistics like mean, count, std, etc.', 1, 1, 'multiple_choice', NOW()),
+('e1000005-0000-0000-0000-000000000003', 'd1000005-0000-0000-0000-000000000001',
+ 'How do you handle missing values?', NULL,
+ '["fillna() or dropna()", "ignore them", "delete the file", "restart Python"]', 'A',
+ 'fillna() fills missing values, dropna() removes rows with missing values.', 1, 2, 'multiple_choice', NOW()),
+('e1000005-0000-0000-0000-000000000004', 'd1000005-0000-0000-0000-000000000001',
+ 'What is groupby used for?', NULL,
+ '["Grouping data for aggregation", "Sorting data", "Filtering data", "Joining data"]', 'A',
+ 'groupby() splits data into groups based on criteria for aggregate operations.', 1, 3, 'multiple_choice', NOW()),
+('e1000005-0000-0000-0000-000000000005', 'd1000005-0000-0000-0000-000000000001',
+ 'What library is used for data visualization?', NULL,
+ '["Matplotlib/Seaborn", "Pandas", "NumPy", "scikit-learn"]', 'A',
+ 'Matplotlib and Seaborn are popular libraries for creating visualizations.', 1, 4, 'multiple_choice', NOW());
+
+-- Quiz: TensorFlow and PyTorch (d1000002-0000-0000-0000-000000000003)
+INSERT INTO questions (id, quiz_id, "questionText", image_url, options, "correctAnswer", explanation, points, position, type, created_at) VALUES
+('e1000010-0000-0000-0000-000000000001', 'd1000002-0000-0000-0000-000000000003',
+ 'What is TensorFlow?', NULL,
+ '["Open-source ML framework by Google", "Database", "Programming language", "Operating system"]', 'A',
+ 'TensorFlow is an open-source machine learning framework developed by Google.', 1, 0, 'multiple_choice', NOW()),
+('e1000010-0000-0000-0000-000000000002', 'd1000002-0000-0000-0000-000000000003',
+ 'What is PyTorch?', NULL,
+ '["Open-source ML framework by Facebook", "Web framework", "Database system", "Cloud service"]', 'A',
+ 'PyTorch is an open-source machine learning framework developed by Facebook.', 1, 1, 'multiple_choice', NOW()),
+('e1000010-0000-0000-0000-000000000003', 'd1000002-0000-0000-0000-000000000003',
+ 'What is a tensor?', NULL,
+ '["Multi-dimensional array", "Single number", "String", "Boolean"]', 'A',
+ 'Tensors are multi-dimensional arrays that are fundamental to deep learning frameworks.', 1, 2, 'multiple_choice', NOW()),
+('e1000010-0000-0000-0000-000000000004', 'd1000002-0000-0000-0000-000000000003',
+ 'What is eager execution?', NULL,
+ '["Operations execute immediately", "Delayed execution", "Parallel execution", "Sequential execution"]', 'A',
+ 'Eager execution evaluates operations immediately without building a graph.', 1, 3, 'multiple_choice', NOW()),
+('e1000010-0000-0000-0000-000000000005', 'd1000002-0000-0000-0000-000000000003',
+ 'What is autograd in PyTorch?', NULL,
+ '["Automatic differentiation", "Auto-scaling", "Auto-saving", "Auto-loading"]', 'A',
+ 'Autograd automatically computes gradients for tensor operations.', 1, 4, 'multiple_choice', NOW());
+
+-- Quiz: AWS Cloud Services (d1000003-0000-0000-0000-000000000003)
+INSERT INTO questions (id, quiz_id, "questionText", image_url, options, "correctAnswer", explanation, points, position, type, created_at) VALUES
+('e1000011-0000-0000-0000-000000000001', 'd1000003-0000-0000-0000-000000000003',
+ 'What is AWS EC2?', NULL,
+ '["Virtual servers in the cloud", "Database service", "Storage service", "Networking service"]', 'A',
+ 'EC2 (Elastic Compute Cloud) provides resizable virtual servers in the cloud.', 1, 0, 'multiple_choice', NOW()),
+('e1000011-0000-0000-0000-000000000002', 'd1000003-0000-0000-0000-000000000003',
+ 'What is AWS S3?', NULL,
+ '["Object storage service", "Compute service", "Database", "Networking"]', 'A',
+ 'S3 (Simple Storage Service) is an object storage service for any amount of data.', 1, 1, 'multiple_choice', NOW()),
+('e1000011-0000-0000-0000-000000000003', 'd1000003-0000-0000-0000-000000000003',
+ 'What is AWS Lambda?', NULL,
+ '["Serverless compute service", "Database service", "Container service", "Storage service"]', 'A',
+ 'Lambda runs code without provisioning or managing servers (serverless).', 1, 2, 'multiple_choice', NOW()),
+('e1000011-0000-0000-0000-000000000004', 'd1000003-0000-0000-0000-000000000003',
+ 'What is AWS RDS?', NULL,
+ '["Managed relational database", "File storage", "Compute service", "CDN service"]', 'A',
+ 'RDS (Relational Database Service) manages relational databases in the cloud.', 1, 3, 'multiple_choice', NOW()),
+('e1000011-0000-0000-0000-000000000005', 'd1000003-0000-0000-0000-000000000003',
+ 'What is an AWS region?', NULL,
+ '["Physical location with data centers", "Virtual network", "Security group", "User account"]', 'A',
+ 'AWS Regions are physical locations around the world with clusters of data centers.', 1, 4, 'multiple_choice', NOW());
+
+-- Quiz: User Research Methods (d1000004-0000-0000-0000-000000000002)
+INSERT INTO questions (id, quiz_id, "questionText", image_url, options, "correctAnswer", explanation, points, position, type, created_at) VALUES
+('e1000012-0000-0000-0000-000000000001', 'd1000004-0000-0000-0000-000000000002',
+ 'What is a user persona?', NULL,
+ '["Fictional representation of target user", "Real user", "Developer", "Designer"]', 'A',
+ 'Personas are fictional characters representing user types based on research.', 1, 0, 'multiple_choice', NOW()),
+('e1000012-0000-0000-0000-000000000002', 'd1000004-0000-0000-0000-000000000002',
+ 'What is A/B testing?', NULL,
+ '["Comparing two versions to see which performs better", "Alphabet testing", "Audio testing", "Bug testing"]', 'A',
+ 'A/B testing compares two versions to determine which one performs better.', 1, 1, 'multiple_choice', NOW()),
+('e1000012-0000-0000-0000-000000000003', 'd1000004-0000-0000-0000-000000000002',
+ 'What is usability testing?', NULL,
+ '["Observing users interact with product", "Code testing", "Performance testing", "Security testing"]', 'A',
+ 'Usability testing evaluates a product by observing real users interactions.', 1, 2, 'multiple_choice', NOW()),
+('e1000012-0000-0000-0000-000000000004', 'd1000004-0000-0000-0000-000000000002',
+ 'What is a user journey map?', NULL,
+ '["Visualization of user experience over time", "Road map", "Site map", "Mind map"]', 'A',
+ 'User journey maps visualize the complete experience a user has with a product.', 1, 3, 'multiple_choice', NOW()),
+('e1000012-0000-0000-0000-000000000005', 'd1000004-0000-0000-0000-000000000002',
+ 'What is card sorting?', NULL,
+ '["Method to organize information architecture", "Playing cards", "Credit cards", "Business cards"]', 'A',
+ 'Card sorting helps understand how users categorize and organize information.', 1, 4, 'multiple_choice', NOW());
+
+-- Quiz: Design Systems Best Practices (d1000004-0000-0000-0000-000000000003)
+INSERT INTO questions (id, quiz_id, "questionText", image_url, options, "correctAnswer", explanation, points, position, type, created_at) VALUES
+('e1000013-0000-0000-0000-000000000001', 'd1000004-0000-0000-0000-000000000003',
+ 'What is a design token?', NULL,
+ '["Named values for design decisions", "Authentication token", "Access token", "Security token"]', 'A',
+ 'Design tokens store design decisions like colors, spacing, and typography.', 1, 0, 'multiple_choice', NOW()),
+('e1000013-0000-0000-0000-000000000002', 'd1000004-0000-0000-0000-000000000003',
+ 'What is atomic design?', NULL,
+ '["Methodology for creating design systems", "Nuclear design", "Molecular design", "Physical design"]', 'A',
+ 'Atomic design creates design systems from atoms to organisms to templates.', 1, 1, 'multiple_choice', NOW()),
+('e1000013-0000-0000-0000-000000000003', 'd1000004-0000-0000-0000-000000000003',
+ 'What is component documentation?', NULL,
+ '["Guidelines for using components", "Code comments", "User manual", "API docs"]', 'A',
+ 'Component documentation explains how and when to use design system components.', 1, 2, 'multiple_choice', NOW()),
+('e1000013-0000-0000-0000-000000000004', 'd1000004-0000-0000-0000-000000000003',
+ 'What is design system governance?', NULL,
+ '["Process for managing system evolution", "Government regulations", "Legal compliance", "Security policy"]', 'A',
+ 'Governance defines how the design system is maintained and updated.', 1, 3, 'multiple_choice', NOW()),
+('e1000013-0000-0000-0000-000000000005', 'd1000004-0000-0000-0000-000000000003',
+ 'What is a pattern library?', NULL,
+ '["Collection of reusable design patterns", "Image library", "Book library", "Code library"]', 'A',
+ 'Pattern libraries contain reusable design patterns and their usage guidelines.', 1, 4, 'multiple_choice', NOW());
+
+-- Quiz: Statistical Analysis (d1000005-0000-0000-0000-000000000002)
+INSERT INTO questions (id, quiz_id, "questionText", image_url, options, "correctAnswer", explanation, points, position, type, created_at) VALUES
+('e1000014-0000-0000-0000-000000000001', 'd1000005-0000-0000-0000-000000000002',
+ 'What is the mean?', NULL,
+ '["Average of all values", "Middle value", "Most frequent value", "Range of values"]', 'A',
+ 'The mean is the sum of all values divided by the count.', 1, 0, 'multiple_choice', NOW()),
+('e1000014-0000-0000-0000-000000000002', 'd1000005-0000-0000-0000-000000000002',
+ 'What is the median?', NULL,
+ '["Middle value when sorted", "Average value", "Most common value", "Highest value"]', 'A',
+ 'The median is the middle value in a sorted dataset.', 1, 1, 'multiple_choice', NOW()),
+('e1000014-0000-0000-0000-000000000003', 'd1000005-0000-0000-0000-000000000002',
+ 'What is standard deviation?', NULL,
+ '["Measure of data spread", "Average value", "Maximum value", "Minimum value"]', 'A',
+ 'Standard deviation measures how spread out the values are from the mean.', 1, 2, 'multiple_choice', NOW()),
+('e1000014-0000-0000-0000-000000000004', 'd1000005-0000-0000-0000-000000000002',
+ 'What is correlation?', NULL,
+ '["Relationship between variables", "Cause and effect", "Single variable", "No relationship"]', 'A',
+ 'Correlation measures the strength and direction of relationship between variables.', 1, 3, 'multiple_choice', NOW()),
+('e1000014-0000-0000-0000-000000000005', 'd1000005-0000-0000-0000-000000000002',
+ 'What is a p-value?', NULL,
+ '["Probability of results occurring by chance", "Percentage", "Proportion", "Probability density"]', 'A',
+ 'P-value indicates the probability of observing results if the null hypothesis is true.', 1, 4, 'multiple_choice', NOW());
+
+-- Quiz: Machine Learning Algorithms (d1000005-0000-0000-0000-000000000003)
+INSERT INTO questions (id, quiz_id, "questionText", image_url, options, "correctAnswer", explanation, points, position, type, created_at) VALUES
+('e1000015-0000-0000-0000-000000000001', 'd1000005-0000-0000-0000-000000000003',
+ 'What is a decision tree?', NULL,
+ '["Tree-like model of decisions", "Database structure", "File system", "Network topology"]', 'A',
+ 'Decision trees use a tree structure to make decisions based on feature values.', 1, 0, 'multiple_choice', NOW()),
+('e1000015-0000-0000-0000-000000000002', 'd1000005-0000-0000-0000-000000000003',
+ 'What is random forest?', NULL,
+ '["Ensemble of decision trees", "Single tree", "Linear model", "Neural network"]', 'A',
+ 'Random forest combines multiple decision trees for better predictions.', 1, 1, 'multiple_choice', NOW()),
+('e1000015-0000-0000-0000-000000000003', 'd1000005-0000-0000-0000-000000000003',
+ 'What is k-means clustering?', NULL,
+ '["Algorithm to partition data into k clusters", "Sorting algorithm", "Search algorithm", "Compression algorithm"]', 'A',
+ 'K-means partitions data into k clusters based on similarity.', 1, 2, 'multiple_choice', NOW()),
+('e1000015-0000-0000-0000-000000000004', 'd1000005-0000-0000-0000-000000000003',
+ 'What is SVM?', NULL,
+ '["Support Vector Machine classifier", "System Virtual Machine", "Storage Volume Manager", "Simple Verification Method"]', 'A',
+ 'SVM finds the optimal hyperplane to separate classes.', 1, 3, 'multiple_choice', NOW()),
+('e1000015-0000-0000-0000-000000000005', 'd1000005-0000-0000-0000-000000000003',
+ 'What is gradient boosting?', NULL,
+ '["Ensemble method that builds models sequentially", "Gradient descent", "Feature scaling", "Data augmentation"]', 'A',
+ 'Gradient boosting builds models sequentially, each correcting predecessor errors.', 1, 4, 'multiple_choice', NOW());

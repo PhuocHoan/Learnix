@@ -56,6 +56,7 @@ export class Lesson {
       language: string;
       initialCode: string;
       expectedOutput?: string;
+      unitTestCode?: string;
     }[];
     defaultLanguage: string;
     instructions?: string;

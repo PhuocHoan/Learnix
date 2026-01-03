@@ -967,9 +967,26 @@ export function LessonViewerPage() {
                             return;
                           }
 
-                          // If code exercise and not completed, block navigation
+                          // If code exercise and not completed, check if it's React
                           if (currentLesson.ideConfig) {
-                            // Code exercise must be completed to proceed - button should be disabled
+                            const isReactExercise =
+                              currentLesson.ideConfig.defaultLanguage ===
+                                'react' ||
+                              currentLesson.ideConfig.defaultLanguage ===
+                                'javascript';
+                            // React exercises can proceed (can't be auto-validated)
+                            if (isReactExercise) {
+                              // Mark as complete and navigate
+                              completeLesson(
+                                {
+                                  lessonId: currentLesson.id,
+                                  suppressToast: true,
+                                },
+                                { onSuccess: () => handleNavigation() },
+                              );
+                              return;
+                            }
+                            // Non-React code exercise must be completed to proceed
                             return;
                           }
 
@@ -987,13 +1004,26 @@ export function LessonViewerPage() {
                             },
                           );
                         }}
-                        disabled={
-                          isCompletingLesson ||
-                          (currentLesson.type === 'quiz' &&
-                            !isLessonCompleted) ||
-                          (Boolean(currentLesson.ideConfig) &&
-                            !isLessonCompleted)
-                        }
+                        disabled={(() => {
+                          if (isCompletingLesson) return true;
+                          if (
+                            currentLesson.type === 'quiz' &&
+                            !isLessonCompleted
+                          )
+                            return true;
+                          if (currentLesson.ideConfig) {
+                            // React exercises can't be auto-validated, so always allow Next
+                            const isReactExercise =
+                              currentLesson.ideConfig.defaultLanguage ===
+                                'react' ||
+                              currentLesson.ideConfig.defaultLanguage ===
+                                'javascript';
+                            if (isReactExercise) return false;
+                            // Non-React code exercises require completion
+                            return !isLessonCompleted;
+                          }
+                          return false;
+                        })()}
                       >
                         {isCompletingLesson && (
                           <Loader2 className="w-4 h-4 animate-spin" />
