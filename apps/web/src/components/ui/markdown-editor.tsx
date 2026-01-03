@@ -74,7 +74,10 @@ function LinkDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange} key={dialogKey}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Insert Link</DialogTitle>
           <DialogDescription>

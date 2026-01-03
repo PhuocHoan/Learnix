@@ -643,8 +643,7 @@ export function LessonViewerPage() {
     }
 
     const isPreviewLesson = currentLesson?.isFreePreview ?? false;
-    const hasCourseAccess =
-      (enrollment?.hasAccess ?? false) || isInstructor || isAdmin;
+    const hasCourseAccess = enrollment?.hasAccess ?? false;
     const hasAccess = hasCourseAccess || isPreviewLesson;
 
     if (course && !hasAccess && isAuthenticated) {
@@ -728,8 +727,7 @@ export function LessonViewerPage() {
   }
 
   const isPreviewLesson = currentLesson?.isFreePreview ?? false;
-  const hasCourseAccess =
-    (enrollment?.hasAccess ?? false) || isInstructor || isAdmin;
+  const hasCourseAccess = enrollment?.hasAccess ?? false;
   const hasAccess = hasCourseAccess || isPreviewLesson;
   const shouldShowAuthModal = !hasAccess && !isAuthenticated;
 
@@ -1098,7 +1096,10 @@ export function LessonViewerPage() {
                         const isActive = lesson.id === activeLessonId;
                         const isCompleted = completedIds.includes(lesson.id);
                         const isLocked =
-                          !isEnrolled && !lesson.isFreePreview && !isInstructor;
+                          !isEnrolled &&
+                          !lesson.isFreePreview &&
+                          !isInstructor &&
+                          !isAdmin;
 
                         let typeIcon = <FileText className="w-4 h-4" />;
                         let typeLabel = 'Lesson';

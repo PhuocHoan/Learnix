@@ -202,6 +202,7 @@ export function QuizGenerationModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         showCloseButton={step !== 'preview'}
+        onInteractOutside={(e) => e.preventDefault()}
         className={cn(
           'flex flex-col gap-0 p-0 overflow-hidden bg-background transition-all duration-300',
           step === 'preview'

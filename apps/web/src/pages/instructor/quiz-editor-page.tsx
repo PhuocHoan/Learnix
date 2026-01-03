@@ -577,6 +577,7 @@ export default function QuizEditorPage() {
         }}
       >
         <DialogContent
+          onInteractOutside={(e) => e.preventDefault()}
           className={cn(
             'flex flex-col gap-0 p-0 overflow-hidden bg-background transition-all duration-300',
             aiDialogStep === 'preview'

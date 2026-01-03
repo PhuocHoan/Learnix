@@ -207,6 +207,7 @@ export class CoursesService {
     // If course is NOT published OR not approved (status != PUBLISHED), only the Instructor or Admin can view it.
     if (!course.isPublished || course.status !== CourseStatus.PUBLISHED) {
       const isInstructor = user?.id === course.instructor?.id;
+      // Admin can view ANY course regardless of status
       const isAdmin = user?.role === UserRole.ADMIN;
 
       if (!isInstructor && !isAdmin) {
@@ -310,12 +311,10 @@ export class CoursesService {
 
     const isInstructor = course?.instructorId === userId;
     const isAdmin = user.role === UserRole.ADMIN;
-    const isPending = course?.status === CourseStatus.PENDING;
-    const isPublished = course?.status === CourseStatus.PUBLISHED;
-    const isDraft = course?.status === CourseStatus.DRAFT;
 
-    // Admin has read-only audit access during DRAFT/PENDING and after approval (PUBLISHED)
-    const hasAdminAccess = isAdmin && (isDraft || isPending || isPublished);
+    // Admin has FULL access to everything, always.
+    // We treat them as having "Admin Access" which overrides other checks.
+    const hasAdminAccess = isAdmin;
 
     // Sanitize enrollment data to only include existing lessons
     if (enrollment) {
@@ -337,6 +336,7 @@ export class CoursesService {
       isEnrolled: Boolean(enrollment),
       isInstructor,
       isAdmin,
+      // Admin always has access
       hasAccess: Boolean(enrollment) || isInstructor || hasAdminAccess,
       enrollment,
     };
@@ -450,14 +450,8 @@ export class CoursesService {
     // Check access: enrolled OR free preview OR is instructor OR is admin reviewing
     const isInstructor = lesson.section.course.instructorId === userId;
     const isAdmin = user.role === UserRole.ADMIN;
-    const isDraft = lesson.section.course.status === CourseStatus.DRAFT;
-    const isPending = lesson.section.course.status === CourseStatus.PENDING;
-    const isPublished = lesson.section.course.status === CourseStatus.PUBLISHED;
     const hasAccess =
-      isEnrolled ||
-      lesson.isFreePreview ||
-      isInstructor ||
-      (isAdmin && (isDraft || isPending || isPublished));
+      isEnrolled || lesson.isFreePreview || isInstructor || isAdmin; // Admin always has access regardless of course status
 
     if (!hasAccess) {
       throw new ForbiddenException(

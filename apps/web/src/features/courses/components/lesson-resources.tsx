@@ -437,7 +437,7 @@ function AddResourceDialog({
           Add Resource
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Add Lesson Resource</DialogTitle>
         </DialogHeader>

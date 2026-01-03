@@ -29,7 +29,7 @@ export function AuthRequiredModal({
       {/* Backdrop - fixed to cover entire viewport */}
       <div
         className="fixed inset-0 z-100 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in"
-        onClick={onClose}
+        // onClick={onClose} // Disabled to enforce explicit close action
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             onClose();
