@@ -125,7 +125,7 @@ export class QuizzesController {
   }
 
   @Post(':id/save-progress')
-  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR, UserRole.ADMIN)
   async saveProgress(
     @Param('id') id: string,
     @Body() submitDto: SubmitQuizDto,
@@ -138,7 +138,7 @@ export class QuizzesController {
     );
   }
   @Post(':id/submit')
-  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR, UserRole.ADMIN)
   async submitQuiz(
     @Param('id') id: string,
     @Body() submitDto: SubmitQuizDto,
@@ -148,7 +148,7 @@ export class QuizzesController {
   }
 
   @Get(':id/submission')
-  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR)
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR, UserRole.ADMIN)
   async getSubmission(
     @Param('id') id: string,
     @CurrentUser() user: User,

@@ -249,27 +249,25 @@ export class DashboardService {
     // FIX: Explicitly type the array here
     const activities: ActivityItem[] = [];
 
-    // 1. Enrollment Activities
-    if (user.role === UserRole.STUDENT || !user.role) {
-      const recentEnrollments = await this.enrollmentRepository.find({
-        where: { userId: user.id },
-        relations: ['course'],
-        order: { enrolledAt: 'DESC' },
-        take: 5,
-      });
+    // 1. Enrollment Activities (For ALL users)
+    const recentEnrollments = await this.enrollmentRepository.find({
+      where: { userId: user.id },
+      relations: ['course'],
+      order: { enrolledAt: 'DESC' },
+      take: 5,
+    });
 
-      recentEnrollments.forEach((enrollment) => {
-        activities.push({
-          id: enrollment.id,
-          type: 'enrollment',
-          title: `Enrolled in "${enrollment.course.title}"`,
-          course: enrollment.course.title,
-          timestamp: enrollment.enrolledAt.toISOString(),
-        });
+    recentEnrollments.forEach((enrollment) => {
+      activities.push({
+        id: enrollment.id,
+        type: 'enrollment',
+        title: `Enrolled in "${enrollment.course.title}"`,
+        course: enrollment.course.title,
+        timestamp: enrollment.enrolledAt.toISOString(),
       });
-    }
+    });
 
-    // 2. Course Creation Activities
+    // 2. Course Creation Activities (For INSTRUCTORS)
     if (user.role === UserRole.INSTRUCTOR) {
       const recentCourses = await this.courseRepository.find({
         where: { instructor: { id: user.id } },
@@ -287,7 +285,7 @@ export class DashboardService {
       });
     }
 
-    // 3. User Registration Activity
+    // 3. User Registration Activity (For ADMINS)
     if (user.role === UserRole.ADMIN) {
       const recentUsers = await this.userRepository.find({
         order: { createdAt: 'DESC' },
