@@ -7,6 +7,7 @@ import { UserRole } from '../users/enums/user-role.enum';
 import { AuthController } from './auth.controller';
 import { AuthService, type OAuthProfile } from './auth.service';
 
+import type { RequestWithUser } from '../types/request.interface';
 import type { Response, Request } from 'express';
 
 describe('AuthController', () => {
@@ -185,7 +186,7 @@ describe('AuthController', () => {
           avatarUrl: 'https://avatar.url',
           providerId: 'google-123',
         } as OAuthProfile,
-      } as unknown as Request;
+      } as unknown as RequestWithUser;
       const res = mockResponse();
 
       authService.validateOAuthLogin.mockResolvedValue({
@@ -212,7 +213,7 @@ describe('AuthController', () => {
           avatarUrl: 'https://avatar.url',
           providerId: 'github-123',
         } as OAuthProfile,
-      } as unknown as Request;
+      } as unknown as RequestWithUser;
       const res = mockResponse();
 
       authService.validateOAuthLogin.mockResolvedValue({

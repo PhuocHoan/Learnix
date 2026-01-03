@@ -40,15 +40,12 @@ import type {
   MessageResult,
   SafeUser,
 } from './auth.service';
+import type { RequestWithUser } from '../types/request.interface';
 import type {
   CookieOptions,
   Request as ExpressRequest,
   Response as ExpressResponse,
 } from 'express';
-
-// Express 5 compatible types - using full Express types instead of core types
-type Request = ExpressRequest;
-type Response = ExpressResponse;
 
 // so we can use 'lax' for better security
 const getCookieOptions = (): CookieOptions => {
@@ -78,7 +75,7 @@ export class AuthController {
   @Post('login')
   async signIn(
     @Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) res: ExpressResponse,
   ): Promise<{ user: SafeUser; message: string }> {
     const result = await this.authService.login(loginDto);
 
@@ -123,7 +120,7 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  logout(@Res({ passthrough: true }) res: Response): MessageResult {
+  logout(@Res({ passthrough: true }) res: ExpressResponse): MessageResult {
     // Clear the cookie
     res.clearCookie('access_token', { path: '/' });
     return { message: 'Logout successful' };
@@ -139,8 +136,8 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   async googleAuthRedirect(
-    @Req() req: Request,
-    @Res() res: Response,
+    @Req() req: RequestWithUser,
+    @Res() res: ExpressResponse,
   ): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
@@ -187,8 +184,8 @@ export class AuthController {
   @Get('github/callback')
   @UseGuards(GithubAuthGuard)
   async githubAuthRedirect(
-    @Req() req: Request,
-    @Res() res: Response,
+    @Req() req: RequestWithUser,
+    @Res() res: ExpressResponse,
   ): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
@@ -242,7 +239,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async selectRole(
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) res: ExpressResponse,
     @CurrentUser() user: User,
     @Body() selectRoleDto: SelectRoleDto,
   ): Promise<{ user: SafeUser; accessToken: string; message: string }> {
@@ -353,7 +350,7 @@ export class AuthController {
   async deleteAccount(
     @CurrentUser() user: User,
     @Body() deleteAccountDto: DeleteAccountDto,
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) res: ExpressResponse,
   ): Promise<MessageResult> {
     const result = await this.authService.deleteAccount(
       user.id,
