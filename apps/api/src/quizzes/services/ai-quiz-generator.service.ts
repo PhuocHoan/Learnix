@@ -31,6 +31,16 @@ export class AiQuizGeneratorService {
       throw new Error('Gemini API key not configured');
     }
 
+    // Truncate text if it's too long (approx. 20k chars) to prevent timeouts/context limits
+    const MAX_CHARS = 20000;
+    let processedText = lessonText;
+    if (lessonText.length > MAX_CHARS) {
+      this.logger.warn(
+        `Lesson text too long (${lessonText.length} chars). Truncating to ${MAX_CHARS} chars.`,
+      );
+      processedText = lessonText.substring(0, MAX_CHARS) + '... (truncated)';
+    }
+
     const typesSentence =
       preferredTypes.length > 0
         ? `Use these question types: ${preferredTypes.join(', ')}.`
@@ -41,7 +51,7 @@ export class AiQuizGeneratorService {
 ${typesSentence}
 
 Lesson Content:
-${lessonText}
+${processedText}
 
 Requirements:
 1. Generate exactly ${numberOfQuestions} questions.

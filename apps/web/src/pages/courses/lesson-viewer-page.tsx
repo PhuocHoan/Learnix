@@ -804,7 +804,7 @@ export function LessonViewerPage() {
                           (acc, s) => acc + s.lessons.length,
                           0,
                         ) ?? 1)) *
-                      100,
+                        100,
                     )}
                     %
                   </span>
@@ -847,7 +847,7 @@ export function LessonViewerPage() {
             className={cn(
               'flex-1 overflow-y-auto bg-background scroll-smooth',
               currentLesson?.ideConfig &&
-              'grid lg:grid-cols-2 gap-0 overflow-hidden',
+                'grid lg:grid-cols-2 gap-0 overflow-hidden',
               // Adjust width when sidebar is open on desktop
               isSidebarOpen && 'lg:mr-0',
             )}
@@ -856,7 +856,7 @@ export function LessonViewerPage() {
               className={cn(
                 'max-w-4xl mx-auto p-6 md:p-10 w-full transition-all duration-300',
                 currentLesson?.ideConfig &&
-                'overflow-y-auto h-full max-w-none p-6',
+                  'overflow-y-auto h-full max-w-none p-6',
                 !isSidebarOpen && !currentLesson?.ideConfig && 'max-w-5xl', // Expand content width when sidebar is closed
               )}
             >
@@ -930,7 +930,7 @@ export function LessonViewerPage() {
                   />
 
                   {currentLesson.type === 'quiz' &&
-                    (currentLesson.content?.length ?? 0) === 0 ? null : (
+                  (currentLesson.content?.length ?? 0) === 0 ? null : (
                     <LessonContent
                       blocks={currentLesson.content}
                       onVideoComplete={handleVideoComplete}
@@ -1138,7 +1138,7 @@ export function LessonViewerPage() {
                                 ? 'bg-primary/5 border-primary'
                                 : 'border-transparent hover:bg-muted/50',
                               isLocked &&
-                              'opacity-60 cursor-not-allowed bg-muted/10',
+                                'opacity-60 cursor-not-allowed bg-muted/10',
                             )}
                           >
                             <div className="shrink-0 mt-0.5">
