@@ -11,6 +11,7 @@ import {
 import { Server, Socket } from 'socket.io';
 
 import { decryptTokenFromCookie } from '../auth/utils/token-encryption';
+import { IUsersService } from '../users/interfaces/users-service.interface';
 import { UsersService } from '../users/users.service';
 
 import { Notification } from './entities/notification.entity';
@@ -38,8 +39,7 @@ export class NotificationsGateway
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => UsersService))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private readonly usersService: any,
+    private readonly usersService: IUsersService,
   ) {}
 
   afterInit(server: Server) {
@@ -64,9 +64,7 @@ export class NotificationsGateway
           });
 
           // Verify user still exists and is active
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
           const user = await this.usersService.findOne(payload.sub);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           if (!user?.isActive) {
             const error: Error & { data?: unknown } = new Error(
               'Authentication error: User not found or inactive',
@@ -74,7 +72,6 @@ export class NotificationsGateway
             return next(error);
           }
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
           socket.userId = user.id;
           next();
         } catch (error) {

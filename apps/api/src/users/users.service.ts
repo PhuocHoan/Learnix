@@ -13,6 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 
+import { INotificationsService } from '../notifications/interfaces/notifications-service.interface';
 import { NotificationsService } from '../notifications/notifications.service';
 
 import { CreateUserDto } from './dto/create-user.dto';
@@ -36,8 +37,7 @@ export class UsersService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     @Inject(forwardRef(() => NotificationsService))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private notificationsService: any,
+    private notificationsService: INotificationsService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -205,7 +205,6 @@ export class UsersService {
     const savedUser = await this.usersRepository.save(user);
 
     // Notify user of role change
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     await this.notificationsService.notifyRoleChange(id, role);
 
     return savedUser;
