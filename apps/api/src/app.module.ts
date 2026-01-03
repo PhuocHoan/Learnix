@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { ExternalAuth } from './auth/entities/external-auth.entity';
+import { CodeExecutionModule } from './code-execution/code-execution.module';
 import { CoursesModule } from './courses/courses.module';
 import { CourseSection } from './courses/entities/course-section.entity';
 import { Course } from './courses/entities/course.entity';
@@ -144,6 +145,7 @@ import { UsersModule } from './users/users.module';
     UploadModule,
     PaymentsModule,
     NotificationsModule,
+    CodeExecutionModule,
   ],
   providers: [
     {

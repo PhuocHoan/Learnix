@@ -1306,12 +1306,7 @@ function solution(a, b) {
     return a + b;
 }
 
-// Input Example:
-// const n = parseInt(readline());      // Read an integer
-// const arr = readline().split(' ');   // Read an array string
-// print(arr);
-
-print(solution(1, 2));`;
+console.log(solution(1, 2));`;
 
     case 'typescript':
       return `// Write your code here
@@ -1319,12 +1314,7 @@ function solution(a: number, b: number): number {
     return a + b;
 }
 
-// Input Example:
-// const n = parseInt(readline());      // Read an integer
-// const arr = readline().split(' ');   // Read an array string
-// print(arr);
-
-print(solution(1, 2));`;
+console.log(solution(1, 2));`;
 
     case 'python':
       return `# Write your code here
@@ -1469,6 +1459,7 @@ const getDefaultTestCode = (lang: string) => {
       return '// Logic Test (Concatenated to end)\n// NOTE: Remove main() from student initial code.\nfn main() {\n    assert_eq!(solution(2, 2), 4, "Fail: 2+2 != 4");\n    println!("Success!");\n}';
     case 'csharp':
       return '// Logic Test (Concatenated to end)\n// NOTE: Remove Main() from Program class in student initial code.\npublic class TestRunner {\n    public static void Main() {\n        if (Program.Solution(2, 2) != 4) {\n            Console.Error.WriteLine("Fail: 2+2 != 4");\n            Environment.Exit(1);\n        }\n        Console.WriteLine("Success!");\n    }\n}';
+
     default:
       return '';
   }
@@ -1485,6 +1476,7 @@ const getDefaultExpectedOutput = (lang: string) => {
     case 'rust':
     case 'csharp':
       return '3';
+
     default:
       return '';
   }
