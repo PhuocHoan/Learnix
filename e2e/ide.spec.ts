@@ -91,24 +91,20 @@ test.describe('Embedded IDE', () => {
     });
 
     // Mock Code Execution
-    await page.route('**/exercises/execute', async (route) => {
+    await page.route('**/code-execution/run', async (route) => {
       const request = route.request();
       const postData = JSON.parse(request.postData() || '{}');
 
       // Basic validation of request
       if (postData.language === 'python') {
         await route.fulfill({
-          status: 201,
+          status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            run: {
-              stdout: 'Hello from IDE\n',
-              stderr: '',
-              code: 0,
-              output: 'Hello from IDE\n',
-            },
-            language: 'python',
-            version: '3.10.0',
+            stdout: 'Hello from IDE\n',
+            stderr: '',
+            code: 0,
+            output: 'Hello from IDE\n',
           }),
         });
       } else {
@@ -171,9 +167,11 @@ test.describe('Embedded IDE', () => {
       // Run the code
       await runButton.click();
 
-      // Verify Output (look in the output console pre element, not the code editor)
+      // Verify Output (target the output container div specifically)
       await expect(
-        page.locator('pre').filter({ hasText: 'Hello from IDE' }),
+        page
+          .locator('.whitespace-pre-wrap')
+          .filter({ hasText: 'Hello from IDE' }),
       ).toBeVisible();
       await expect(page.getByText('SUCCESS', { exact: true })).toBeVisible();
     }

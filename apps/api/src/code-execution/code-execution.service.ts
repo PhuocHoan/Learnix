@@ -133,8 +133,7 @@ const require = (moduleName) => {
         code: run.code,
         output: run.output,
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (rawError: any) {
+    } catch (rawError: unknown) {
       interface AxiosErrorShape {
         response?: {
           data?: {

@@ -17,7 +17,7 @@ This folder contains the database schema and seed data for the Learnix online le
 ## Create schema and import seed data (Using Docker)
 
 ```bash
-# This reset script will apply the schema and comprehensive seed data
+# This reset script will apply the schema and comprehensive seed data (Make sure you are in the root directory of the project repository)
 docker exec -it learnix-backend pnpm --filter @repo/api db:reset
 docker exec -it learnix-backend pnpm --filter @repo/api db:seed
 ```

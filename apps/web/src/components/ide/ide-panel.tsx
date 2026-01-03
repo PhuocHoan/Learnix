@@ -164,7 +164,7 @@ export function IdePanel({
     'success' | 'error' | null
   >(null);
   const [stdin, setStdin] = useState('');
-  const [PreviewComponent, setPreviewComponent] = useState<any>(null);
+  const [previewIframeSrc, setPreviewIframeSrc] = useState<string | null>(null);
   // Default to Preview if it's React/JS code (implied by having exports/components), otherwise Output
   const [activeTab, setActiveTab] = useState<'console' | 'preview' | 'input'>(
     'console',
@@ -174,7 +174,11 @@ export function IdePanel({
     setIsRunning(true);
     setExecutionResult(null);
     setOutput('');
-    setPreviewComponent(null);
+    // Revoke previous blob URL if exists
+    if (previewIframeSrc) {
+      URL.revokeObjectURL(previewIframeSrc);
+    }
+    setPreviewIframeSrc(null);
 
     // For Python, JS, TS (Node), we want console. For React, we prefer Preview.
     // Note: JS/TS are now backend-executed by default, so they should use console.
@@ -189,13 +193,23 @@ export function IdePanel({
       const combinedOutput = result.stdout + result.stderr;
       setOutput(combinedOutput);
 
-      if (result.Component) {
-        setPreviewComponent(() => result.Component);
-        setActiveTab('preview'); // Auto-switch to preview if we got a component
+      if (result.iframeSrc) {
+        setPreviewIframeSrc(result.iframeSrc);
+        setActiveTab('preview'); // Auto-switch to preview if we got iframe
       }
 
       // Check success conditions
-      if (currentConfig?.expectedOutput) {
+      if (result.iframeSrc) {
+        // React preview - if there's expectedOutput, we can't auto-verify, so leave neutral
+        // If no expectedOutput, treat as success (preview rendered)
+        if (currentConfig?.expectedOutput) {
+          // Leave executionResult as null (neutral) - cannot auto-verify React output
+          setExecutionResult(null);
+        } else {
+          setExecutionResult('success');
+        }
+        clearMarkers();
+      } else if (currentConfig?.expectedOutput) {
         if (combinedOutput.trim() === currentConfig.expectedOutput.trim()) {
           setExecutionResult('success');
           clearMarkers();
@@ -232,7 +246,7 @@ export function IdePanel({
     setOutput('');
     setExecutionResult(null);
     setStdin('');
-    setPreviewComponent(null);
+    setPreviewIframeSrc(null);
   };
 
   return (
@@ -247,7 +261,7 @@ export function IdePanel({
                 setCurrentLanguage(val);
                 setOutput('');
                 setExecutionResult(null);
-                setPreviewComponent(null);
+                setPreviewIframeSrc(null);
               }}
             >
               <SelectTrigger className="w-[140px] h-8 bg-transparent border-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 px-2 text-sm font-semibold capitalize">
@@ -382,11 +396,14 @@ export function IdePanel({
               value="preview"
               className="flex-1 min-h-0 mt-0 p-0 relative bg-white"
             >
-              <div className="h-full w-full overflow-auto p-4 text-black font-sans">
-                {PreviewComponent ? (
-                  <div className="preview-sandbox">
-                    <PreviewComponent />
-                  </div>
+              <div className="h-full w-full overflow-hidden">
+                {previewIframeSrc ? (
+                  <iframe
+                    src={previewIframeSrc}
+                    className="w-full h-full border-0"
+                    title="React Preview"
+                    sandbox="allow-scripts"
+                  />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-gray-400">
                     <Eye className="w-8 h-8 mb-2 opacity-50" />
