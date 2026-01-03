@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 
 import { Notification } from './entities/notification.entity';
 import { NotificationType } from './enums/notification-type.enum';
+import { INotificationsGateway } from './interfaces/notifications-gateway.interface';
 import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
@@ -17,7 +18,7 @@ export class NotificationsService {
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
     @Inject(forwardRef(() => NotificationsGateway))
-    private readonly gateway: NotificationsGateway,
+    private readonly gateway: INotificationsGateway,
   ) {}
 
   async create(
@@ -275,6 +276,16 @@ export class NotificationsService {
       NotificationType.COURSE_UNENROLLMENT,
       { courseTitle, courseId },
       `/courses/${courseId}`,
+    );
+  }
+  async notifyRoleChange(userId: string, newRole: string) {
+    return await this.create(
+      userId,
+      'Role Updated 🛡️',
+      `Your account role has been updated to "${newRole.toUpperCase()}". You may need to refresh the page to see changes.`,
+      'info',
+      NotificationType.SYSTEM_ALERT,
+      { newRole },
     );
   }
 }

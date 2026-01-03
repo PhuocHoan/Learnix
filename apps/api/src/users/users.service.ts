@@ -5,10 +5,16 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
+
+import { INotificationsService } from '../notifications/interfaces/notifications-service.interface';
+import { NotificationsService } from '../notifications/notifications.service';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import {
@@ -30,6 +36,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @Inject(forwardRef(() => NotificationsService))
+    private notificationsService: INotificationsService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -187,8 +195,19 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    // Protect Admin Accounts
+    if (user.role === UserRole.ADMIN) {
+      throw new ForbiddenException('Cannot modify an admin account');
+    }
+
     user.role = role;
-    return await this.usersRepository.save(user);
+    const savedUser = await this.usersRepository.save(user);
+
+    // Notify user of role change
+    await this.notificationsService.notifyRoleChange(id, role);
+
+    return savedUser;
   }
 
   async updateStatus(id: string, isActive: boolean): Promise<User> {
@@ -196,6 +215,12 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    // Protect Admin Accounts
+    if (user.role === UserRole.ADMIN) {
+      throw new ForbiddenException('Cannot lock an admin account');
+    }
+
     user.isActive = isActive;
     return await this.usersRepository.save(user);
   }
