@@ -82,17 +82,37 @@ Requirements:
         let content = response.text;
 
         if (!content) {
+          this.logger.error('Gemini returned empty response');
           throw new Error('No response from Gemini');
         }
 
-        // Remove markdown code blocks if present
+        this.logger.debug(`Raw Gemini response length: ${content.length}`);
+
+        // Remove markdown code blocks if present (handle various formats)
         content = content
-          .replace(/```json\n?/g, '')
-          .replace(/```\n?/g, '')
+          .replace(/```json\s*/gi, '')
+          .replace(/```\s*/g, '')
           .trim();
 
+        // Try to extract JSON object/array from the response
+        // Sometimes Gemini adds extra text before or after JSON
+        const jsonMatch = /(\{[\s\S]*\}|\[[\s\S]*\])/.exec(content);
+        if (jsonMatch) {
+          content = jsonMatch[1];
+        }
+
         // Parse the JSON response
-        const result: unknown = JSON.parse(content);
+        let result: unknown;
+        try {
+          result = JSON.parse(content);
+        } catch (_parseError) {
+          this.logger.error(
+            `JSON parse failed. Content: ${content.substring(0, 500)}...`,
+          );
+          throw new Error(
+            'Failed to parse AI response. The response was not valid JSON.',
+          );
+        }
 
         // Validate the response structure
         let title = 'AI Generated Quiz';
@@ -122,15 +142,57 @@ Requirements:
         }
 
         if (questions.length === 0) {
+          this.logger.error('No questions found in parsed response');
           throw new Error('Invalid response format: No questions found');
         }
 
-        // Enforce count limit strictly incase AI hallucinated more
-        if (questions.length > numberOfQuestions) {
-          questions = questions.slice(0, numberOfQuestions);
+        // Validate and filter questions to ensure they have required fields
+        const validQuestions = questions.filter((q) => {
+          const isValid =
+            typeof q.questionText === 'string' &&
+            q.questionText.trim().length > 0 &&
+            typeof q.correctAnswer === 'string' &&
+            q.correctAnswer.trim().length > 0 &&
+            [
+              'multiple_choice',
+              'multi_select',
+              'true_false',
+              'short_answer',
+            ].includes(q.type);
+
+          if (!isValid) {
+            this.logger.warn(
+              `Filtering out invalid question: ${JSON.stringify(q).substring(0, 200)}`,
+            );
+          }
+          return isValid;
+        });
+
+        // Ensure options is always an array
+        validQuestions.forEach((q) => {
+          if (!Array.isArray(q.options)) {
+            q.options = [];
+          }
+        });
+
+        if (validQuestions.length === 0) {
+          this.logger.error('All generated questions were invalid');
+          throw new Error('AI generated invalid questions. Please try again.');
         }
 
-        return { title, questions };
+        this.logger.log(
+          `Successfully generated ${validQuestions.length} valid questions`,
+        );
+
+        // Enforce count limit strictly in case AI hallucinated more
+        if (validQuestions.length > numberOfQuestions) {
+          return {
+            title,
+            questions: validQuestions.slice(0, numberOfQuestions),
+          };
+        }
+
+        return { title, questions: validQuestions };
       } catch (error: unknown) {
         attempt++;
 
@@ -141,25 +203,41 @@ Requirements:
             ? (error as { status: unknown }).status
             : undefined;
 
-        // Check for 503 (Overloaded) or 429 (Quota)
-        if (status === 503 || status === 429) {
-          if (attempt >= maxRetries) {
-            throw new Error(
-              status === 429
-                ? 'AI service quota exceeded. Please try again later.'
-                : 'AI service is currently overloaded. Please try again later.',
-            );
-          }
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+
+        // Determine if this error is retryable
+        const isRetryableError =
+          status === 503 ||
+          status === 429 ||
+          errorMessage.includes('parse') ||
+          errorMessage.includes('No response') ||
+          errorMessage.includes('invalid questions') ||
+          errorMessage.includes('No questions found');
+
+        if (isRetryableError && attempt < maxRetries) {
           // Wait 2000 * 2^(attempt-1) ... e.g. 2000, 4000, 8000
           const delay = 2000 * Math.pow(2, attempt - 1);
-          this.logger.warn(`Waiting ${delay}ms before retry...`);
+          this.logger.warn(
+            `Retryable error detected. Waiting ${delay}ms before retry...`,
+          );
           await wait(delay);
           continue;
         }
 
-        // For other errors, throw immediately
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
+        // For quota errors, provide a specific message
+        if (status === 429) {
+          throw new Error('AI service quota exceeded. Please try again later.');
+        }
+
+        // For overload errors, provide a specific message
+        if (status === 503) {
+          throw new Error(
+            'AI service is currently overloaded. Please try again later.',
+          );
+        }
+
+        // For other errors, throw with the message
         throw new Error(`Failed to generate quiz: ${errorMessage}`);
       }
     }

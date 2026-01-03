@@ -31,6 +31,9 @@ import {
   Circle,
   Pencil,
   Sparkles,
+  Check,
+  ChevronLeft,
+  BrainCircuit,
 } from 'lucide-react';
 import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import ReactMarkdown from 'react-markdown';
@@ -101,6 +104,19 @@ export default function QuizEditorPage() {
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
   const [orderedQuestions, setOrderedQuestions] = useState<Question[]>([]);
   const [showAiDialog, setShowAiDialog] = useState(false);
+  const [aiDialogStep, setAiDialogStep] = useState<'config' | 'preview'>(
+    'config',
+  );
+  const [previewQuestions, setPreviewQuestions] = useState<
+    {
+      questionText: string;
+      options: string[];
+      correctAnswer: string;
+      explanation?: string;
+      type: QuestionType;
+    }[]
+  >([]);
+  const [isSavingPreview, setIsSavingPreview] = useState(false);
   const [aiConfig, setAiConfig] = useState<{
     text: string;
     count: number | '';
@@ -183,36 +199,146 @@ export default function QuizEditorPage() {
 
   const generateQuizMutation = useMutation({
     mutationFn: quizzesApi.generateQuiz,
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       toast.success(`Generated ${data.questions.length} questions!`);
-      setShowAiDialog(false);
-      // Sequentially add questions
-      if (quiz) {
-        let addedCount = 0;
-        for (const q of data.questions) {
-          try {
-            await quizzesApi.createQuestion(quiz.id, {
-              ...q,
-              type: q.type,
-              points: 1,
-            });
-            addedCount++;
-          } catch (_e) {
-            // Silently continue if one question fails
-          }
-        }
-        if (addedCount > 0) {
-          toast.success(`Added ${addedCount} questions to quiz.`);
-          void queryClient.invalidateQueries({
-            queryKey: ['quiz', 'lesson', lessonId],
-          });
+      // Set preview questions and show preview step
+      setPreviewQuestions(
+        data.questions.map((q) => ({
+          questionText: q.questionText,
+          options: q.options || [],
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+          type: q.type,
+        })),
+      );
+      setAiDialogStep('preview');
+    },
+    onError: (error: unknown) => {
+      // Extract error message from axios error response
+      let message = 'Failed to generate quiz. Please try again.';
+      if (
+        error &&
+        typeof error === 'object' &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        const serverMessage = (error.response.data as { message: string })
+          .message;
+        if (serverMessage) {
+          message = serverMessage;
         }
       }
-    },
-    onError: () => {
-      toast.error('Failed to generate quiz. Please try again.');
+      toast.error(message);
     },
   });
+
+  // Handler to save preview questions to the quiz
+  const handleSavePreviewQuestions = async () => {
+    if (!quiz) {
+      return;
+    }
+
+    setIsSavingPreview(true);
+    let addedCount = 0;
+    let failedCount = 0;
+
+    for (const q of previewQuestions) {
+      try {
+        await quizzesApi.createQuestion(quiz.id, {
+          ...q,
+          type: q.type,
+          points: 1,
+        });
+        addedCount++;
+      } catch (_e) {
+        failedCount++;
+      }
+    }
+
+    setIsSavingPreview(false);
+
+    if (addedCount > 0) {
+      if (failedCount > 0) {
+        toast.warning(
+          `Added ${addedCount} questions. ${failedCount} failed to save.`,
+        );
+      } else {
+        toast.success(`Added ${addedCount} questions to quiz.`);
+      }
+      void queryClient.invalidateQueries({
+        queryKey: ['quiz', 'lesson', lessonId],
+      });
+    } else if (failedCount > 0) {
+      toast.error('All questions failed to save. Please try again.');
+    }
+
+    // Reset and close dialog
+    setShowAiDialog(false);
+    setAiDialogStep('config');
+    setPreviewQuestions([]);
+    setAiConfig({ text: '', count: 5, types: ['multiple_choice'] });
+  };
+
+  // Handler to update a preview question
+  const handlePreviewQuestionChange = <
+    K extends keyof (typeof previewQuestions)[0],
+  >(
+    index: number,
+    field: K,
+    value: (typeof previewQuestions)[0][K],
+  ) => {
+    setPreviewQuestions((prev) =>
+      prev.map((q, i) => (i === index ? { ...q, [field]: value } : q)),
+    );
+  };
+
+  // Handler to update an option in a preview question
+  const handlePreviewOptionChange = (
+    qIndex: number,
+    oIndex: number,
+    value: string,
+  ) => {
+    setPreviewQuestions((prev) =>
+      prev.map((q, qi) =>
+        qi === qIndex
+          ? {
+              ...q,
+              options: q.options.map((opt, oi) =>
+                oi === oIndex ? value : opt,
+              ),
+            }
+          : q,
+      ),
+    );
+  };
+
+  // Handler to remove a preview question
+  const handleRemovePreviewQuestion = (index: number) => {
+    setPreviewQuestions((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Handler to toggle multi-select correct answer
+  const handleTogglePreviewCorrect = (qIndex: number, letter: string) => {
+    const q = previewQuestions.at(qIndex);
+    if (!q) {
+      return;
+    }
+
+    if (q.type === 'multi_select') {
+      const correct = q.correctAnswer.split(',').filter(Boolean);
+      const next = correct.includes(letter)
+        ? correct.filter((l) => l !== letter).sort()
+        : [...correct, letter].sort();
+      handlePreviewQuestionChange(qIndex, 'correctAnswer', next.join(','));
+    } else {
+      handlePreviewQuestionChange(qIndex, 'correctAnswer', letter);
+    }
+  };
 
   const {
     mutate: createQuiz,
@@ -440,167 +566,401 @@ export default function QuizEditorPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-primary">
-              <Sparkles className="w-5 h-5" /> Generate Quiz with AI
-            </DialogTitle>
-            <DialogDescription>
-              Paste your lesson content below and let AI generate questions for
-              you.
-            </DialogDescription>
-          </DialogHeader>
+      <Dialog
+        open={showAiDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowAiDialog(false);
+            setAiDialogStep('config');
+            setPreviewQuestions([]);
+          }
+        }}
+      >
+        <DialogContent
+          className={cn(
+            'flex flex-col gap-0 p-0 overflow-hidden bg-background transition-all duration-300',
+            aiDialogStep === 'preview'
+              ? 'sm:max-w-4xl max-h-[90vh]'
+              : 'sm:max-w-[600px]',
+          )}
+        >
+          {aiDialogStep === 'config' ? (
+            <>
+              <DialogHeader className="p-6 pb-4">
+                <DialogTitle className="flex items-center gap-2 text-primary">
+                  <Sparkles className="w-5 h-5" /> Generate Quiz with AI
+                </DialogTitle>
+                <DialogDescription>
+                  Paste your lesson content below and let AI generate questions
+                  for you.
+                </DialogDescription>
+              </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="lesson-content" className="text-sm font-medium">
-                Lesson Content
-              </label>
-              <Textarea
-                id="lesson-content"
-                placeholder="Paste text notes, summary, or lesson script..."
-                className="min-h-[200px]"
-                value={aiConfig.text}
-                onChange={(e) =>
-                  setAiConfig((prev) => ({ ...prev, text: e.target.value }))
-                }
-              />
-              <p className="text-xs text-muted-foreground">
-                The more context you provide, the better the questions will be.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="question-count" className="text-sm font-medium">
-                  Number of Questions
-                </label>
-                <Input
-                  id="question-count"
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={aiConfig.count}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '') {
-                      setAiConfig((prev) => ({ ...prev, count: '' }));
-                    } else {
-                      const parsed = parseInt(val);
-                      if (!isNaN(parsed)) {
-                        setAiConfig((prev) => ({ ...prev, count: parsed }));
-                      }
+              <div className="grid gap-4 p-6 pt-0">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="lesson-content"
+                    className="text-sm font-medium"
+                  >
+                    Lesson Content
+                  </label>
+                  <Textarea
+                    id="lesson-content"
+                    placeholder="Paste text notes, summary, or lesson script..."
+                    className="min-h-[200px]"
+                    value={aiConfig.text}
+                    onChange={(e) =>
+                      setAiConfig((prev) => ({ ...prev, text: e.target.value }))
                     }
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <span className="text-sm font-medium">Question Types</span>
-                <div className="flex flex-col gap-2 p-3 border rounded-md">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={aiConfig.types.includes('multiple_choice')}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The more context you provide, the better the questions will
+                    be.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="question-count"
+                      className="text-sm font-medium"
+                    >
+                      Number of Questions
+                    </label>
+                    <Input
+                      id="question-count"
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={aiConfig.count}
                       onChange={(e) => {
-                        const checked = e.target.checked;
-                        setAiConfig((prev) => ({
-                          ...prev,
-                          types: checked
-                            ? [...prev.types, 'multiple_choice']
-                            : prev.types.filter((t) => t !== 'multiple_choice'),
-                        }));
+                        const val = e.target.value;
+                        if (val === '') {
+                          setAiConfig((prev) => ({ ...prev, count: '' }));
+                        } else {
+                          const parsed = parseInt(val);
+                          if (!isNaN(parsed)) {
+                            setAiConfig((prev) => ({ ...prev, count: parsed }));
+                          }
+                        }
                       }}
-                      className="rounded border-primary text-primary focus:ring-primary"
-                    />{' '}
-                    Multiple Choice (Single Answer)
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={aiConfig.types.includes('multi_select')}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setAiConfig((prev) => ({
-                          ...prev,
-                          types: checked
-                            ? [...prev.types, 'multi_select']
-                            : prev.types.filter((t) => t !== 'multi_select'),
-                        }));
-                      }}
-                      className="rounded border-primary text-primary focus:ring-primary"
-                    />{' '}
-                    Multiple Choice (Multiple Answers)
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={aiConfig.types.includes('true_false')}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setAiConfig((prev) => ({
-                          ...prev,
-                          types: checked
-                            ? [...prev.types, 'true_false']
-                            : prev.types.filter((t) => t !== 'true_false'),
-                        }));
-                      }}
-                      className="rounded border-primary text-primary focus:ring-primary"
-                    />{' '}
-                    True/False
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={aiConfig.types.includes('short_answer')}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setAiConfig((prev) => ({
-                          ...prev,
-                          types: checked
-                            ? [...prev.types, 'short_answer']
-                            : prev.types.filter((t) => t !== 'short_answer'),
-                        }));
-                      }}
-                      className="rounded border-primary text-primary focus:ring-primary"
-                    />{' '}
-                    Short Answer
-                  </label>
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium">Question Types</span>
+                    <div className="flex flex-col gap-2 p-3 border rounded-md">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={aiConfig.types.includes('multiple_choice')}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setAiConfig((prev) => ({
+                              ...prev,
+                              types: checked
+                                ? [...prev.types, 'multiple_choice']
+                                : prev.types.filter(
+                                    (t) => t !== 'multiple_choice',
+                                  ),
+                            }));
+                          }}
+                          className="rounded border-primary text-primary focus:ring-primary"
+                        />{' '}
+                        Multiple Choice (Single Answer)
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={aiConfig.types.includes('multi_select')}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setAiConfig((prev) => ({
+                              ...prev,
+                              types: checked
+                                ? [...prev.types, 'multi_select']
+                                : prev.types.filter(
+                                    (t) => t !== 'multi_select',
+                                  ),
+                            }));
+                          }}
+                          className="rounded border-primary text-primary focus:ring-primary"
+                        />{' '}
+                        Multiple Choice (Multiple Answers)
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={aiConfig.types.includes('true_false')}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setAiConfig((prev) => ({
+                              ...prev,
+                              types: checked
+                                ? [...prev.types, 'true_false']
+                                : prev.types.filter((t) => t !== 'true_false'),
+                            }));
+                          }}
+                          className="rounded border-primary text-primary focus:ring-primary"
+                        />{' '}
+                        True/False
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={aiConfig.types.includes('short_answer')}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setAiConfig((prev) => ({
+                              ...prev,
+                              types: checked
+                                ? [...prev.types, 'short_answer']
+                                : prev.types.filter(
+                                    (t) => t !== 'short_answer',
+                                  ),
+                            }));
+                          }}
+                          className="rounded border-primary text-primary focus:ring-primary"
+                        />{' '}
+                        Short Answer
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowAiDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() =>
-                generateQuizMutation.mutate({
-                  text: aiConfig.text,
-                  count:
-                    typeof aiConfig.count === 'number' ? aiConfig.count : 5,
-                  types: aiConfig.types.length
-                    ? aiConfig.types
-                    : ['multiple_choice'],
-                })
-              }
-              disabled={
-                !aiConfig.text ||
-                aiConfig.count === '' ||
-                generateQuizMutation.isPending
-              }
-              className="bg-primary hover:bg-primary/90"
-            >
-              {generateQuizMutation.isPending && (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              )}
-              {generateQuizMutation.isPending
-                ? 'Generating...'
-                : 'Generate Questions'}
-            </Button>
-          </DialogFooter>
+              <DialogFooter className="p-6 pt-4 border-t">
+                <Button variant="ghost" onClick={() => setShowAiDialog(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() =>
+                    generateQuizMutation.mutate({
+                      text: aiConfig.text,
+                      count:
+                        typeof aiConfig.count === 'number' ? aiConfig.count : 5,
+                      types: aiConfig.types.length
+                        ? aiConfig.types
+                        : ['multiple_choice'],
+                    })
+                  }
+                  disabled={
+                    !aiConfig.text ||
+                    aiConfig.count === '' ||
+                    generateQuizMutation.isPending
+                  }
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  {generateQuizMutation.isPending && (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  )}
+                  {generateQuizMutation.isPending
+                    ? 'Generating...'
+                    : 'Generate Questions'}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader className="p-6 pb-4 border-b bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-white shadow-lg">
+                    <BrainCircuit className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-lg">
+                      Review Generated Questions
+                    </DialogTitle>
+                    <DialogDescription className="text-sm">
+                      Edit questions below before adding them to your quiz.
+                    </DialogDescription>
+                  </div>
+                </div>
+                <Badge className="w-fit mt-2 bg-primary/10 text-primary border-primary/20">
+                  {previewQuestions.length} Questions
+                </Badge>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 max-h-[60vh]">
+                {previewQuestions.map((q, qIndex) => {
+                  const letters = ['A', 'B', 'C', 'D'];
+                  return (
+                    <Card
+                      key={qIndex}
+                      className="relative border-border/50 shadow-sm"
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] uppercase tracking-wider"
+                          >
+                            {q.type.replace('_', ' ')}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleRemovePreviewQuestion(qIndex)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <Textarea
+                          value={q.questionText}
+                          onChange={(e) =>
+                            handlePreviewQuestionChange(
+                              qIndex,
+                              'questionText',
+                              e.target.value,
+                            )
+                          }
+                          className="text-base font-medium resize-none border-none p-0 focus-visible:ring-0 min-h-[60px]"
+                          placeholder="Question text..."
+                        />
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {q.type !== 'short_answer' ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {q.options.map((opt, oIndex) => {
+                              const letter = letters.at(oIndex) ?? 'X';
+                              const correctLetters = q.correctAnswer
+                                .split(',')
+                                .map((s) => s.trim());
+                              const isCorrect = correctLetters.includes(letter);
+
+                              return (
+                                <div
+                                  key={oIndex}
+                                  className={cn(
+                                    'flex items-center gap-3 p-3 rounded-lg border-2 transition-all',
+                                    isCorrect
+                                      ? 'border-green-500 bg-green-500/5'
+                                      : 'border-border/50 hover:border-border',
+                                  )}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleTogglePreviewCorrect(qIndex, letter)
+                                    }
+                                    className={cn(
+                                      'w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-xs font-bold transition-colors',
+                                      isCorrect
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary',
+                                    )}
+                                  >
+                                    {isCorrect ? (
+                                      <Check className="w-4 h-4" />
+                                    ) : (
+                                      letter
+                                    )}
+                                  </button>
+                                  <Input
+                                    value={opt}
+                                    onChange={(e) =>
+                                      handlePreviewOptionChange(
+                                        qIndex,
+                                        oIndex,
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="flex-1 border-none p-0 h-auto focus-visible:ring-0"
+                                    placeholder={`Option ${letter}`}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <label
+                              htmlFor={`preview-expected-answer-${qIndex}`}
+                              className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                            >
+                              Expected Answer
+                            </label>
+                            <Input
+                              id={`preview-expected-answer-${qIndex}`}
+                              value={q.correctAnswer}
+                              onChange={(e) =>
+                                handlePreviewQuestionChange(
+                                  qIndex,
+                                  'correctAnswer',
+                                  e.target.value,
+                                )
+                              }
+                              className="font-medium"
+                              placeholder="Type the expected answer..."
+                            />
+                          </div>
+                        )}
+
+                        {q.explanation && (
+                          <div className="space-y-2 pt-2 border-t">
+                            <label
+                              htmlFor={`preview-explanation-${qIndex}`}
+                              className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1"
+                            >
+                              <BrainCircuit className="w-3 h-3" /> Explanation
+                            </label>
+                            <Textarea
+                              id={`preview-explanation-${qIndex}`}
+                              value={q.explanation}
+                              onChange={(e) =>
+                                handlePreviewQuestionChange(
+                                  qIndex,
+                                  'explanation',
+                                  e.target.value,
+                                )
+                              }
+                              className="text-sm resize-none min-h-[60px]"
+                              placeholder="Explanation for the correct answer..."
+                            />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <DialogFooter className="p-6 pt-4 border-t bg-muted/20 gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setAiDialogStep('config')}
+                  className="mr-auto"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Back
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAiDialog(false);
+                    setAiDialogStep('config');
+                    setPreviewQuestions([]);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => void handleSavePreviewQuestions()}
+                  disabled={previewQuestions.length === 0 || isSavingPreview}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isSavingPreview ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4 mr-2" />
+                  )}
+                  {isSavingPreview
+                    ? 'Saving...'
+                    : `Add ${previewQuestions.length} Questions`}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </PageContainer>
@@ -736,7 +1096,7 @@ function SortableQuestionItem({
                   >
                     <div
                       className={cn(
-                        'w-6 h-6 flex items-center justify-center font-bold text-xs',
+                        'w-6 h-6 shrink-0 flex items-center justify-center font-bold text-xs',
                         question.type === 'multi_select'
                           ? 'rounded-md'
                           : 'rounded-full',
