@@ -34,10 +34,15 @@ export function CodeEditor({
     });
 
     // Configure Node.js environment types for TS/JS
+    // Includes Learnix stdin helpers: input(), print() (JS), println() (TS)
     const nodeLibs = `
       declare var STDIN: string;
       declare function readline(): string;
+      
+      // Learnix stdin helpers
+      declare function input(): string;
       declare function print(...args: any[]): void;
+      declare function println(...args: any[]): void;
 
       declare module "fs" {
         export function readFileSync(path: number | string, options?: any): any;

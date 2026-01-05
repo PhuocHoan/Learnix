@@ -304,7 +304,7 @@ INSERT INTO lessons (id, title, type, content, "ideConfig", "durationSeconds", "
 
 ('b1000001-0000-0000-0000-000000000008', 'Create an Express API Endpoint', 'standard',
  '[{"id":"exercise2","type":"text","content":"## Backend Exercise\n\nCreate a REST API endpoint that returns user data.\n\n### Requirements\n- Create GET /api/users endpoint\n- Return JSON array of users\n- Add proper error handling","orderIndex":0}]',
- '{"allowedLanguages":[{"language":"javascript","initialCode":"const express = require(''express'');\nconst app = express();\n\n// 1. Define some mock data to return\nconst users = [\n    { id: 1, name: ''John Doe'', email: ''john@example.com'' },\n    { id: 2, name: ''Jane Smith'', email: ''jane@example.com'' }\n];\n\n// 2. Create the GET endpoint\n// app.get(''/api/users'', ...\n\napp.listen(3000, () => {\n  console.log(''Server running on port 3000'');\n});","expectedOutput":"Server running on port 3000\\n[MOCK] Registered GET /api/users","unitTestCode":"// Validate the submission\ntry {\n    LearnixTest.expectListening(3000);\n    LearnixTest.expectRoute(''GET'', ''/api/users'');\n} catch (err) {\n    throw err;\n}"}],"defaultLanguage":"javascript"}',
+ '{"allowedLanguages":[{"language":"javascript","initialCode":"// Write your code here\nfunction solution(a, b) {\n    return a + b;\n}\n\n// Input Example:\n// const n = parseInt(input());              // Read an integer\n// const arr = input().split('' '').map(Number); // Read an array\n\nprint(solution(1, 2));","expectedOutput":"3"}],"defaultLanguage":"javascript"}',
  2100, FALSE, 1, 'a1000001-0000-0000-0000-000000000003'),
 
  -- Course 1 Quiz Lessons

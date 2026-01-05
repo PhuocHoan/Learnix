@@ -1306,7 +1306,11 @@ function solution(a, b) {
     return a + b;
 }
 
-console.log(solution(1, 2));`;
+// Input Example:
+// const n = parseInt(input());              // Read an integer
+// const arr = input().split(' ').map(Number); // Read an array
+
+print(solution(1, 2));`;
 
     case 'typescript':
       return `// Write your code here
@@ -1314,7 +1318,11 @@ function solution(a: number, b: number): number {
     return a + b;
 }
 
-console.log(solution(1, 2));`;
+// Input Example:
+// const n: number = parseInt(input());              // Read an integer
+// const arr: number[] = input().split(' ').map(Number); // Read an array
+
+println(solution(1, 2));`;
 
     case 'python':
       return `# Write your code here
@@ -1382,8 +1390,6 @@ import (
     "fmt"
     "bufio"
     "os"
-    "strings"
-    "strconv"
 )
 
 func solution(a int, b int) int {

@@ -120,6 +120,49 @@ var require = (moduleName) => {
 // --------------------------------
 `;
 
+  // JS/TS Stdin helpers - defines print() and input() functions like HackerRank
+  private readonly JS_STDIN_HELPERS = `
+// --- LEARNIX STDIN HELPERS ---
+// HackerRank-style print() and input() functions
+
+const __inputLines = (typeof __stdin !== 'undefined' ? __stdin : '').split('\\n');
+let __inputIndex = 0;
+
+function input() {
+    if (__inputIndex >= __inputLines.length) {
+        return '';
+    }
+    return __inputLines[__inputIndex++];
+}
+
+function print(...args) {
+    console.log(...args);
+}
+// --------------------------------
+`;
+
+  // TypeScript version with type declarations - using const/arrow to avoid overload issues
+  // Note: renamed 'print' to 'println' to avoid conflict with DOM's window.print()
+  private readonly TS_STDIN_HELPERS = `
+// --- LEARNIX STDIN HELPERS ---
+// HackerRank-style println() and input() functions
+
+const __inputLines: string[] = (typeof __stdin !== 'undefined' ? __stdin : '').split('\\n');
+let __inputIndex: number = 0;
+
+const input = (): string => {
+    if (__inputIndex >= __inputLines.length) {
+        return '';
+    }
+    return __inputLines[__inputIndex++];
+};
+
+const println = (...args: any[]): void => {
+    console.log(...args);
+};
+// --------------------------------
+`;
+
   async executeCode(request: ExecutionRequest): Promise<ExecutionResponse> {
     const { language, sourceCode, stdin } = request;
     const config = this.LANGUAGE_MAP[language.toLowerCase()] ?? {
@@ -127,21 +170,31 @@ var require = (moduleName) => {
       version: '*',
     };
 
+    // Use a mutable variable for sourceCode modification
+    let originalSourceCode = sourceCode;
+
+    // Inject stdin helpers for JS/TS (print and input functions)
+    if (language === 'javascript' || language === 'typescript') {
+      // Pass stdin as __stdin variable for the input() function
+      const stdinInjection = `const __stdin = ${JSON.stringify(stdin ?? '')};\n`;
+      const helpers =
+        language === 'typescript'
+          ? this.TS_STDIN_HELPERS
+          : this.JS_STDIN_HELPERS;
+      originalSourceCode = stdinInjection + helpers + '\n' + originalSourceCode;
+    }
+
     // Inject Mock if using Express in JS/TS
     // Regex to detect require('express') with any quote style or spacing
     const expressRegex = /require\s*\(\s*['"]express['"]\s*\)/;
 
-    // Use a mutable variable for sourceCode modification
-    let originalSourceCode = sourceCode;
-
     if (
       (language === 'javascript' || language === 'typescript') &&
-      expressRegex.test(originalSourceCode)
+      expressRegex.test(sourceCode)
     ) {
       this.logger.log('Injecting Express Mock Shim');
-      const shim = this.EXPRESS_MOCK;
-      // We append the sourceCode to the shim
-      originalSourceCode = shim + '\n' + originalSourceCode;
+      // We prepend the Express mock to the already-modified code
+      originalSourceCode = this.EXPRESS_MOCK + '\n' + originalSourceCode;
     }
 
     this.logger.log(

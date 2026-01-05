@@ -31,7 +31,15 @@ const STORAGE_KEY_PREFIX = 'ide_progress_';
 
 const STDIN_INSTRUCTIONS = new Map<string, string>([
   ['python', 'Tip: input() reads one line at a time.'],
-  ['javascript', "Tip: Use 'readline()' to read input line-by-line."],
+  ['javascript', 'Tip: input() reads one line at a time.'],
+  ['typescript', 'Tip: input() reads one line at a time.'],
+  ['java', 'Tip: Use Scanner with System.in to read input.'],
+  ['c++', 'Tip: Use cin >> or getline() to read input.'],
+  ['cpp', 'Tip: Use cin >> or getline() to read input.'],
+  ['c', 'Tip: Use scanf() or fgets() to read input.'],
+  ['csharp', 'Tip: Use Console.ReadLine() to read input.'],
+  ['go', 'Tip: Use bufio.Scanner to read input line-by-line.'],
+  ['rust', 'Tip: Use std::io::stdin() to read input.'],
 ]);
 
 interface IdePanelProps {
@@ -94,6 +102,13 @@ export function IdePanel({
         if (match) {
           const lineNum = parseInt(match[1]);
           const colNum = match[2] ? parseInt(match[2]) : 1;
+          const lineCount = model.getLineCount();
+
+          // Validate line number is within valid range
+          if (lineNum < 1 || lineNum > lineCount) {
+            return; // Skip invalid line numbers
+          }
+
           markers.push({
             startLineNumber: lineNum,
             startColumn: colNum,
